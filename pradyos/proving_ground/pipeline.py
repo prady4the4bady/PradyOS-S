@@ -23,6 +23,7 @@ into the kernel via ``AdmissionPipeline.register_with(imperium)``.
 from __future__ import annotations
 
 import logging
+import re
 import os
 import shutil
 import subprocess
@@ -287,3 +288,64 @@ class AdmissionPipeline:
             verdict.status.value, verdict.reason, verdict.duration_sec,
         )
         return verdict
+
+    # ---------- inline admission (no file I/O, no network) ----------
+
+    # Hard violations → REJECTED immediately
+    _INLINE_HARD = [
+        re.compile(r"rm\s+-[rRfF]{1,4}\s*/", re.I),        # rm -rf /
+        re.compile(r"\bDROP\s+TABLE\b", re.I),              # SQL DROP TABLE
+        re.compile(r"\bformat\s+[a-zA-Z]:", re.I),          # format c:
+        re.compile(r"\bmkfs\.", re.I),                       # mkfs.ext4 etc.
+        re.compile(r"dd\s+if=/dev/zero", re.I),              # disk wipe
+        re.compile(r":\(\)\s*\{", re.I),                    # fork bomb
+    ]
+
+    # Soft violations → QUARANTINED
+    _INLINE_SOFT = [
+        re.compile(r"\beval\s*\(", re.I),                   # eval()
+        re.compile(r"\bexec\s*\(", re.I),                   # exec()
+        re.compile(r"__import__\s*\("),                     # __import__()
+        re.compile(r"\brmdir\s+/", re.I),                   # rmdir /
+        re.compile(r"(?i)(password|secret|token)\s*=\s*['\"][^'\"]{4,}['\"]"),
+    ]
+
+    def admit_inline(self, intent: str, kind: str) -> AdmissionVerdict:
+        """Scan an inline task intent string for constitutional violations.
+
+        Runs only the constitutional scan phase — no file I/O, no network,
+        no cloning.  Returns an :class:`AdmissionVerdict` immediately.
+
+        Severity:
+            HARD → REJECTED
+            SOFT → QUARANTINED
+            none → ADMITTED
+        """
+
+        for pattern in self._INLINE_HARD:
+            if pattern.search(intent):
+                return AdmissionVerdict(
+                    repo_url=f"inline://{kind}/{intent[:40]}",
+                    repo_ref="inline",
+                    workspace="",
+                    status=AdmissionStatus.REJECTED,
+                    reason=f"hard constitutional violation detected in intent: {pattern.pattern!r}",
+                )
+
+        for pattern in self._INLINE_SOFT:
+            if pattern.search(intent):
+                return AdmissionVerdict(
+                    repo_url=f"inline://{kind}/{intent[:40]}",
+                    repo_ref="inline",
+                    workspace="",
+                    status=AdmissionStatus.QUARANTINED,
+                    reason=f"soft constitutional violation detected in intent: {pattern.pattern!r}",
+                )
+
+        return AdmissionVerdict(
+            repo_url=f"inline://{kind}/{intent[:40]}",
+            repo_ref="inline",
+            workspace="",
+            status=AdmissionStatus.ADMITTED,
+            reason="inline task passed constitutional scan",
+        )

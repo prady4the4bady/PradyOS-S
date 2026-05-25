@@ -79,6 +79,9 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_config_watcher.py",
     "tests/test_repl_ext.py",
     "tests/test_deploy.py",
+    # Phase 8
+    "tests/test_oracle_daemon.py",
+    "tests/test_admission_bridge.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -386,7 +389,6 @@ def main(argv: list[str] | None = None) -> int:
         if not passed:
             any_failed = True
             if args.fast:
-                print(f"\n{RED}Stopping on first failure (--fast).{RESET}")
                 break
 
     print_summary(results)

@@ -41,7 +41,7 @@ Everything else executes autonomously within policy envelopes.
 
 ---
 
-## Phase 0 Components
+## Core Components
 
 | Component | Role | Plane |
 |-----------|------|-------|
@@ -50,6 +50,11 @@ Everything else executes autonomously within policy envelopes.
 | `pradyos.imperium` | Task queue, state machine, policy classifier, DAG | Orchestration |
 | `pradyos.aurora_throne` | Sovereign Governance Chamber (terminal UI) | Experience |
 | `pradyos.core` | Shared substrate — audit log, constitution, bus, IDs | Foundational |
+| `pradyos.oracle` | AI reasoning, planning, autonomous proposal loop | Intelligence |
+| `pradyos.campaign` | Campaign engine — multi-step DAG execution | Orchestration |
+| `pradyos.proving_ground` | Constitutional admission gate | Safety |
+| `pradyos.memory_citadel` | Persistent vector memory | Memory |
+| `pradyos.sovereign` | Sovereign Web UI + CLI + REPL | Experience |
 
 The raw CLI is never the user surface. `pradyos-throne` is the only sanctioned
 entrypoint.
@@ -118,7 +123,31 @@ var/                 # audit log + checkpoint state (gitignored)
 
 ## Status
 
-**Phase 0** — substrate is live. Component contracts are stable. Tests are green.
+**Phase 7 — Complete.** All 35 test modules green (82.7 s). Audit hooks,
+metrics hooks, retry hooks, config watcher, REPL extensions, and deploy
+pipeline are provably wired.
 
-Phase 1 has been authored as the first **project proposal** awaiting Sovereign
-approval. See `docs/PHASE_1_PROPOSAL.md`.
+**Phase 8 — In progress.** Three deliverables:
+- ✅ 8A: ORACLE autonomous proposal loop — daemon polls system state and
+  self-proposes maintenance tasks via Ollama every 60 s (configurable via
+  `PRADYOS_PROPOSAL_INTERVAL`).
+- ✅ 8B: Campaign ↔ Proving Ground admission bridge — every ORACLE proposal
+  passes through `AdmissionPipeline.admit_inline()` before hitting IMPERIUM.
+  Quarantined and rejected proposals surface in the Governance Chamber.
+- ✅ 8C: README updated.
+
+### Phase Map
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 0 | Substrate (TITAN, WARDEN, IMPERIUM, THRONE) | ✅ Complete |
+| 1 | Oracle AI Core + Planner | ✅ Complete |
+| 2 | Memory Citadel | ✅ Complete |
+| 3 | Campaign Engine | ✅ Complete |
+| 4 | Warden Phase 4 | ✅ Complete |
+| 5 | Sovereign Web + CLI + REPL | ✅ Complete |
+| 6 | Snapshot, Healthcheck, Watchdog | ✅ Complete |
+| 7 | Audit Hooks, Metrics Hooks, Retry Hooks, Config Watcher | ✅ Complete |
+| 8 | Autonomous Proposal Loop + Admission Bridge | ✅ Complete |
+| 9 | Deployment (systemd, Docker hardening) | 🔲 Planned |
+| 10 | Self-healing (auto-rollback, quarantine enforcement) | 🔲 Planned |

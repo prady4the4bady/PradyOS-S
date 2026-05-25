@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -28,7 +29,7 @@ log = logging.getLogger("pradyos.oracle.daemon")
 
 DEFAULT_PORT = int(os.environ.get("PRADYOS_ORACLE_PORT", "11435"))
 DEFAULT_BASE_URL = os.environ.get("PRADYOS_OLLAMA_URL", "http://localhost:11434")
-DEFAULT_MODEL = os.environ.get("PRADYOS_ORACLE_MODEL", "qwen2.5:7b")
+DEFAULT_MODEL = os.environ.get("PRADYOS_ORACLE_MODEL", "qwen2.5-coder:1.5b-base")
 
 # ---------------------------------------------------------------------------
 # HTTP status server
@@ -81,6 +82,137 @@ def _start_http_server(port: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# JSON proposal extraction helper
+# ---------------------------------------------------------------------------
+
+def _extract_json_proposal(text: str) -> dict | None:
+    """Extract first JSON object containing 'intent' and 'kind' keys from text."""
+    text = text.strip()
+
+    # Try direct parse first
+    try:
+        obj = json.loads(text)
+        if isinstance(obj, dict) and "intent" in obj and "kind" in obj:
+            return obj
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Try to find a JSON object embedded in prose — both key orderings
+    for pattern in (
+        r'\{[^{}]*"intent"[^{}]*"kind"[^{}]*\}',
+        r'\{[^{}]*"kind"[^{}]*"intent"[^{}]*\}',
+    ):
+        m = re.search(pattern, text, re.DOTALL)
+        if m:
+            try:
+                obj = json.loads(m.group())
+                if isinstance(obj, dict) and "intent" in obj and "kind" in obj:
+                    return obj
+            except Exception:  # noqa: BLE001
+                pass
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Autonomous proposal loop
+# ---------------------------------------------------------------------------
+
+async def _proposal_loop(
+    oracle: Oracle,
+    bus: Any,
+    audit: Any,
+    interval_sec: int = 60,
+) -> None:
+    """Run an autonomous maintenance-proposal cycle every *interval_sec* seconds.
+
+    Each cycle:
+      a. Checks Ollama liveness — skips if unreachable.
+      b. Pulls the last 10 audit entries to build a state summary.
+      c. Asks the model to propose ONE maintenance task as JSON.
+      d. Publishes ``oracle.proposal`` on the bus if valid JSON returned.
+      e. Logs ``oracle.proposal_cycle`` to audit.
+    """
+    cycle = 0
+
+    while True:
+        await asyncio.sleep(interval_sec)
+        cycle += 1
+
+        # a. Liveness check
+        alive = await oracle._planner.client.is_alive()
+        if not alive:
+            log.warning("ORACLE proposal cycle %d: Ollama not reachable — skipping.", cycle)
+            audit.record(
+                agent_id="oracle",
+                kind="oracle.proposal_cycle",
+                summary=f"cycle {cycle} skipped — Ollama unreachable",
+                detail={"cycle": cycle, "proposed": False},
+            )
+            continue
+
+        # b. Pull last 10 audit entries
+        entries = audit.tail(10)
+
+        # c. Build compact state summary
+        lines: list[str] = []
+        for e in entries:
+            if hasattr(e, "to_dict"):
+                d = e.to_dict()
+                lines.append(
+                    f"  [{d.get('agent_id', '?')}] {d.get('summary', '')} ({d.get('kind', '')})"
+                )
+            elif isinstance(e, dict):
+                lines.append(
+                    f"  [{e.get('agent_id', '?')}] {e.get('summary', '')} ({e.get('kind', '')})"
+                )
+            else:
+                lines.append(f"  {e}")
+        state_summary = "\n".join(lines) if lines else "(no recent audit entries)"
+
+        # d. Ask the model for a proposal
+        prompt = (
+            f"Recent system audit log ({len(entries)} entries):\n{state_summary}\n\n"
+            "Reply with exactly one JSON object: "
+            '{"intent": "<task description>", "kind": "<shell|research|oracle.plan>"}. '
+            "No other text."
+        )
+
+        proposed = False
+        try:
+            response = await oracle._client.chat(
+                [{"role": "user", "content": prompt}],
+                model=oracle._client.model,
+            )
+
+            # e. Parse and publish if valid
+            payload = _extract_json_proposal(response)
+            if payload:
+                bus.publish("oracle.proposal", payload)
+                proposed = True
+                log.info(
+                    "ORACLE proposal cycle %d: proposed '%s' (%s)",
+                    cycle, payload.get("intent", ""), payload.get("kind", ""),
+                )
+            else:
+                log.debug(
+                    "ORACLE proposal cycle %d: no valid JSON in response: %r",
+                    cycle, response[:120],
+                )
+
+        except Exception as e:  # noqa: BLE001
+            log.warning("ORACLE proposal cycle %d error: %s", cycle, e)
+
+        # f. Log the cycle outcome
+        audit.record(
+            agent_id="oracle",
+            kind="oracle.proposal_cycle",
+            summary=f"proposal cycle {cycle}, proposed={proposed}",
+            detail={"cycle": cycle, "proposed": proposed},
+        )
+
+
+# ---------------------------------------------------------------------------
 # Daemon entry point
 # ---------------------------------------------------------------------------
 
@@ -117,27 +249,43 @@ async def run_daemon(
             status["model"],
             status["available_models"],
         )
-        audit.log("oracle.started", {
-            "ollama_url": base_url,
-            "model": model,
-            "available_models": status["available_models"],
-        }, agent_id="oracle")
+        audit.record(
+            agent_id="oracle",
+            kind="event",
+            summary="oracle.started",
+            detail={
+                "ollama_url": base_url,
+                "model": model,
+                "available_models": status["available_models"],
+            },
+        )
     else:
         log.warning(
             "ORACLE started but Ollama is NOT reachable at %s — "
             "planning will fail until Ollama is available.",
             base_url,
         )
-        audit.log("oracle.started_degraded", {"ollama_url": base_url}, agent_id="oracle")
+        audit.record(
+            agent_id="oracle",
+            kind="event",
+            summary="oracle.started_degraded",
+            detail={"ollama_url": base_url},
+        )
 
     # Subscribe to bus events
     bus.subscribe("imperium.task_queued", _on_task_queued)
 
-    # Keep alive
+    # Autonomous proposal loop — runs until cancelled
+    proposal_task = asyncio.create_task(
+        _proposal_loop(
+            oracle, bus, audit,
+            interval_sec=int(os.environ.get("PRADYOS_PROPOSAL_INTERVAL", "60")),
+        )
+    )
     try:
-        while True:
-            await asyncio.sleep(5)
+        await proposal_task
     except asyncio.CancelledError:
+        proposal_task.cancel()
         log.info("ORACLE daemon shutting down.")
         _oracle_ref = None
 
