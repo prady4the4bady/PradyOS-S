@@ -287,7 +287,7 @@ def test_multiple_hooks_accumulate(tmp_path):
     log = _make_log(tmp_path)
 
     kernel = MagicMock()
-    kernel.submit = lambda task: MagicMock(spec=task, state="QUEUED")
+    kernel.submit = lambda task: MagicMock(state="QUEUED")  # removed spec=task (Python 3.12: cannot spec a Mock)
     kernel.approve = lambda task_id, approver="sovereign": True
     kernel._run_record = None
 

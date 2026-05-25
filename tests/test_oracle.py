@@ -26,7 +26,7 @@ class TestOllamaClient:
     def test_instantiation_defaults(self):
         c = OllamaClient()
         assert c.base_url == "http://localhost:11434"
-        assert c.model == "qwen2.5:7b"
+        assert c.model == "qwen2.5-coder:1.5b-base"
         assert c.timeout == 120.0
 
     def test_instantiation_custom(self):
