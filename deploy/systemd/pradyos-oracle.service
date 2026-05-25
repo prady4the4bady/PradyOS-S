@@ -1,0 +1,58 @@
+[Unit]
+Description=PRADY OS — ORACLE AI Reasoning Daemon (autonomous proposal loop, Plane 4)
+Documentation=file:///opt/pradyos/docs/api/oracle.md
+After=network-online.target pradyos-imperium.service
+Wants=network-online.target
+# ORACLE registers handlers with IMPERIUM; bind so both restart together.
+BindsTo=pradyos-imperium.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+# Allow up to 120 s between watchdog pings — the proposal loop sleeps 60 s.
+WatchdogSec=120
+ExecStart=/opt/pradyos/.venv/bin/pradyos-oracle
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+User=pradyos
+Group=pradyos
+
+# ---------- Runtime configuration ----------
+Environment=PRADYOS_OLLAMA_URL=http://localhost:11434
+Environment=PRADYOS_ORACLE_MODEL=qwen2.5-coder:1.5b-base
+Environment=PRADYOS_ORACLE_PORT=11435
+Environment=PRADYOS_PROPOSAL_INTERVAL=60
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+# Override via /etc/pradyos/oracle.env (EnvironmentFile, optional)
+EnvironmentFile=-/etc/pradyos/oracle.env
+
+# ---------- Persistent directories ----------
+RuntimeDirectory=pradyos
+StateDirectory=pradyos
+LogsDirectory=pradyos
+
+# ---------- Hardening ----------
+# ORACLE reads audit state; it does not need any write path beyond /var/log/pradyos
+# and /var/lib/pradyos (whitelisted via ReadWritePaths).
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

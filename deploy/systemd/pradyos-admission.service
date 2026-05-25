@@ -1,0 +1,51 @@
+[Unit]
+Description=PRADY OS — Admission Bridge (constitutional gate for ORACLE proposals, Plane 5)
+Documentation=file:///opt/pradyos/docs/api/oracle.md
+# The bridge subscribes to oracle.proposal events from the ORACLE daemon
+# and must start after both ORACLE and IMPERIUM are live.
+After=pradyos-oracle.service pradyos-imperium.service
+Requires=pradyos-imperium.service
+# Restart alongside ORACLE if it cycles.
+BindsTo=pradyos-oracle.service
+
+[Service]
+Type=simple
+ExecStart=/opt/pradyos/.venv/bin/pradyos-admission
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=5
+StartLimitIntervalSec=30
+
+User=pradyos
+Group=pradyos
+
+# ---------- Runtime configuration ----------
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+EnvironmentFile=-/etc/pradyos/admission.env
+
+# ---------- Persistent directories ----------
+LogsDirectory=pradyos
+StateDirectory=pradyos
+RuntimeDirectory=pradyos
+
+# ---------- Hardening ----------
+# The admission bridge reads constitutional rules and writes audit events only.
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos /var/lib/pradyos
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

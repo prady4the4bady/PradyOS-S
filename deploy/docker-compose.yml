@@ -1,40 +1,59 @@
-# PRADY OS — Sovereign Edition
-# docker-compose.yml (Phase 7G)
+# PRADY OS -- Sovereign Edition
+# docker-compose.yml (Phase 9 hardened)
 #
 # Services:
-#   sovereign   — main web API (FastAPI / uvicorn)
-#   repl        — interactive CLI REPL (one-shot / interactive)
+#   sovereign   -- Sovereign web API (FastAPI / uvicorn)
+#   oracle      -- ORACLE AI reasoning daemon + autonomous proposal loop
+#   admission   -- Admission Bridge (constitutional gate for oracle proposals)
+#   repl        -- Interactive CLI REPL (profile-gated)
 #
-# Usage:
-#   docker compose up sovereign         # start web API
-#   docker compose run --rm repl        # open REPL session
-#   docker compose up --build           # rebuild + start all
+# Security hardening applied to all services:
+#   cap_drop: [ALL]                  drop all Linux capabilities
+#   security_opt: no-new-privileges  prevent privilege escalation via exec
+#   read_only: true                  container root FS is read-only
+#   tmpfs /tmp                       writable scratch without persistence
+#   Named volumes for /app/var       audit logs + state survive restarts
+#   Secrets via env_file             never baked into the image
 
 version: "3.9"
 
 x-common-env: &common-env
   PRADYOS_LOG_LEVEL: "${PRADYOS_LOG_LEVEL:-INFO}"
   PRADYOS_MAX_CAMPAIGN_WORKERS: "${PRADYOS_MAX_CAMPAIGN_WORKERS:-4}"
-  PRADYOS_ORACLE_URL: "${PRADYOS_ORACLE_URL:-}"
   SOVEREIGN_CIRCUIT_THRESHOLD: "${SOVEREIGN_CIRCUIT_THRESHOLD:-5}"
   SOVEREIGN_CIRCUIT_RESET_SEC: "${SOVEREIGN_CIRCUIT_RESET_SEC:-60}"
 
+x-build: &build
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: runtime
+  image: pradyos-sovereign:latest
+
+x-hardening: &hardening
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+
 services:
+
   sovereign:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: runtime
-    image: pradyos-sovereign:latest
+    <<: [*build, *hardening]
     container_name: pradyos-sovereign
     restart: unless-stopped
     ports:
       - "${SOVEREIGN_PORT:-8000}:8000"
     environment:
       <<: *common-env
+    env_file:
+      - path: deploy/secrets.env
+        required: false
     volumes:
-      # Persist audit + campaign archives across restarts
-      - pradyos-data:/app/data
+      - pradyos-var:/app/var
     healthcheck:
       test:
         - CMD
@@ -46,23 +65,77 @@ services:
       retries: 3
       start_period: 20s
 
+  oracle:
+    <<: [*build, *hardening]
+    container_name: pradyos-oracle
+    restart: unless-stopped
+    entrypoint: ["/venv/bin/pradyos-oracle"]
+    ports:
+      - "127.0.0.1:${ORACLE_PORT:-11435}:11435"
+    environment:
+      <<: *common-env
+      PRADYOS_OLLAMA_URL: "${PRADYOS_OLLAMA_URL:-http://host.docker.internal:11434}"
+      PRADYOS_ORACLE_MODEL: "${PRADYOS_ORACLE_MODEL:-qwen2.5-coder:1.5b-base}"
+      PRADYOS_ORACLE_PORT: "11435"
+      PRADYOS_PROPOSAL_INTERVAL: "${PRADYOS_PROPOSAL_INTERVAL:-60}"
+      PRADYOS_AUDIT_PATH: "/app/var/log/audit.jsonl"
+      PRADYOS_STATE_PATH: "/app/var/state"
+    env_file:
+      - path: deploy/secrets.env
+        required: false
+    volumes:
+      - pradyos-var:/app/var
+    depends_on:
+      sovereign:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:11435/oracle/status')"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  admission:
+    <<: [*build, *hardening]
+    container_name: pradyos-admission
+    restart: unless-stopped
+    entrypoint: ["/venv/bin/pradyos-admission"]
+    environment:
+      <<: *common-env
+      PRADYOS_AUDIT_PATH: "/app/var/log/audit.jsonl"
+      PRADYOS_STATE_PATH: "/app/var/state"
+    env_file:
+      - path: deploy/secrets.env
+        required: false
+    volumes:
+      - pradyos-var:/app/var
+    depends_on:
+      oracle:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pradyos.oracle.admission_bridge"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
   repl:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: runtime
-    image: pradyos-sovereign:latest
+    <<: [*build, *hardening]
     container_name: pradyos-repl
     stdin_open: true
     tty: true
     environment:
       <<: *common-env
     volumes:
-      - pradyos-data:/app/data
+      - pradyos-var:/app/var
     entrypoint: ["/venv/bin/pradyos-repl"]
     profiles:
-      - repl  # only started explicitly: docker compose --profile repl run repl
+      - repl
 
 volumes:
-  pradyos-data:
+  pradyos-var:
     driver: local

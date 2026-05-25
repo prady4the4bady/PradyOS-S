@@ -127,14 +127,59 @@ var/                 # audit log + checkpoint state (gitignored)
 metrics hooks, retry hooks, config watcher, REPL extensions, and deploy
 pipeline are provably wired.
 
-**Phase 8 — In progress.** Three deliverables:
-- ✅ 8A: ORACLE autonomous proposal loop — daemon polls system state and
-  self-proposes maintenance tasks via Ollama every 60 s (configurable via
-  `PRADYOS_PROPOSAL_INTERVAL`).
-- ✅ 8B: Campaign ↔ Proving Ground admission bridge — every ORACLE proposal
-  passes through `AdmissionPipeline.admit_inline()` before hitting IMPERIUM.
-  Quarantined and rejected proposals surface in the Governance Chamber.
-- ✅ 8C: README updated.
+**Phase 8 — Complete.** All 37 test modules green. ORACLE autonomous proposal
+loop and Campaign ↔ Proving Ground admission bridge provably wired.
+
+**Phase 9 — Complete.** All 37 test modules green. Four deliverables:
+- ✅ 9A: Production systemd units for **all five services** — `pradyos-titan`,
+  `pradyos-warden`, `pradyos-imperium`, `pradyos-oracle` (new), and
+  `pradyos-admission` (new). All units restart on failure, log to journald,
+  and carry a full set of systemd sandboxing directives (`NoNewPrivileges`,
+  `ProtectSystem=strict`, `PrivateTmp`, `PrivateDevices`,
+  `ProtectKernelModules`, `ProtectControlGroups`, `RestrictNamespaces`,
+  `LockPersonality`, `MemoryDenyWriteExecute`, `SystemCallFilter`). Dependency
+  ordering: WARDEN + TITAN → IMPERIUM → ORACLE → ADMISSION.
+- ✅ 9B: Docker hardening — `deploy/Dockerfile` upgraded to Python 3.12,
+  `COPY --chown=pradyos` throughout. `deploy/docker-compose.yml` gains
+  `oracle` and `admission` services wired with healthchecks
+  (`/oracle/status` and import-probe respectively), plus fleet-wide
+  `cap_drop: [ALL]`, `security_opt: no-new-privileges:true`,
+  `read_only: true`, `tmpfs: /tmp`, and a single named volume
+  `pradyos-var` for audit log + state persistence. Secrets managed via
+  `deploy/secrets.env` (template at `deploy/secrets.env.example`).
+- ✅ 9C: `tests/test_deploy.py` extended with 28 new assertions covering
+  new systemd units, Docker hardening directives, oracle/admission
+  service definitions, and healthcheck presence. All 37 modules remain green.
+- ✅ 9D: README updated.
+
+### Systemd deployment (Sovereign build)
+
+```bash
+sudo cp deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now \
+    pradyos-titan.service \
+    pradyos-warden.service \
+    pradyos-imperium.service \
+    pradyos-oracle.service \
+    pradyos-admission.service
+```
+
+The `pradyos-throne.service` is a *session* unit — it is launched on
+Sovereign login, not enabled as a system daemon.
+
+### Docker production stack (Phase 9)
+
+```bash
+cp deploy/secrets.env.example deploy/secrets.env
+# edit deploy/secrets.env with your Ollama URL, log level, etc.
+docker compose -f deploy/docker-compose.yml up --build sovereign oracle admission
+```
+
+Healthchecks are wired to:
+- `sovereign` → `GET /api/metrics` on port 8000
+- `oracle` → `GET /oracle/status` on port 11435
+- `admission` → Python import probe (`import pradyos.oracle.admission_bridge`)
 
 ### Phase Map
 
@@ -149,5 +194,5 @@ pipeline are provably wired.
 | 6 | Snapshot, Healthcheck, Watchdog | ✅ Complete |
 | 7 | Audit Hooks, Metrics Hooks, Retry Hooks, Config Watcher | ✅ Complete |
 | 8 | Autonomous Proposal Loop + Admission Bridge | ✅ Complete |
-| 9 | Deployment (systemd, Docker hardening) | 🔲 Planned |
+| 9 | Deployment (systemd hardening + Docker hardening) | ✅ Complete |
 | 10 | Self-healing (auto-rollback, quarantine enforcement) | 🔲 Planned |
