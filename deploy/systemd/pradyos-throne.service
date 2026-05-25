@@ -1,0 +1,19 @@
+[Unit]
+Description=PRADY OS — AURORA THRONE (governance terminal, Plane 10)
+Documentation=file:///opt/pradyos/docs/api/aurora_throne.md
+After=pradyos-imperium.service
+Requires=pradyos-imperium.service
+
+# The Throne is per-Sovereign-session; do not enable as a daemon by default.
+# Instead, install as a user unit launched on Sovereign login.
+
+[Service]
+Type=simple
+ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.aurora_throne.app
+
+Environment=PRADYOS_WARDEN_URL=http://127.0.0.1:9701
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+
+[Install]
+WantedBy=default.target

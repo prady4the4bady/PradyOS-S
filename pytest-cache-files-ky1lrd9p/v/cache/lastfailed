@@ -1,0 +1,8 @@
+{
+  "tests/test_imperium.py::test_policy_destructive_requires_approval": true,
+  "tests/test_imperium.py::test_kernel_escalates_destructive_command": true,
+  "tests/test_imperium.py::test_kernel_approve_unblocks_escalated": true,
+  "tests/test_integration.py::test_imperium_dispatches_to_titan_via_socket": true,
+  "tests/test_titan_ops.py::test_daemon_serves_one_instruction": true,
+  "tests/test_warden_grid.py::test_thresholds_env_override": true
+}

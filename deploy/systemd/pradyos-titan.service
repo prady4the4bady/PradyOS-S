@@ -1,0 +1,36 @@
+[Unit]
+Description=PRADY OS — TITAN OPS (hidden command runner, Plane 2)
+Documentation=file:///opt/pradyos/docs/api/titan_ops.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+WatchdogSec=30
+ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.titan_ops.daemon
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=10
+
+# TITAN OPS has constitutional admin authority.
+# Privilege is granted because every action is audited.
+User=root
+Group=root
+
+Environment=PRADYOS_TITAN_SOCKET=/run/pradyos/titan.sock
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+
+# Audit + state stay sovereign across restarts
+RuntimeDirectory=pradyos
+StateDirectory=pradyos
+LogsDirectory=pradyos
+
+# Sandboxing — TITAN OPS may operate on host but cannot wander
+ProtectSystem=full
+ProtectHome=read-only
+NoNewPrivileges=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

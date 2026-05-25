@@ -1,0 +1,44 @@
+# Sovereign state — never commit
+var/log/*
+var/state/*
+!var/log/.gitkeep
+!var/state/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/lib/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# venv
+.venv/
+venv/
+env/
+
+# editors
+.vscode/
+.idea/
+*.swp
+
+# tests
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/

@@ -1,0 +1,30 @@
+[Unit]
+Description=PRADY OS — IMPERIUM (orchestration kernel, Plane 3)
+Documentation=file:///opt/pradyos/docs/api/imperium.md
+After=pradyos-titan.service pradyos-warden.service
+Requires=pradyos-titan.service pradyos-warden.service
+
+[Service]
+Type=notify
+WatchdogSec=30
+ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.imperium.kernel
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=10
+
+User=pradyos
+Group=pradyos
+
+Environment=PRADYOS_TITAN_SOCKET=/run/pradyos/titan.sock
+Environment=PRADYOS_WARDEN_URL=http://127.0.0.1:9701
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
