@@ -421,14 +421,3 @@ def _wire_oracle(planner: Any | None, audit_log: EventAuditLog) -> None:
         return result
 
     planner.plan = _plan_hooked
-uires_approval": getattr(result, "requires_approval", False) if result else False,
-                "step_count": len(getattr(result, "steps", [])) if result else 0,
-                "error": str(exc) if exc else getattr(result, "error", None) if result else None,
-                "ok": ok,
-            },
-        )
-        if exc is not None:
-            raise exc
-        return result
-
-    planner.plan = _plan_hooked
