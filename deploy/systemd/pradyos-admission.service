@@ -22,6 +22,8 @@ Group=pradyos
 # ---------- Runtime configuration ----------
 Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 EnvironmentFile=-/etc/pradyos/admission.env
 
 # ---------- Persistent directories ----------
@@ -44,8 +46,4 @@ RestrictNamespaces=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 RestrictRealtime=true
-SystemCallFilter=@system-service
-SystemCallErrorNumber=EPERM
-
-[Install]
-WantedBy=multi-user.target
+System

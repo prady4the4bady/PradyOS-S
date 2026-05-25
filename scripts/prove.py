@@ -82,6 +82,8 @@ DEFAULT_MODULES: list[str] = [
     # Phase 8
     "tests/test_oracle_daemon.py",
     "tests/test_admission_bridge.py",
+    # Phase 10
+    "tests/test_redis_bus.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -374,7 +376,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{RED}No test modules found. Aborting.{RESET}")
         return 1
 
-    print(f"Running {len(existing)} module(s)…\n")
+    print(f"Running {len(existing)} module(s)...\n")
 
     results: list[tuple[str, bool, float]] = []
     any_failed = False

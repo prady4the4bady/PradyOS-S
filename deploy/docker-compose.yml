@@ -22,6 +22,8 @@ x-common-env: &common-env
   PRADYOS_MAX_CAMPAIGN_WORKERS: "${PRADYOS_MAX_CAMPAIGN_WORKERS:-4}"
   SOVEREIGN_CIRCUIT_THRESHOLD: "${SOVEREIGN_CIRCUIT_THRESHOLD:-5}"
   SOVEREIGN_CIRCUIT_RESET_SEC: "${SOVEREIGN_CIRCUIT_RESET_SEC:-60}"
+  PRADYOS_BUS_BACKEND: "redis"
+  PRADYOS_REDIS_URL: "redis://redis:6379/0"
 
 x-build: &build
   build:
@@ -41,6 +43,22 @@ x-hardening: &hardening
 
 services:
 
+  redis:
+    image: redis:7-alpine
+    container_name: pradyos-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - pradyos-redis:/data
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   sovereign:
     <<: [*build, *hardening]
     container_name: pradyos-sovereign
@@ -54,6 +72,9 @@ services:
         required: false
     volumes:
       - pradyos-var:/app/var
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -86,6 +107,8 @@ services:
     volumes:
       - pradyos-var:/app/var
     depends_on:
+      redis:
+        condition: service_healthy
       sovereign:
         condition: service_healthy
     healthcheck:
@@ -111,31 +134,4 @@ services:
     env_file:
       - path: deploy/secrets.env
         required: false
-    volumes:
-      - pradyos-var:/app/var
-    depends_on:
-      oracle:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import pradyos.oracle.admission_bridge"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
-  repl:
-    <<: [*build, *hardening]
-    container_name: pradyos-repl
-    stdin_open: true
-    tty: true
-    environment:
-      <<: *common-env
-    volumes:
-      - pradyos-var:/app/var
-    entrypoint: ["/venv/bin/pradyos-repl"]
-    profiles:
-      - repl
-
-volumes:
-  pradyos-var:
-    driver: local
+   

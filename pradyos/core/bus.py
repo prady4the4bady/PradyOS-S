@@ -11,6 +11,7 @@ broker without changing call sites.
 
 from __future__ import annotations
 
+import os
 import threading
 from collections import defaultdict
 from typing import Any, Callable
@@ -39,7 +40,7 @@ class EventBus:
         for fn in targets + wildcard:
             try:
                 fn(topic, payload)
-            except Exception:  # noqa: BLE001 — subscriber faults are isolated
+            except Exception:  # noqa: BLE001 -- subscriber faults are isolated
                 pass
 
 
@@ -47,17 +48,34 @@ _singleton: EventBus | None = None
 _lock = threading.Lock()
 
 
-def get_bus() -> EventBus:
+def get_bus() -> EventBus:  # type: ignore[return-value]
+    """Return the process-global bus singleton.
+
+    When PRADYOS_BUS_BACKEND=redis is set, returns a RedisBus
+    (cross-process, Redis-backed).  Otherwise returns the lightweight
+    in-process EventBus.  All call sites are unaffected -- both
+    classes expose the identical subscribe / unsubscribe / publish API.
+    """
     global _singleton
     if _singleton is None:
         with _lock:
             if _singleton is None:
-                _singleton = EventBus()
-    return _singleton
+                backend = os.environ.get("PRADYOS_BUS_BACKEND", "").lower()
+                if backend == "redis":
+                    from pradyos.core.redis_bus import RedisBus  # noqa: PLC0415
+                    _singleton = RedisBus()  # type: ignore[assignment]
+                else:
+                    _singleton = EventBus()
+    return _singleton  # type: ignore[return-value]
 
 
-def reset_bus_for_tests() -> EventBus:
+def reset_bus_for_tests() -> "EventBus":
+    """Reset the global singleton and return a fresh EventBus.
+
+    Called by the ``isolated_bus`` pytest fixture so every test starts
+    with a clean, empty bus and subscribers from previous tests cannot
+    bleed through.
+    """
     global _singleton
-    with _lock:
-        _singleton = EventBus()
+    _singleton = EventBus()
     return _singleton

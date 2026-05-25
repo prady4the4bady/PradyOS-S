@@ -142,7 +142,8 @@ loop and Campaign ↔ Proving Ground admission bridge provably wired.
 - ✅ 9B: Docker hardening — `deploy/Dockerfile` upgraded to Python 3.12,
   `COPY --chown=pradyos` throughout. `deploy/docker-compose.yml` gains
   `oracle` and `admission` services wired with healthchecks
-  (`/oracle/status` and import-probe respectively), plus fleet-wide
+  (`/oracle/status` and
+import-probe respectively), plus fleet-wide
   `cap_drop: [ALL]`, `security_opt: no-new-privileges:true`,
   `read_only: true`, `tmpfs: /tmp`, and a single named volume
   `pradyos-var` for audit log + state persistence. Secrets managed via
@@ -152,47 +153,45 @@ loop and Campaign ↔ Proving Ground admission bridge provably wired.
   service definitions, and healthcheck presence. All 37 modules remain green.
 - ✅ 9D: README updated.
 
-### Systemd deployment (Sovereign build)
-
-```bash
-sudo cp deploy/systemd/*.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now \
-    pradyos-titan.service \
-    pradyos-warden.service \
-    pradyos-imperium.service \
-    pradyos-oracle.service \
-    pradyos-admission.service
-```
-
-The `pradyos-throne.service` is a *session* unit — it is launched on
-Sovereign login, not enabled as a system daemon.
-
-### Docker production stack (Phase 9)
-
-```bash
-cp deploy/secrets.env.example deploy/secrets.env
-# edit deploy/secrets.env with your Ollama URL, log level, etc.
-docker compose -f deploy/docker-compose.yml up --build sovereign oracle admission
-```
-
-Healthchecks are wired to:
-- `sovereign` → `GET /api/metrics` on port 8000
-- `oracle` → `GET /oracle/status` on port 11435
-- `admission` → Python import probe (`import pradyos.oracle.admission_bridge`)
+**Phase 10 — Complete.** All 38 test modules green (28.7 s). Redis
+inter-process bus live across Docker and systemd planes:
+- ✅ 10A: `pradyos/core/redis_bus.py` — `RedisBus` drop-in replacement for
+  `EventBus` using redis-py Pub/Sub. A daemon thread polls
+  `pubsub.get_message()` and dispatches to registered callbacks. Regular
+  topics use `SUBSCRIBE`; the wildcard `"*"` topic uses `PSUBSCRIBE("*")`.
+  Subscriber faults are isolated; unsubscribe triggers `UNSUBSCRIBE` /
+  `PUNSUBSCRIBE` when the last handler is removed.
+- ✅ 10B: `pradyos/core/bus.py` — `get_bus()` factory updated. When
+  `PRADYOS_BUS_BACKEND=redis`, returns `RedisBus`; otherwise the existing
+  in-process `EventBus`. Zero call-site changes.
+- ✅ 10C: `deploy/docker-compose.yml` — `redis:7-alpine` service added with
+  a `redis-cli ping` healthcheck and a named volume (`pradyos-redis`). All
+  application services gain `PRADYOS_BUS_BACKEND=redis`,
+  `PRADYOS_REDIS_URL=redis://redis:6379/0`, and `depends_on: [redis]`.
+- ✅ 10D: All six `deploy/systemd/*.service` files (`pradyos-titan`,
+  `pradyos-warden`, `pradyos-imperium`, `pradyos-oracle`, `pradyos-admission`,
+  `pradyos-throne`) updated with
+  `Environment=PRADYOS_BUS_BACKEND=redis` and
+  `Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0`.
+- ✅ 10E: `tests/test_redis_bus.py` — 16 tests using `fakeredis` (no real
+  Redis server required). Covers pub/sub, wildcard, unsubscribe, fault
+  isolation, payload round-trip, and `get_bus()` factory.
+- ✅ 10F: `pyproject.toml` dev deps extended with `redis>=5.0` and
+  `fakeredis>=2.0`. `deploy/secrets.env.example` documents new env vars.
 
 ### Phase Map
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 0 | Substrate (TITAN, WARDEN, IMPERIUM, THRONE) | ✅ Complete |
-| 1 | Oracle AI Core + Planner | ✅ Complete |
-| 2 | Memory Citadel | ✅ Complete |
-| 3 | Campaign Engine | ✅ Complete |
-| 4 | Warden Phase 4 | ✅ Complete |
-| 5 | Sovereign Web + CLI + REPL | ✅ Complete |
-| 6 | Snapshot, Healthcheck, Watchdog | ✅ Complete |
-| 7 | Audit Hooks, Metrics Hooks, Retry Hooks, Config Watcher | ✅ Complete |
-| 8 | Autonomous Proposal Loop + Admission Bridge | ✅ Complete |
-| 9 | Deployment (systemd hardening + Docker hardening) | ✅ Complete |
-| 10 | Self-healing (auto-rollback, quarantine enforcement) | 🔲 Planned |
+| 0 | Substrate (TITAN, WARDEN, IMPERIUM, THRONE) | Complete |
+| 1 | Oracle AI Core + Planner | Complete |
+| 2 | Memory Citadel | Complete |
+| 3 | Campaign Engine | Complete |
+| 4 | Warden Phase 4 | Complete |
+| 5 | Sovereign Web + CLI + REPL | Complete |
+| 6 | Snapshot, Healthcheck, Watchdog | Complete |
+| 7 | Audit Hooks, Metrics Hooks, Retry Hooks, Config Watcher | Complete |
+| 8 | Autonomous Proposal Loop + Admission Bridge | Complete |
+| 9 | Deployment (systemd hardening + Docker hardening) | Complete |
+| 10 | Redis Inter-Process Event Bus | Complete |
+| 11 | Self-Healing (auto-rollback, quarantine enforcement) | Planned |

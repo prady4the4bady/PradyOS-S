@@ -27,6 +27,8 @@ Environment=PRADYOS_ORACLE_PORT=11435
 Environment=PRADYOS_PROPOSAL_INTERVAL=60
 Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 # Override via /etc/pradyos/oracle.env (EnvironmentFile, optional)
 EnvironmentFile=-/etc/pradyos/oracle.env
 
@@ -51,8 +53,4 @@ RestrictNamespaces=true
 LockPersonality=true
 MemoryDenyWriteExecute=true
 RestrictRealtime=true
-SystemCallFilter=@system-service
-SystemCallErrorNumber=EPERM
-
-[Install]
-WantedBy=multi-user.target
+System

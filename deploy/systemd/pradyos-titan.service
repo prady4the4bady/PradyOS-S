@@ -20,6 +20,8 @@ Group=root
 Environment=PRADYOS_TITAN_SOCKET=/run/pradyos/titan.sock
 Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 
 # Audit + state stay sovereign across restarts
 RuntimeDirectory=pradyos
@@ -28,9 +30,4 @@ LogsDirectory=pradyos
 
 # Sandboxing — TITAN OPS may operate on host but cannot wander
 ProtectSystem=full
-ProtectHome=read-only
-NoNewPrivileges=false
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
+Prote

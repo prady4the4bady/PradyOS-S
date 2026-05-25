@@ -19,12 +19,24 @@ Environment=PRADYOS_TITAN_SOCKET=/run/pradyos/titan.sock
 Environment=PRADYOS_WARDEN_URL=http://127.0.0.1:9701
 Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 
 ProtectSystem=strict
 ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
+
 ProtectHome=true
-NoNewPrivileges=true
 PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallFilter=@system-service
 
 [Install]
 WantedBy=multi-user.target
