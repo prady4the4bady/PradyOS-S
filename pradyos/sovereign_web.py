@@ -111,6 +111,7 @@ def create_app(
     checkpoint_store: Any | None = None,
     bus: Any | None = None,
     health_registry: Any | None = None,
+    observability_dashboard: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -124,6 +125,9 @@ def create_app(
         Optional EventBus. Falls back to the global singleton.
     health_registry:
         Optional HealthRegistry instance. Falls back to the global singleton.
+    observability_dashboard:
+        Optional ObservabilityDashboard instance (Phase 12). When provided,
+        GET /api/v1/dashboard returns a live DashboardSnapshot as JSON.
     """
     app = FastAPI(
         title="PRADY OS -- Sovereign Dashboard",
@@ -267,6 +271,33 @@ def create_app(
         except Exception as exc:  # noqa: BLE001
             log.debug("Recommendations unavailable: %s", exc)
             return JSONResponse({"recommendations": [], "ts": time.time()})
+
+    # ------------------------------------------------------------------
+    # GET /api/v1/dashboard  (Phase 12 -- Observability Dashboard)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/dashboard")
+    async def api_dashboard() -> JSONResponse:
+        if observability_dashboard is None:
+            return JSONResponse(
+                {"bus_events": [], "quarantine": [], "system_health": {
+                    "status": "ok", "active_tasks": 0,
+                    "dead_letter_count": 0, "last_event_ts": None,
+                }},
+                status_code=200,
+            )
+        try:
+            snap = observability_dashboard.get_live_snapshot()
+            return JSONResponse(snap.to_dict(), status_code=200)
+        except Exception as exc:  # noqa: BLE001
+            log.debug("ObservabilityDashboard.get_live_snapshot failed: %s", exc)
+            return JSONResponse(
+                {"bus_events": [], "quarantine": [], "system_health": {
+                    "status": "ok", "active_tasks": 0,
+                    "dead_letter_count": 0, "last_event_ts": None,
+                }},
+                status_code=200,
+            )
 
         # POST /api/approve/{task_id}
     # ------------------------------------------------------------------

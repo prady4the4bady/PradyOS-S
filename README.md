@@ -198,6 +198,37 @@ inter-process bus live across Docker and systemd planes:
   snapshot reference, multi-task quarantine, and WARDEN notification.
 - ✅ 11E: `scripts/prove.py` updated; README Phase Map updated.
 
+**Phase 12 — Complete.** All 44 test modules green. Live observability
+dashboard — the Sovereign sees everything in real time:
+- ✅ 12A: `pradyos/aurora_throne/dashboard.py` — `ObservabilityDashboard`
+  class with a `deque(maxlen=50)` ring buffer, `get_live_snapshot()` →
+  `DashboardSnapshot` (bus_events, quarantine, system_health), `start()`
+  / `stop()` subscribe/unsubscribe on the bus wildcard, and a
+  `_on_bus_event()` subscriber that populates the ring buffer and updates
+  `last_event_ts`. Health thresholds: **ok** (dlq=0, active<5),
+  **degraded** (dlq≥1 or active≥5), **critical** (dlq≥5 or active≥20).
+- ✅ 12B: `pradyos/sovereign_web.py` — `GET /api/v1/dashboard` endpoint
+  wired into the existing FastAPI app via a new `observability_dashboard`
+  constructor parameter. Returns `DashboardSnapshot.to_dict()` as JSON
+  (200); falls back to a zeroed snapshot when no dashboard is injected.
+- ✅ 12C: `pradyos/aurora_throne/textual_app.py` — `DashboardScreen`
+  (Textual `Screen` subclass) renders three live panels: **Live Bus
+  Events** | **Quarantine** | **System Health**. Refreshes every 2 s.
+  Accessible via the `d` keybind from `ThroneApp`; `escape` / `q`
+  dismisses and returns to the main Throne.
+- ✅ 12D: `tests/test_dashboard.py` — 20 unit tests: snapshot type,
+  ring-buffer cap (50) and eviction, quarantine reflection, health
+  thresholds (ok/degraded/critical), start/stop subscribe/unsubscribe,
+  _on_bus_event appends, last_event_ts tracking, active_tasks and
+  dead_letter_count from kernel, JSON-serialisability, dict field
+  presence, and idempotent double-stop.
+- ✅ 12E: `tests/test_dashboard_web.py` — 10 FastAPI TestClient tests:
+  HTTP 200, required keys (bus_events / quarantine / system_health),
+  quarantine state reflection, status field validity, bus_events as
+  list, health metric keys, and Content-Type: application/json.
+- ✅ 12F: `scripts/prove.py` updated with both new test modules (44 total).
+- ✅ 12G: README Phase Map updated; Phase 13 planned.
+
 ### Phase Map
 
 | Phase | Name | Status |
@@ -214,4 +245,5 @@ inter-process bus live across Docker and systemd planes:
 | 9 | Deployment (systemd hardening + Docker hardening) | Complete |
 | 10 | Redis Inter-Process Event Bus | Complete |
 | 11 | Self-Healing (auto-rollback, quarantine enforcement) | Complete |
-| 12 | Observability Dashboard (real-time Sovereign dashboard: live bus events, active quarantine, system health) | Planned |
+| 12 | Observability Dashboard (live bus events, quarantine, system health) | Complete |
+| 13 | Live Campaign Monitor — real-time campaign progress, step execution timeline, and TITAN ops feed in Aurora Throne | Planned |

@@ -1066,6 +1066,7 @@ class ThroneApp(App):
         Binding("f4", "show_tab('pane-health')", "Health", show=False),
         Binding("f5", "show_tab('pane-gallery')", "Gallery", show=False),
         Binding("c", "focus_command", "Command", show=True),
+        Binding("d", "show_dashboard", "Dashboard", show=True),
         Binding("escape", "close_command", "Close", show=False),
         Binding("q", "quit", "Quit", show=True),
     ]
@@ -1239,6 +1240,13 @@ class ThroneApp(App):
         self._cmd_bar.display = False
         self._cmd_bar_visible = False
 
+    def action_show_dashboard(self) -> None:
+        """Push the DashboardScreen (Phase 12 observability view)."""
+        from pradyos.aurora_throne.dashboard import ObservabilityDashboard  # noqa: PLC0415
+        # Re-use an existing wired dashboard if available, else create one.
+        dash = getattr(self, "_observability_dashboard", None)
+        self.push_screen(DashboardScreen(dashboard=dash))
+
     # ---------- sovereign commands ----------
 
     def execute_command(self, raw: str) -> None:
@@ -1301,6 +1309,125 @@ class ThroneApp(App):
             if tid.startswith(prefix):
                 return tid
         return None
+
+
+
+# ---------------------------------------------------------------------------
+# DashboardScreen (Phase 12 — Observability Dashboard)
+# ---------------------------------------------------------------------------
+
+class DashboardScreen(Screen):
+    """Full-screen observability dashboard.
+
+    Renders three panels:
+      - Live Bus Events  — last 50 events from the EventBus ring buffer
+      - Quarantine       — tasks quarantined by SelfHealEngine
+      - System Health    — coarse health signal from kernel metrics
+
+    Accessible via the ``d`` keybind from :class:`ThroneApp`.
+    Press ``escape`` or ``q`` to dismiss and return to the main throne.
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Back", show=True),
+        Binding("q", "dismiss", "Back", show=False),
+    ]
+
+    def __init__(self, dashboard: Any | None = None) -> None:
+        super().__init__()
+        self._dashboard = dashboard
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Horizontal():
+            with Vertical(id="dash-events"):
+                yield Static(
+                    "[bold cyan]LIVE BUS EVENTS[/bold cyan]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="dash-events-log", highlight=True, markup=True, wrap=True)
+            with Vertical(id="dash-quarantine"):
+                yield Static(
+                    "[bold red]QUARANTINE[/bold red]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="dash-quarantine-log", highlight=True, markup=True, wrap=True)
+            with Vertical(id="dash-health"):
+                yield Static(
+                    "[bold yellow]SYSTEM HEALTH[/bold yellow]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="dash-health-log", highlight=True, markup=True, wrap=True)
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._refresh_dashboard()
+        self.set_interval(2.0, self._refresh_dashboard)
+
+    def _refresh_dashboard(self) -> None:
+        """Pull a fresh snapshot and update all three panels."""
+        if self._dashboard is None:
+            self._write_panel("dash-events-log", ["[dim]No dashboard wired[/dim]"])
+            self._write_panel("dash-quarantine-log", ["[dim]—[/dim]"])
+            self._write_panel("dash-health-log", ["[dim]—[/dim]"])
+            return
+
+        try:
+            snap = self._dashboard.get_live_snapshot()
+        except Exception as exc:  # noqa: BLE001
+            self._write_panel("dash-events-log", [f"[red]Error: {exc}[/red]"])
+            return
+
+        # Live Bus Events
+        events = snap.bus_events[-20:]  # most recent 20 for display
+        if events:
+            lines = []
+            for ev in reversed(events):
+                ts = ev.get("ts", 0.0)
+                ts_fmt = time.strftime("%H:%M:%S", time.localtime(float(ts))) if ts else "--"
+                topic = ev.get("topic", "?")
+                payload_str = str(ev.get("payload", {}))[:80]
+                lines.append(f"[dim]{ts_fmt}[/dim] [cyan]{topic}[/cyan]  {payload_str}")
+        else:
+            lines = ["[dim]No events yet[/dim]"]
+        self._write_panel("dash-events-log", lines)
+
+        # Quarantine
+        q = snap.quarantine
+        if q:
+            q_lines = [f"[red]{tid[:24]}[/red]" for tid in q]
+        else:
+            q_lines = ["[green]No quarantined tasks[/green]"]
+        self._write_panel("dash-quarantine-log", q_lines)
+
+        # System Health
+        health = snap.system_health
+        status = health.get("status", "?")
+        status_color = {"ok": "green", "degraded": "yellow", "critical": "red"}.get(status, "white")
+        last_ts = health.get("last_event_ts")
+        last_fmt = (
+            time.strftime("%H:%M:%S", time.localtime(float(last_ts)))
+            if last_ts is not None else "none"
+        )
+        h_lines = [
+            f"[{status_color}]STATUS: {status.upper()}[/{status_color}]",
+            f"[dim]Active tasks:[/dim]      [cyan]{health.get('active_tasks', 0)}[/cyan]",
+            f"[dim]Dead-letter queue:[/dim] [cyan]{health.get('dead_letter_count', 0)}[/cyan]",
+            f"[dim]Last event:[/dim]        [dim]{last_fmt}[/dim]",
+        ]
+        self._write_panel("dash-health-log", h_lines)
+
+    def _write_panel(self, widget_id: str, lines: list) -> None:
+        try:
+            log_w = self.query_one(f"#{widget_id}", RichLog)
+            log_w.clear()
+            for line in lines:
+                log_w.write(line)
+        except NoMatches:
+            pass
+
+    def action_dismiss(self) -> None:
+        self.app.pop_screen()
 
 
 # ---------------------------------------------------------------------------
