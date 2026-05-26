@@ -1065,7 +1065,7 @@ class ThroneApp(App):
         Binding("f3", "show_tab('pane-campaign')", "Campaign", show=False),
         Binding("f4", "show_tab('pane-health')", "Health", show=False),
         Binding("f5", "show_tab('pane-gallery')", "Gallery", show=False),
-        Binding("c", "focus_command", "Command", show=True),
+        Binding("c", "show_campaign_monitor", "Monitor", show=True),
         Binding("d", "show_dashboard", "Dashboard", show=True),
         Binding("escape", "close_command", "Close", show=False),
         Binding("q", "quit", "Quit", show=True),
@@ -1247,6 +1247,11 @@ class ThroneApp(App):
         dash = getattr(self, "_observability_dashboard", None)
         self.push_screen(DashboardScreen(dashboard=dash))
 
+    def action_show_campaign_monitor(self) -> None:
+        """Push the CampaignMonitorScreen (Phase 13 live campaign view)."""
+        monitor = getattr(self, "_campaign_monitor", None)
+        self.push_screen(CampaignMonitorScreen(monitor=monitor))
+
     # ---------- sovereign commands ----------
 
     def execute_command(self, raw: str) -> None:
@@ -1416,6 +1421,136 @@ class DashboardScreen(Screen):
             f"[dim]Last event:[/dim]        [dim]{last_fmt}[/dim]",
         ]
         self._write_panel("dash-health-log", h_lines)
+
+    def _write_panel(self, widget_id: str, lines: list) -> None:
+        try:
+            log_w = self.query_one(f"#{widget_id}", RichLog)
+            log_w.clear()
+            for line in lines:
+                log_w.write(line)
+        except NoMatches:
+            pass
+
+    def action_dismiss(self) -> None:
+        self.app.pop_screen()
+
+
+# ---------------------------------------------------------------------------
+# CampaignMonitorScreen (Phase 13 — Live Campaign Monitor)
+# ---------------------------------------------------------------------------
+
+
+class CampaignMonitorScreen(Screen):
+    """Full-screen live campaign monitor.
+
+    Renders three panels:
+      - Active Campaigns  — non-terminal campaigns from the registry
+      - Step Timeline     — last 100 campaign.* bus events (ring buffer)
+      - TITAN Ops Feed    — last 50 titan.* bus events (ring buffer)
+
+    Refreshes every 2 seconds.
+    Accessible via the ``c`` keybind from :class:`ThroneApp`.
+    Press ``escape`` or ``q`` to dismiss and return to the main throne.
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Back", show=True),
+        Binding("q", "dismiss", "Back", show=False),
+    ]
+
+    def __init__(self, monitor: Any | None = None) -> None:
+        super().__init__()
+        self._monitor = monitor
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Horizontal():
+            with Vertical(id="cm-active"):
+                yield Static(
+                    "[bold cyan]ACTIVE CAMPAIGNS[/bold cyan]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="cm-active-log", highlight=True, markup=True, wrap=True)
+            with Vertical(id="cm-timeline"):
+                yield Static(
+                    "[bold yellow]STEP TIMELINE[/bold yellow]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="cm-timeline-log", highlight=True, markup=True, wrap=True)
+            with Vertical(id="cm-titan"):
+                yield Static(
+                    "[bold magenta]TITAN OPS FEED[/bold magenta]",
+                    classes="panel-title",
+                )
+                yield RichLog(id="cm-titan-log", highlight=True, markup=True, wrap=True)
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._refresh_monitor()
+        self.set_interval(2.0, self._refresh_monitor)
+
+    def _refresh_monitor(self) -> None:
+        """Pull a fresh snapshot and update all three panels."""
+        if self._monitor is None:
+            self._write_panel("cm-active-log", ["[dim]No monitor wired[/dim]"])
+            self._write_panel("cm-timeline-log", ["[dim]--[/dim]"])
+            self._write_panel("cm-titan-log", ["[dim]--[/dim]"])
+            return
+
+        try:
+            snap = self._monitor.get_snapshot()
+        except Exception as exc:  # noqa: BLE001
+            self._write_panel("cm-active-log", [f"[red]Error: {exc}[/red]"])
+            return
+
+        # Active Campaigns panel
+        campaigns = snap.active_campaigns
+        if campaigns:
+            lines = []
+            for c in campaigns:
+                cid = str(c.get("campaign_id", c.get("id", "?")))
+                name = str(c.get("name", ""))
+                status = str(c.get("status", "?"))
+                lines.append(
+                    f"[cyan]{cid[:20]}[/cyan] [dim]{name[:24]}[/dim] "
+                    f"[[yellow]{status}[/yellow]]"
+                )
+        else:
+            lines = ["[dim]No active campaigns[/dim]"]
+        self._write_panel("cm-active-log", lines)
+
+        # Step Timeline panel
+        timeline = snap.step_timeline[-20:]  # most recent 20 for display
+        if timeline:
+            t_lines = []
+            for ev in reversed(timeline):
+                ts = ev.get("ts", 0.0)
+                ts_fmt = time.strftime("%H:%M:%S", time.localtime(float(ts))) if ts else "--"
+                cid = str(ev.get("campaign_id", ""))[:16]
+                step = str(ev.get("step", ""))[:30]
+                status = str(ev.get("status", ""))
+                t_lines.append(
+                    f"[dim]{ts_fmt}[/dim] [cyan]{cid}[/cyan] [yellow]{step}[/yellow] {status}"
+                )
+        else:
+            t_lines = ["[dim]No step events yet[/dim]"]
+        self._write_panel("cm-timeline-log", t_lines)
+
+        # TITAN Ops Feed panel
+        titan_feed = snap.titan_ops_feed[-20:]  # most recent 20 for display
+        if titan_feed:
+            tf_lines = []
+            for ev in reversed(titan_feed):
+                ts = ev.get("ts", 0.0)
+                ts_fmt = time.strftime("%H:%M:%S", time.localtime(float(ts))) if ts else "--"
+                topic = str(ev.get("topic", "?"))
+                payload_str = str(ev.get("payload", {}))[:60]
+                tf_lines.append(
+                    f"[dim]{ts_fmt}[/dim] [magenta]{topic}[/magenta]  {payload_str}"
+                )
+        else:
+            tf_lines = ["[dim]No TITAN events yet[/dim]"]
+        self._write_panel("cm-titan-log", tf_lines)
 
     def _write_panel(self, widget_id: str, lines: list) -> None:
         try:

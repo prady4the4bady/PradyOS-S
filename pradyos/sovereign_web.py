@@ -112,6 +112,7 @@ def create_app(
     bus: Any | None = None,
     health_registry: Any | None = None,
     observability_dashboard: Any | None = None,
+    campaign_monitor: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -128,6 +129,9 @@ def create_app(
     observability_dashboard:
         Optional ObservabilityDashboard instance (Phase 12). When provided,
         GET /api/v1/dashboard returns a live DashboardSnapshot as JSON.
+    campaign_monitor:
+        Optional CampaignMonitor instance (Phase 13). When provided,
+        GET /api/v1/campaigns/monitor returns a live CampaignMonitorSnapshot as JSON.
     """
     app = FastAPI(
         title="PRADY OS -- Sovereign Dashboard",
@@ -298,6 +302,22 @@ def create_app(
                 }},
                 status_code=200,
             )
+
+    # ------------------------------------------------------------------
+    # GET /api/v1/campaigns/monitor  (Phase 13 -- Campaign Monitor)
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/campaigns/monitor")
+    async def api_campaigns_monitor() -> JSONResponse:
+        _zero = {"active_campaigns": [], "step_timeline": [], "titan_ops_feed": []}
+        if campaign_monitor is None:
+            return JSONResponse(_zero, status_code=200)
+        try:
+            snap = campaign_monitor.get_snapshot()
+            return JSONResponse(snap.to_dict(), status_code=200)
+        except Exception as exc:  # noqa: BLE001
+            log.debug("CampaignMonitor.get_snapshot failed: %s", exc)
+            return JSONResponse(_zero, status_code=200)
 
         # POST /api/approve/{task_id}
     # ------------------------------------------------------------------

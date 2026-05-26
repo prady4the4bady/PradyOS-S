@@ -198,6 +198,34 @@ inter-process bus live across Docker and systemd planes:
   snapshot reference, multi-task quarantine, and WARDEN notification.
 - ✅ 11E: `scripts/prove.py` updated; README Phase Map updated.
 
+**Phase 13 — Complete.** All 43 test modules green. Live campaign monitor —
+the Sovereign watches every campaign step execute in real time:
+- ✅ 13A: `pradyos/aurora_throne/campaign_monitor.py` — `CampaignMonitor` class
+  with `deque(maxlen=100)` step_timeline and `deque(maxlen=50)` titan_ops_feed ring
+  buffers, `get_snapshot()` → `CampaignMonitorSnapshot` (active_campaigns,
+  step_timeline, titan_ops_feed), `start()` / `stop()` subscribe/unsubscribe on
+  the bus wildcard, `_on_campaign_event()` and `_on_titan_event()` route events by
+  prefix.
+- ✅ 13B: `pradyos/sovereign_web.py` — `GET /api/v1/campaigns/monitor` endpoint
+  wired into `create_app()` via new `campaign_monitor` parameter. Returns
+  `CampaignMonitorSnapshot.to_dict()` as JSON (200); falls back to zeroed snapshot
+  when no monitor is injected.
+- ✅ 13C: `pradyos/aurora_throne/textual_app.py` — `CampaignMonitorScreen`
+  (Textual `Screen` subclass) renders three live panels: **Active Campaigns** |
+  **Step Timeline** | **TITAN Ops Feed**. Refreshes every 2 s. Accessible via
+  the `c` keybind from `ThroneApp`; `escape` / `q` dismisses.
+- ✅ 13D: `tests/test_campaign_monitor.py` — 20 unit tests: snapshot type,
+  ring-buffer caps (100/50) and eviction, active_campaigns reflection,
+  _on_campaign_event / _on_titan_event appends with ts, start/stop
+  subscribe/unsubscribe, JSON-serialisability, dict key presence, ring-buffer
+  independence, and idempotent double-stop.
+- ✅ 13E: `tests/test_campaign_monitor_web.py` — 10 FastAPI TestClient tests:
+  HTTP 200, required keys, list types, active_campaigns reflection, Content-Type
+  application/json, ts in timeline entries, topic in titan feed entries, and safe
+  fallback with no monitor injected.
+- ✅ 13F: `scripts/prove.py` updated with both new test modules (43 total).
+- ✅ 13G: README Phase Map updated; Phase 14 planned.
+
 **Phase 12 — Complete.** All 44 test modules green. Live observability
 dashboard — the Sovereign sees everything in real time:
 - ✅ 12A: `pradyos/aurora_throne/dashboard.py` — `ObservabilityDashboard`
@@ -246,4 +274,5 @@ dashboard — the Sovereign sees everything in real time:
 | 10 | Redis Inter-Process Event Bus | Complete |
 | 11 | Self-Healing (auto-rollback, quarantine enforcement) | Complete |
 | 12 | Observability Dashboard (live bus events, quarantine, system health) | Complete |
-| 13 | Live Campaign Monitor — real-time campaign progress, step execution timeline, and TITAN ops feed in Aurora Throne | Planned |
+| 13 | Live Campaign Monitor — real-time campaign progress, step execution timeline, and TITAN ops feed in Aurora Throne | Complete |
+| 14 | Policy Engine — Sovereign-configurable task approval rules, rate limits, and constitutional guardrails enforced by IMPERIUM at dispatch time | Planned |
