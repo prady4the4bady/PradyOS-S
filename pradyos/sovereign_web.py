@@ -70,6 +70,7 @@ def create_app(
     campaign_monitor: Any | None = None,
     policy_engine: Any | None = None,
     scheduler: Any | None = None,
+    telemetry: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -260,6 +261,27 @@ def create_app(
             return JSONResponse({"disabled": True}, status_code=200)
         scheduler.disable_job(job_id)
         return JSONResponse({"disabled": True}, status_code=200)
+
+    # ------------------------------------------------------------------
+    # Phase 16 -- Telemetry endpoint
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/telemetry")
+    async def api_telemetry(
+        limit: int = 100,
+        service: str | None = None,
+        status: str | None = None,
+    ) -> JSONResponse:
+        if telemetry is None:
+            return JSONResponse({"spans": [], "count": 0}, status_code=200)
+        effective_limit = min(max(1, limit), 500)
+        spans = telemetry.get_spans(
+            limit=effective_limit,
+            service=service if service else None,
+            status=status if status else None,
+        )
+        data = [s.to_dict() for s in spans]
+        return JSONResponse({"spans": data, "count": len(data)}, status_code=200)
 
     @app.post("/api/approve/{task_id}")
     async def api_approve(task_id: str) -> JSONResponse:
