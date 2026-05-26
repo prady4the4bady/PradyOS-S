@@ -81,6 +81,8 @@ class Imperium:
         # Phase 3
         oracle: Any | None = None,
         memory: Any | None = None,
+        # Phase 11
+        self_heal_engine: Any | None = None,
     ) -> None:
         self.audit = audit or get_audit_log()
         self.bus = bus or get_bus()
@@ -92,8 +94,15 @@ class Imperium:
         self.state: StateCore = state_core or StateCore(
             checkpoint=_checkpoint, audit=self.audit, bus=self.bus
         )
+        # Phase 11: store before building RecoveryCore so the hook can be wired.
+        self._self_heal_engine: Any | None = self_heal_engine
+
         self.recovery: RecoveryCore = recovery_core or RecoveryCore(
-            state=self.state, audit=self.audit, bus=self.bus, scheduler=self.scheduler
+            state=self.state,
+            audit=self.audit,
+            bus=self.bus,
+            scheduler=self.scheduler,
+            on_exhausted=self._self_heal_hook,
         )
 
         self.checkpoint: CheckpointStore = _checkpoint
@@ -514,6 +523,46 @@ class Imperium:
         else:
             err = result.get("error") or result.get("reason") or "handler reported failure"
             self.recovery.handle_failure(rec, err)
+
+    # ---------- Phase 11: self-heal ----------
+
+    def rollback(self, task_id: str) -> None:
+        """Acknowledge a rollback for *task_id*.
+
+        Called by :class:`~pradyos.imperium.self_heal.SelfHealEngine` as
+        part of the autonomous heal cycle.  The task must exist in the
+        scheduler registry; raises :exc:`TaskNotFound` otherwise.
+        """
+        from pradyos.imperium.exceptions import TaskNotFound
+        rec = self.scheduler.get(task_id)
+        if rec is None:
+            raise TaskNotFound(f"task {task_id!r} not found in IMPERIUM registry")
+        self.audit.record(
+            agent_id=self.AGENT_ID,
+            kind="recovery",
+            summary=f"rollback acknowledged: {task_id[:8]}",
+            detail={"task_id": task_id, "state": rec.state.value},
+            correlation_id=task_id,
+        )
+
+    def _self_heal_hook(self, rec: "TaskRecord", error: str) -> None:
+        """Callback wired into RecoveryCore.on_exhausted (Phase 11).
+
+        Fires after a task is dead-lettered (retries exhausted).  Delegates
+        to :class:`~pradyos.imperium.self_heal.SelfHealEngine` if wired.
+        WARDEN is notified automatically via the ``system.self_heal`` bus
+        event published by SelfHealEngine (WARDEN listens on ``system.*``).
+        """
+        if self._self_heal_engine is not None:
+            try:
+                self._self_heal_engine.heal(
+                    rec.spec.task_id, reason="retry_budget_exhausted"
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "SelfHealEngine.heal raised for %s: %s",
+                    rec.spec.task_id[:8], exc,
+                )
 
     # ---------- default handlers ----------
     def _register_default_handlers(self) -> None:

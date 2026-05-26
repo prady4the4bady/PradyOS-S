@@ -59,12 +59,14 @@ class RecoveryCore:
         audit: AuditLog | None = None,
         bus: EventBus | None = None,
         scheduler: Any | None = None,  # SchedulerCore — avoid circular import
+        on_exhausted: Any | None = None,  # callable(rec, error) — Phase 11 self-heal hook
     ) -> None:
         self.state = state
         self.rollback_registry = rollback_registry or RollbackRegistry()
         self.audit = audit or get_audit_log()
         self.bus = bus or get_bus()
         self.scheduler = scheduler  # wired after construction to avoid cycles
+        self._on_exhausted = on_exhausted  # Phase 11: called after dead-lettering
         self._dlq: list[DeadLetterEntry] = []
 
     # ---------- public API ----------
@@ -78,6 +80,12 @@ class RecoveryCore:
         else:
             self._rollback_if_possible(rec)
             self._dead_letter(rec, error)
+            # Phase 11: notify self-heal engine after dead-lettering
+            if self._on_exhausted is not None:
+                try:
+                    self._on_exhausted(rec, error)
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("self-heal hook raised (non-fatal): %s", exc)
 
     def execute_rollback(self, instruction_id: str) -> dict[str, Any]:
         """Invoke a stored rollback entry by instruction ID."""

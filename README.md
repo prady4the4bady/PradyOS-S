@@ -179,6 +179,25 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 10F: `pyproject.toml` dev deps extended with `redis>=5.0` and
   `fakeredis>=2.0`. `deploy/secrets.env.example` documents new env vars.
 
+
+**Phase 11 — Complete.** All 41 test modules green. Autonomous self-healing live:
+- ✅ 11A: `pradyos/imperium/self_heal.py` — `SelfHealEngine` with `heal()`,
+  `is_quarantined()`, `release_quarantine()`, `quarantine_list()`. Loads
+  latest `SnapshotStore` entry as rollback reference, quarantines offending
+  tasks in-memory + persisted to `var/state/quarantine.json`, publishes
+  `system.self_heal` bus event (WARDEN auto-raises incident via `system.*`
+  wildcard), and writes a structured audit entry.
+- ✅ 11B: `pradyos/imperium/kernel.py` — `Imperium.rollback()` method added;
+  `Imperium._self_heal_hook()` callback wired into `RecoveryCore.on_exhausted`
+  so any task that exhausts its retry budget is healed autonomously.
+  `pradyos/imperium/recovery.py` extended with `on_exhausted` callback slot.
+- ✅ 11C: `pradyos/imperium/exceptions.py` — `TaskNotFound` custom exception.
+- ✅ 11D: `tests/test_self_heal.py` — 22 tests: `HealResult` correctness,
+  quarantine persistence, `is_quarantined`, `release_quarantine`, bus events,
+  audit entries, kernel integration (auto-heal on dead-letter), idempotency,
+  snapshot reference, multi-task quarantine, and WARDEN notification.
+- ✅ 11E: `scripts/prove.py` updated; README Phase Map updated.
+
 ### Phase Map
 
 | Phase | Name | Status |
@@ -194,4 +213,5 @@ inter-process bus live across Docker and systemd planes:
 | 8 | Autonomous Proposal Loop + Admission Bridge | Complete |
 | 9 | Deployment (systemd hardening + Docker hardening) | Complete |
 | 10 | Redis Inter-Process Event Bus | Complete |
-| 11 | Self-Healing (auto-rollback, quarantine enforcement) | Planned |
+| 11 | Self-Healing (auto-rollback, quarantine enforcement) | Complete |
+| 12 | Observability Dashboard (real-time Sovereign dashboard: live bus events, active quarantine, system health) | Planned |

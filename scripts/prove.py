@@ -84,6 +84,8 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_admission_bridge.py",
     # Phase 10
     "tests/test_redis_bus.py",
+    # Phase 11
+    "tests/test_self_heal.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
