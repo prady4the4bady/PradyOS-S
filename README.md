@@ -214,7 +214,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 17E: `scripts/prove.py` updated with both new test modules (51 total).
 - ✅ 17F: README Phase Map updated; Phase 18 planned.
 
-**Phase 18 — Planned.** Sovereign Event Ledger — an append-only, cryptographically chained audit ledger where every state-change event in the OS is recorded as a signed entry; queryable via /api/v1/ledger and integrated with the telemetry pipeline for cross-phase tracing.
+**Phase 18 — Complete.** All 53 test modules green. Sovereign Event Ledger — an append-only, cryptographically chained audit log where every OS event is committed as a hash-chain entry that can be verified in O(n) time:
+- ✅ 18A: `pradyos/core/ledger.py` — `LedgerEntry` dataclass with `entry_id` (uuid4 hex), `prev_hash`, `entry_hash` (SHA-256), `service`, `event`, `payload`, `ts`. `EventLedger` class: thread-safe `append()`, `verify()`, `get_entries()` with optional service/event filters, `__len__`, `clear()`.
+- ✅ 18B: `pradyos/sovereign_web.py` — patched to add optional `ledger` param to `create_app()`; `GET /api/v1/ledger` returns `{entries, count}` with `limit`, `service`, `event` query params; `GET /api/v1/ledger/verify` returns `{valid, count}`. Safe empty responses when no ledger injected.
+- ✅ 18C: `tests/test_ledger.py` — 20 unit tests covering append, verify, get_entries, len, clear, tamper detection.
+- ✅ 18D: `tests/test_ledger_web.py` — 10 FastAPI TestClient tests for both ledger endpoints.
+- ✅ 18E: `scripts/prove.py` updated with both new test modules (53 total).
+- ✅ 18F: README Phase Map updated; Phase 19 planned.
+
+**Phase 19 — Planned.** Sovereign Intent Engine — a lightweight rule-based planner that reads the memory graph, active campaigns, and telemetry spans to infer the next best action; exposes `/api/v1/intent/suggest` and integrates with the scheduler for autonomous campaign proposals.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
@@ -258,4 +266,34 @@ IMPERIUM enforces Sovereign-configured rules at dispatch time:
   to permissive engine). `_run_record()` calls `policy_engine.evaluate()`
   before the constitutional gate; raises `PolicyViolationError` if blocked.
 - ✅ 14C: `pradyos/sovereign_web.py` — `GET /api/v1/policy/rules` returns
-  `{"rules": [...]}`
+  `{"rules": [...]}` (200); `POST /api/v1/policy/rules` body
+  `{"rules": [...]}` calls `policy_engine.load()`, returns
+  `{"loaded": N}` (200). Wired via new `policy_engine` param in
+  `create_app()`. Falls back to empty rules list when not injected.
+- ✅ 14D: `tests/test_policy_engine.py` — 20 unit tests covering all rule
+  types, match semantics, rate-limit windowing (mock time), thread safety,
+  `load()` replacement, `get_rules()` copy isolation, `to_dict()` keys,
+  reason strings, multi-rule first-wins, and integration with
+  `ImperiumKernel` raising `PolicyViolationError`.
+- ✅ 14E: `tests/test_policy_web.py` — 10 FastAPI TestClient tests: HTTP 200
+  on GET and POST, required keys (`rules` / `loaded`), `loaded` count,
+  GET-after-POST reflection, empty-POST clears rules, and Content-Type
+  application/json on both endpoints.
+- ✅ 14F: `scripts/prove.py` updated with both new test modules (46 total).
+- ✅ 14G: README Phase Map updated; Phase 15 planned.
+
+**Phase 13 — Complete.** All 43 test modules green. Live campaign monitor —
+the Sovereign watches every campaign step execute in real time:
+- ✅ 13A: `pradyos/aurora_throne/campaign_monitor.py` — `CampaignMonitor` class
+  with `deque(maxlen=100)` step_timeline and `deque(maxlen=50)` titan_ops_feed ring
+  buffers, `get_snapshot()` → `CampaignMonitorSnapshot` (active_campaigns,
+  step_timeline, titan_ops_feed), `start()` / `stop()` subscribe/unsubscribe on
+  the bus wildcard, `_on_campaign_event()` and `_on_titan_event()` route events by
+  prefix.
+- ✅ 13B: `pradyos/sovereign_web.py` — `GET /api/v1/campaigns/monitor` endpoint
+  wired into `create_app()` via new `campaign_monitor` parameter. Returns
+  `CampaignMonitorSnapshot.to_dict()` as JSON (200); falls back to zeroed snapshot
+  when no monitor is injected.
+- ✅ 13C: `pradyos/aurora_throne/textual_app.py` — `CampaignMonitorScreen`
+  (Textual `Screen` subclass) renders three live panels: **Active Campaigns** |
+  **Step

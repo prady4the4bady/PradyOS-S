@@ -12,6 +12,8 @@ from typing import Any, AsyncGenerator
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
+from pradyos.core.ledger import EventLedger
+
 log = logging.getLogger("pradyos.sovereign_web")
 
 _DEFAULT_STATE_DIR = Path(
@@ -72,6 +74,7 @@ def create_app(
     scheduler: Any | None = None,
     telemetry: Any | None = None,
     graph: Any | None = None,
+    ledger: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -365,6 +368,28 @@ def create_app(
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
+
+
+    # ── Phase 18: Sovereign Event Ledger endpoints ──────────────────────────
+
+    @app.get("/api/v1/ledger")
+    async def api_ledger_entries(
+        limit: int = 100,
+        service: str | None = None,
+        event: str | None = None,
+    ) -> JSONResponse:
+        if ledger is None:
+            return JSONResponse({"entries": [], "count": 0})
+        entries = ledger.get_entries(limit=limit, service=service, event=event)
+        return JSONResponse({"entries": [e.to_dict() for e in entries], "count": len(entries)})
+
+    @app.get("/api/v1/ledger/verify")
+    async def api_ledger_verify() -> JSONResponse:
+        if ledger is None:
+            return JSONResponse({"valid": True, "count": 0})
+        valid = ledger.verify()
+        count = len(ledger)
+        return JSONResponse({"valid": valid, "count": count})
 
     return app
 
