@@ -71,6 +71,7 @@ def create_app(
     policy_engine: Any | None = None,
     scheduler: Any | None = None,
     telemetry: Any | None = None,
+    graph: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -282,6 +283,63 @@ def create_app(
         )
         data = [s.to_dict() for s in spans]
         return JSONResponse({"spans": data, "count": len(data)}, status_code=200)
+
+
+    # ------------------------------------------------------------------
+    # Phase 17 -- Memory Graph endpoints
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/graph/stats")
+    async def api_graph_stats() -> JSONResponse:
+        if graph is None:
+            return JSONResponse({"nodes": 0, "edges": 0}, status_code=200)
+        return JSONResponse(graph.stats(), status_code=200)
+
+    @app.get("/api/v1/graph/nodes")
+    async def api_graph_nodes(
+        kind: str | None = None,
+        label: str | None = None,
+        limit: int = 100,
+    ) -> JSONResponse:
+        if graph is None:
+            return JSONResponse({"nodes": [], "count": 0}, status_code=200)
+        nodes = graph.query_nodes(
+            kind=kind if kind else None,
+            label=label if label else None,
+        )
+        capped = nodes[:max(1, limit)]
+        data = [n.to_dict() for n in capped]
+        return JSONResponse({"nodes": data, "count": len(data)}, status_code=200)
+
+    @app.post("/api/v1/graph/nodes")
+    async def api_graph_add_node(request: Request) -> JSONResponse:
+        if graph is None:
+            return JSONResponse({"nodes": [], "count": 0}, status_code=200)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        node = graph.add_node(
+            kind=body.get("kind", ""),
+            label=body.get("label", ""),
+            node_id=body.get("node_id") or None,
+            attributes=body.get("attributes") or None,
+        )
+        return JSONResponse(node.to_dict(), status_code=200)
+
+    @app.get("/api/v1/graph/nodes/{node_id}/neighbours")
+    async def api_graph_neighbours(
+        node_id: str,
+        relation: str | None = None,
+    ) -> JSONResponse:
+        if graph is None:
+            return JSONResponse({"neighbours": [], "count": 0}, status_code=200)
+        neighbours = graph.neighbours(
+            node_id=node_id,
+            relation=relation if relation else None,
+        )
+        data = [n.to_dict() for n in neighbours]
+        return JSONResponse({"neighbours": data, "count": len(data)}, status_code=200)
 
     @app.post("/api/approve/{task_id}")
     async def api_approve(task_id: str) -> JSONResponse:

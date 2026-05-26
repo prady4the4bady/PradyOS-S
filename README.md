@@ -206,7 +206,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 16E: `scripts/prove.py` updated with both new test modules (49 total).
 - ✅ 16F: README Phase Map updated; Phase 17 planned.
 
-**Phase 17 — Planned.** Sovereign Memory Graph — a knowledge graph layer where the OS stores facts, relationships, and inferences about campaigns, tasks, and system state; queryable via /api/v1/memory/graph and visualised in the Aurora Throne TUI.
+**Phase 17 — Complete.** All 51 test modules green. Sovereign Memory Graph — a knowledge graph layer where the OS stores facts, relationships, and inferences about campaigns, tasks, and system state — queryable via API and visualised in the Aurora Throne TUI:
+- ✅ 17A: `pradyos/core/memorygraph.py` — `GraphNode` and `GraphEdge` dataclasses with `to_dict()`. `SovereignMemoryGraph` with bounded storage (maxnodes/maxedges), LRU-by-age eviction, `add_node()`, `add_edge()`, `get_node()`, `get_edge()`, `neighbours(relation=None)`, `query_nodes(kind, label)` sorted newest-first, `remove_node()` cascading edge removal, `remove_edge()`, `stats()`, `clear()`. Thread-safe via `threading.Lock`. Auto-generates UUID4 hex ids.
+- ✅ 17B: `pradyos/sovereign_web.py` — `GET /api/v1/graph/stats` returns `{"nodes": int, "edges": int}`; `POST /api/v1/graph/nodes` body `{kind, label, node_id?, attributes?}` returns new node dict; `GET /api/v1/graph/nodes?kind&label&limit` returns `{"nodes": [...], "count": int}`; `GET /api/v1/graph/nodes/{node_id}/neighbours?relation` returns `{"neighbours": [...], "count": int}`. Wired via new `graph` param in `create_app()`. Safe empty responses when graph not injected.
+- ✅ 17C: `tests/test_memorygraph.py` — 20 unit tests covering add_node kind/label/auto-id/explicit-id/stats, add_edge fields/auto-id/stats, get_node hit/miss, get_edge hit, neighbours basic/relation-filter, query_nodes kind/label filter, remove_node true/false/cascade, remove_edge true/false, maxnodes eviction, and clear.
+- ✅ 17D: `tests/test_memorygraph_web.py` — 10 FastAPI TestClient tests: GET stats 200, stats keys, POST node 200, POST required keys, GET nodes 200/shape, count==len after POST, kind filter, GET neighbours 200, neighbours shape/count, no-graph safe empty.
+- ✅ 17E: `scripts/prove.py` updated with both new test modules (51 total).
+- ✅ 17F: README Phase Map updated; Phase 18 planned.
+
+**Phase 18 — Planned.** Sovereign Event Ledger — an append-only, cryptographically chained audit ledger where every state-change event in the OS is recorded as a signed entry; queryable via /api/v1/ledger and integrated with the telemetry pipeline for cross-phase tracing.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
@@ -250,34 +258,4 @@ IMPERIUM enforces Sovereign-configured rules at dispatch time:
   to permissive engine). `_run_record()` calls `policy_engine.evaluate()`
   before the constitutional gate; raises `PolicyViolationError` if blocked.
 - ✅ 14C: `pradyos/sovereign_web.py` — `GET /api/v1/policy/rules` returns
-  `{"rules": [...]}` (200); `POST /api/v1/policy/rules` body
-  `{"rules": [...]}` calls `policy_engine.load()`, returns
-  `{"loaded": N}` (200). Wired via new `policy_engine` param in
-  `create_app()`. Falls back to empty rules list when not injected.
-- ✅ 14D: `tests/test_policy_engine.py` — 20 unit tests covering all rule
-  types, match semantics, rate-limit windowing (mock time), thread safety,
-  `load()` replacement, `get_rules()` copy isolation, `to_dict()` keys,
-  reason strings, multi-rule first-wins, and integration with
-  `ImperiumKernel` raising `PolicyViolationError`.
-- ✅ 14E: `tests/test_policy_web.py` — 10 FastAPI TestClient tests: HTTP 200
-  on GET and POST, required keys (`rules` / `loaded`), `loaded` count,
-  GET-after-POST reflection, empty-POST clears rules, and Content-Type
-  application/json on both endpoints.
-- ✅ 14F: `scripts/prove.py` updated with both new test modules (46 total).
-- ✅ 14G: README Phase Map updated; Phase 15 planned.
-
-**Phase 13 — Complete.** All 43 test modules green. Live campaign monitor —
-the Sovereign watches every campaign step execute in real time:
-- ✅ 13A: `pradyos/aurora_throne/campaign_monitor.py` — `CampaignMonitor` class
-  with `deque(maxlen=100)` step_timeline and `deque(maxlen=50)` titan_ops_feed ring
-  buffers, `get_snapshot()` → `CampaignMonitorSnapshot` (active_campaigns,
-  step_timeline, titan_ops_feed), `start()` / `stop()` subscribe/unsubscribe on
-  the bus wildcard, `_on_campaign_event()` and `_on_titan_event()` route events by
-  prefix.
-- ✅ 13B: `pradyos/sovereign_web.py` — `GET /api/v1/campaigns/monitor` endpoint
-  wired into `create_app()` via new `campaign_monitor` parameter. Returns
-  `CampaignMonitorSnapshot.to_dict()` as JSON (200); falls back to zeroed snapshot
-  when no monitor is injected.
-- ✅ 13C: `pradyos/aurora_throne/textual_app.py` — `CampaignMonitorScreen`
-  (Textual `Screen` subclass) renders three live panels: **Active Campaigns** |
-  **Step
+  `{"rules": [...]}`
