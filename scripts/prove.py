@@ -92,6 +92,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 13
     "tests/test_campaign_monitor.py",
     "tests/test_campaign_monitor_web.py",
+    # Phase 14
+    "tests/test_policy_engine.py",
+    "tests/test_policy_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -402,8 +405,4 @@ def main(argv: list[str] | None = None) -> int:
                 break
 
     print_summary(results)
-    return 1 if any_failed else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+  

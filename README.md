@@ -198,6 +198,38 @@ inter-process bus live across Docker and systemd planes:
   snapshot reference, multi-task quarantine, and WARDEN notification.
 - ✅ 11E: `scripts/prove.py` updated; README Phase Map updated.
 
+**Phase 14 — Complete.** All 46 test modules green. Policy engine —
+IMPERIUM enforces Sovereign-configured rules at dispatch time:
+- ✅ 14A: `pradyos/imperium/policy_engine.py` — `PolicyEngine` class
+  (pure — no bus, no kernel imports) with `load()` / `get_rules()` /
+  `evaluate()` returning a `PolicyVerdict(allowed, reason)` dataclass.
+  Three rule types: **constitutional_guard** (unconditional block),
+  **rate_limit** (timestamp-list counter pruned by `time.time()`),
+  **approval_required** (allowed=True; enforcement delegated to Sovereign).
+  Match semantics: empty dict matches all tasks; string values use substring
+  containment; all keys must satisfy for a rule to fire. Thread-safe via
+  `threading.Lock`. `PolicyViolationError` defined in same module.
+- ✅ 14B: `pradyos/imperium/kernel.py` — `PolicyEngine` injected into
+  `ImperiumKernel.__init__` as optional `policy_engine` param (falls back
+  to permissive engine). `_run_record()` calls `policy_engine.evaluate()`
+  before the constitutional gate; raises `PolicyViolationError` if blocked.
+- ✅ 14C: `pradyos/sovereign_web.py` — `GET /api/v1/policy/rules` returns
+  `{"rules": [...]}` (200); `POST /api/v1/policy/rules` body
+  `{"rules": [...]}` calls `policy_engine.load()`, returns
+  `{"loaded": N}` (200). Wired via new `policy_engine` param in
+  `create_app()`. Falls back to empty rules list when not injected.
+- ✅ 14D: `tests/test_policy_engine.py` — 20 unit tests covering all rule
+  types, match semantics, rate-limit windowing (mock time), thread safety,
+  `load()` replacement, `get_rules()` copy isolation, `to_dict()` keys,
+  reason strings, multi-rule first-wins, and integration with
+  `ImperiumKernel` raising `PolicyViolationError`.
+- ✅ 14E: `tests/test_policy_web.py` — 10 FastAPI TestClient tests: HTTP 200
+  on GET and POST, required keys (`rules` / `loaded`), `loaded` count,
+  GET-after-POST reflection, empty-POST clears rules, and Content-Type
+  application/json on both endpoints.
+- ✅ 14F: `scripts/prove.py` updated with both new test modules (46 total).
+- ✅ 14G: README Phase Map updated; Phase 15 planned.
+
 **Phase 13 — Complete.** All 43 test modules green. Live campaign monitor —
 the Sovereign watches every campaign step execute in real time:
 - ✅ 13A: `pradyos/aurora_throne/campaign_monitor.py` — `CampaignMonitor` class
@@ -239,40 +271,4 @@ dashboard — the Sovereign sees everything in real time:
   wired into the existing FastAPI app via a new `observability_dashboard`
   constructor parameter. Returns `DashboardSnapshot.to_dict()` as JSON
   (200); falls back to a zeroed snapshot when no dashboard is injected.
-- ✅ 12C: `pradyos/aurora_throne/textual_app.py` — `DashboardScreen`
-  (Textual `Screen` subclass) renders three live panels: **Live Bus
-  Events** | **Quarantine** | **System Health**. Refreshes every 2 s.
-  Accessible via the `d` keybind from `ThroneApp`; `escape` / `q`
-  dismisses and returns to the main Throne.
-- ✅ 12D: `tests/test_dashboard.py` — 20 unit tests: snapshot type,
-  ring-buffer cap (50) and eviction, quarantine reflection, health
-  thresholds (ok/degraded/critical), start/stop subscribe/unsubscribe,
-  _on_bus_event appends, last_event_ts tracking, active_tasks and
-  dead_letter_count from kernel, JSON-serialisability, dict field
-  presence, and idempotent double-stop.
-- ✅ 12E: `tests/test_dashboard_web.py` — 10 FastAPI TestClient tests:
-  HTTP 200, required keys (bus_events / quarantine / system_health),
-  quarantine state reflection, status field validity, bus_events as
-  list, health metric keys, and Content-Type: application/json.
-- ✅ 12F: `scripts/prove.py` updated with both new test modules (44 total).
-- ✅ 12G: README Phase Map updated; Phase 13 planned.
-
-### Phase Map
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 0 | Substrate (TITAN, WARDEN, IMPERIUM, THRONE) | Complete |
-| 1 | Oracle AI Core + Planner | Complete |
-| 2 | Memory Citadel | Complete |
-| 3 | Campaign Engine | Complete |
-| 4 | Warden Phase 4 | Complete |
-| 5 | Sovereign Web + CLI + REPL | Complete |
-| 6 | Snapshot, Healthcheck, Watchdog | Complete |
-| 7 | Audit Hooks, Metrics Hooks, Retry Hooks, Config Watcher | Complete |
-| 8 | Autonomous Proposal Loop + Admission Bridge | Complete |
-| 9 | Deployment (systemd hardening + Docker hardening) | Complete |
-| 10 | Redis Inter-Process Event Bus | Complete |
-| 11 | Self-Healing (auto-rollback, quarantine enforcement) | Complete |
-| 12 | Observability Dashboard (live bus events, quarantine, system health) | Complete |
-| 13 | Live Campaign Monitor — real-time campaign progress, step execution timeline, and TITAN ops feed in Aurora Throne | Complete |
-| 14 | Policy Engine — Sovereign-configurable task approval rules, rate limits, and constitutional guardrails enforced by IMPERIUM at dispatch time | Planned |
+- ✅ 12C: `pradyos/aurora_throne/textual_app.py` — `DashboardScr

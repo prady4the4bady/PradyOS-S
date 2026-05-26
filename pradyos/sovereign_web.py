@@ -33,7 +33,7 @@ import time
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -113,6 +113,7 @@ def create_app(
     health_registry: Any | None = None,
     observability_dashboard: Any | None = None,
     campaign_monitor: Any | None = None,
+    policy_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -132,6 +133,10 @@ def create_app(
     campaign_monitor:
         Optional CampaignMonitor instance (Phase 13). When provided,
         GET /api/v1/campaigns/monitor returns a live CampaignMonitorSnapshot as JSON.
+    policy_engine:
+        Optional PolicyEngine instance (Phase 14). When provided,
+        GET /api/v1/policy/rules returns current rules and
+        POST /api/v1/policy/rules replaces the ruleset.
     """
     app = FastAPI(
         title="PRADY OS -- Sovereign Dashboard",
@@ -318,6 +323,28 @@ def create_app(
         except Exception as exc:  # noqa: BLE001
             log.debug("CampaignMonitor.get_snapshot failed: %s", exc)
             return JSONResponse(_zero, status_code=200)
+
+    # ------------------------------------------------------------------
+    # GET  /api/v1/policy/rules  (Phase 14 -- Policy Engine)
+    # POST /api/v1/policy/rules
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/policy/rules")
+    async def api_policy_get_rules() -> JSONResponse:
+        if policy_engine is None:
+            return JSONResponse({"rules": []}, status_code=200)
+        return JSONResponse({"rules": policy_engine.get_rules()}, status_code=200)
+
+    @app.post("/api/v1/policy/rules")
+    async def api_policy_set_rules(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        rules = body.get("rules", []) if isinstance(body, dict) else []
+        if policy_engine is not None:
+            policy_engine.load(rules)
+        return JSONResponse({"loaded": len(rules)}, status_code=200)
 
         # POST /api/approve/{task_id}
     # ------------------------------------------------------------------
