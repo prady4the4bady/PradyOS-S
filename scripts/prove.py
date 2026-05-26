@@ -107,6 +107,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 18
     "tests/test_ledger.py",
     "tests/test_ledger_web.py",
+    # Phase 19
+    "tests/test_intent_engine.py",
+    "tests/test_intent_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -410,6 +413,4 @@ def main(argv: list[str] | None = None) -> int:
             pytest_cmd, module, fast=args.fast, verbose=args.verbose
         )
         print_result(label, passed, duration, output, verbose=args.verbose)
-        results.append((label, passed, duration))
-        if not passed:
-            any_f
+        

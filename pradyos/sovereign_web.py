@@ -75,6 +75,7 @@ def create_app(
     telemetry: Any | None = None,
     graph: Any | None = None,
     ledger: Any | None = None,
+    intent: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -390,6 +391,46 @@ def create_app(
         valid = ledger.verify()
         count = len(ledger)
         return JSONResponse({"valid": valid, "count": count})
+
+    # ── Phase 19: Sovereign Intent Engine endpoints ─────────────────────────
+
+    @app.get("/api/v1/intent/rules")
+    async def api_intent_get_rules() -> JSONResponse:
+        if intent is None:
+            return JSONResponse({"rules": [], "count": 0}, status_code=200)
+        rules = intent.get_rules()
+        return JSONResponse({"rules": rules, "count": len(rules)}, status_code=200)
+
+    @app.post("/api/v1/intent/rules")
+    async def api_intent_load_rules(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        rules = body.get("rules", []) if isinstance(body, dict) else []
+        if intent is not None:
+            intent.load_rules(rules)
+        return JSONResponse({"loaded": len(rules)}, status_code=200)
+
+    @app.post("/api/v1/intent/suggest")
+    async def api_intent_suggest(request: Request) -> JSONResponse:
+        if intent is None:
+            return JSONResponse({"suggestions": [], "count": 0}, status_code=200)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+        suggestions = intent.suggest(
+            graph_stats=body.get("graph_stats"),
+            active_campaigns=body.get("active_campaigns"),
+            recent_spans=body.get("recent_spans"),
+            recent_entries=body.get("recent_entries"),
+        )
+        data = [s.to_dict() for s in suggestions]
+        return JSONResponse({"suggestions": data, "count": len(data)}, status_code=200)
+
 
     return app
 

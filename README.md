@@ -222,7 +222,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 18E: `scripts/prove.py` updated with both new test modules (53 total).
 - ✅ 18F: README Phase Map updated; Phase 19 planned.
 
-**Phase 19 — Planned.** Sovereign Intent Engine — a lightweight rule-based planner that reads the memory graph, active campaigns, and telemetry spans to infer the next best action; exposes `/api/v1/intent/suggest` and integrates with the scheduler for autonomous campaign proposals.
+**Phase 19 — Complete.** All 55 test modules green. Sovereign Intent Engine — a rule-based planner that evaluates runtime context (memory graph, active campaigns, telemetry spans, event ledger) against a configurable rule set and emits ranked `IntentSuggestion` objects with action, target, reason, confidence, and cryptographic suggestion_id:
+- ✅ 19A: `pradyos/core/intent_engine.py` — `IntentSuggestion` dataclass (`suggestion_id` uuid4 hex, `action`, `target`, `reason`, `confidence`, `ts`, `to_dict()`). `IntentEngine` class: thread-safe `load_rules()` / `get_rules()` (independent copy), `suggest()` evaluating four conditions — `graph_nodes_gt`, `error_span_rate_gt`, `active_campaigns_lt`, `ledger_events_gt`; unknown conditions silently skipped.
+- ✅ 19B: `pradyos/sovereign_web.py` — patched to add optional `intent` param to `create_app()`; `GET /api/v1/intent/rules` returns `{rules, count}`; `POST /api/v1/intent/rules` body `{rules:[...]}` returns `{loaded}`; `POST /api/v1/intent/suggest` body `{graph_stats, active_campaigns, recent_spans, recent_entries}` returns `{suggestions, count}`. Safe empty responses when no intent injected.
+- ✅ 19C: `tests/test_intent_engine.py` — 20 unit tests covering all four conditions (fire and no-fire cases), mutation-safe copy semantics, suggestion field correctness, uuid hex id, approximate ts, `to_dict()` keys, unknown condition skip, and empty-list clear.
+- ✅ 19D: `tests/test_intent_web.py` — 10 FastAPI TestClient tests for all three intent endpoints including round-trip POST→GET rules verification and no-intent safe-empty responses.
+- ✅ 19E: `scripts/prove.py` updated with both new test modules (55 total).
+- ✅ 19F: README Phase Map updated; Phase 20 planned.
+
+**Phase 20 — Planned.** Sovereign Audit Trail UI — a read-only, paginated web UI served at `/audit` that renders the event ledger, telemetry spans, and intent suggestions in a single timeline view; no new dependencies, pure HTML/CSS/JS served from the existing FastAPI app.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
