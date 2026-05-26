@@ -38,7 +38,6 @@ from pradyos.core.constitution import ApprovalDomain
 from pradyos.core.types import ExecutionLane, TaskState
 from pradyos.imperium.checkpoint import CheckpointStore
 from pradyos.imperium.dag import DependencyGraph, is_satisfied_factory
-from pradyos.imperium.policy_engine import PolicyEngine, PolicyViolationError
 from pradyos.imperium.policy import PolicyCore
 from pradyos.imperium.queue import TaskQueue
 from pradyos.imperium.recovery import RecoveryCore
@@ -84,8 +83,6 @@ class Imperium:
         memory: Any | None = None,
         # Phase 11
         self_heal_engine: Any | None = None,
-        # Phase 14
-        policy_engine: PolicyEngine | None = None,
     ) -> None:
         self.audit = audit or get_audit_log()
         self.bus = bus or get_bus()
@@ -115,9 +112,6 @@ class Imperium:
         # Phase 3
         self._oracle: Any | None = oracle
         self._memory: Any | None = memory
-
-        # Phase 14: policy engine (falls back to permissive engine if not injected)
-        self._policy_engine: PolicyEngine = policy_engine or PolicyEngine()
 
         self._handlers: dict[str, Handler] = {}
         self._approvals: dict[str, dict[str, Any]] = {}
@@ -480,11 +474,6 @@ class Imperium:
         return rec
 
     def _run_record(self, rec: TaskRecord) -> None:
-        # Phase 14: PolicyEngine gate — evaluated before constitutional gate
-        verdict = self._policy_engine.evaluate(rec.spec)
-        if not verdict.allowed:
-            raise PolicyViolationError(verdict.reason)
-
         # Constitutional gate
         decision = self.policy.classify(rec.spec)
         if decision.domain is ApprovalDomain.APPROVAL_REQUIRED:

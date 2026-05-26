@@ -1,28 +1,4 @@
-"""Sovereign Web Dashboard (Phase 4C / Phase 5 extensions).
-
-FastAPI application providing an HTTP control plane for PRADY OS.
-
-Entry point: ``pradyos-web``  (runs on ``0.0.0.0:8000``)
-
-Routes
-------
-GET  /                          HTML dashboard (inline Jinja2 template)
-GET  /api/status                JSON: checkpoint state, warden snapshot, active campaigns
-GET  /api/campaigns             JSON list of all campaigns with progress
-GET  /api/health                JSON: health probe results (Phase 5B)
-GET  /api/analytics             JSON: campaign analytics (Phase 5E)
-POST /api/approve/{task_id}     Write approval decision -> JSON confirmation
-POST /api/reject/{task_id}      Write rejection decision -> JSON confirmation
-GET  /stream                    Server-Sent Events stream from EventBus
-
-Windows safety
---------------
-* No uvloop -- uses asyncio default event loop
-* All paths via pathlib.Path
-* No AF_UNIX, no fork(), no os.killpg()
-* SSE implemented with asyncio.Queue (no trio, no anyio required)
-"""
-
+"""Sovereign Web Dashboard (Phase 4C / Phase 5 extensions)."""
 from __future__ import annotations
 
 import asyncio
@@ -38,10 +14,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 log = logging.getLogger("pradyos.sovereign_web")
 
-# ---------------------------------------------------------------------------
-# State / decisions file
-# ---------------------------------------------------------------------------
-
 _DEFAULT_STATE_DIR = Path(
     os.environ.get(
         "PRADYOS_STATE_PATH",
@@ -52,28 +24,17 @@ _DECISIONS_FILE = _DEFAULT_STATE_DIR / "sovereign_decisions.jsonl"
 
 
 def _write_decision(task_id: str, decision: str, reason: str = "") -> dict[str, Any]:
-    """Append a decision record to the decisions file."""
     _DEFAULT_STATE_DIR.mkdir(parents=True, exist_ok=True)
-    record = {
-        "task_id": task_id,
-        "decision": decision,
-        "reason": reason,
-        "ts": time.time(),
-    }
+    record = {"task_id": task_id, "decision": decision, "reason": reason, "ts": time.time()}
     with _DECISIONS_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
     return record
 
 
-# ---------------------------------------------------------------------------
-# EventBus SSE bridge
-# ---------------------------------------------------------------------------
-
 _sse_queues: list[asyncio.Queue[str]] = []
 
 
 def _publish_to_sse(topic: str, payload: dict[str, Any]) -> None:
-    """Forward EventBus events to all active SSE subscribers."""
     data = json.dumps({"topic": topic, "payload": payload})
     for q in list(_sse_queues):
         try:
@@ -83,7 +44,6 @@ def _publish_to_sse(topic: str, payload: dict[str, Any]) -> None:
 
 
 async def _sse_generator(queue: asyncio.Queue[str]) -> AsyncGenerator[str, None]:
-    """Yield SSE-formatted messages from the queue."""
     keepalive_s = float(os.environ.get("PRADYOS_SSE_KEEPALIVE_S", "30.0"))
     _sse_queues.append(queue)
     try:
@@ -101,11 +61,6 @@ async def _sse_generator(queue: asyncio.Queue[str]) -> AsyncGenerator[str, None]
             pass
 
 
-# ---------------------------------------------------------------------------
-# App factory
-# ---------------------------------------------------------------------------
-
-
 def create_app(
     campaign_registry: Any | None = None,
     checkpoint_store: Any | None = None,
@@ -114,52 +69,17 @@ def create_app(
     observability_dashboard: Any | None = None,
     campaign_monitor: Any | None = None,
     policy_engine: Any | None = None,
+    scheduler: Any | None = None,
 ) -> FastAPI:
-    """Create and configure the FastAPI application.
+    """Create and configure the FastAPI application."""
+    app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
 
-    Parameters
-    ----------
-    campaign_registry:
-        Optional CampaignRegistry instance. Falls back to the global one.
-    checkpoint_store:
-        Optional CheckpointStore instance.
-    bus:
-        Optional EventBus. Falls back to the global singleton.
-    health_registry:
-        Optional HealthRegistry instance. Falls back to the global singleton.
-    observability_dashboard:
-        Optional ObservabilityDashboard instance (Phase 12). When provided,
-        GET /api/v1/dashboard returns a live DashboardSnapshot as JSON.
-    campaign_monitor:
-        Optional CampaignMonitor instance (Phase 13). When provided,
-        GET /api/v1/campaigns/monitor returns a live CampaignMonitorSnapshot as JSON.
-    policy_engine:
-        Optional PolicyEngine instance (Phase 14). When provided,
-        GET /api/v1/policy/rules returns current rules and
-        POST /api/v1/policy/rules replaces the ruleset.
-    """
-    app = FastAPI(
-        title="PRADY OS -- Sovereign Dashboard",
-        version="5.0",
-        docs_url="/docs",
-    )
-
-    # Wire EventBus -> SSE
     if bus is not None:
         bus.subscribe("*", _publish_to_sse)
 
-    # ------------------------------------------------------------------
-    # GET /
-    # ------------------------------------------------------------------
-
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def dashboard() -> HTMLResponse:
-        html = _DASHBOARD_HTML
-        return HTMLResponse(content=html, status_code=200)
-
-    # ------------------------------------------------------------------
-    # GET /api/status
-    # ------------------------------------------------------------------
+        return HTMLResponse(content=_DASHBOARD_HTML, status_code=200)
 
     @app.get("/api/status")
     async def api_status() -> JSONResponse:
@@ -167,29 +87,20 @@ def create_app(
         if checkpoint_store is not None:
             try:
                 checkpoint_summary = _read_checkpoint_summary(checkpoint_store)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 checkpoint_summary = {"error": str(e)}
-
         active_campaigns: list[dict] = []
         if campaign_registry is not None:
             try:
                 active_campaigns = [c.to_dict() for c in campaign_registry.active()]
-            except Exception as e:  # noqa: BLE001
+            except Exception:
                 active_campaigns = []
-
-        return JSONResponse(
-            {
-                "ok": True,
-                "timestamp": time.time(),
-                "checkpoint": checkpoint_summary,
-                "warden": {"status": "operational"},
-                "active_campaigns": active_campaigns,
-            }
-        )
-
-    # ------------------------------------------------------------------
-    # GET /api/campaigns
-    # ------------------------------------------------------------------
+        return JSONResponse({
+            "ok": True, "timestamp": time.time(),
+            "checkpoint": checkpoint_summary,
+            "warden": {"status": "operational"},
+            "active_campaigns": active_campaigns,
+        })
 
     @app.get("/api/campaigns")
     async def api_campaigns() -> JSONResponse:
@@ -200,13 +111,9 @@ def create_app(
                     d = c.to_dict()
                     d["progress"] = c.progress()
                     campaigns.append(d)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.debug("Error fetching campaigns: %s", e)
         return JSONResponse({"ok": True, "campaigns": campaigns, "count": len(campaigns)})
-
-    # ------------------------------------------------------------------
-    # GET /api/health  (Phase 5B)
-    # ------------------------------------------------------------------
 
     @app.get("/api/health")
     async def api_health() -> JSONResponse:
@@ -215,17 +122,10 @@ def create_app(
             reg = health_registry if health_registry is not None else get_health_registry()
             overall = reg.overall()
             probes = reg.run_all()
-            return JSONResponse({
-                "status": overall,
-                "probes": [p.dict() for p in probes],
-            })
-        except Exception as e:  # noqa: BLE001
+            return JSONResponse({"status": overall, "probes": [p.dict() for p in probes]})
+        except Exception as e:
             log.debug("Health registry unavailable: %s", e)
             return JSONResponse({"status": "ok", "probes": []})
-
-    # ------------------------------------------------------------------
-    # GET /api/analytics  (Phase 5E)
-    # ------------------------------------------------------------------
 
     @app.get("/api/analytics")
     async def api_analytics() -> JSONResponse:
@@ -236,17 +136,11 @@ def create_app(
                 raise ValueError("no registry")
             analytics = CampaignAnalytics(registry=reg)
             return JSONResponse(analytics.to_dict())
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.debug("Analytics unavailable: %s", e)
-            return JSONResponse({
-                "success_rate": 0.0,
-                "avg_duration_s": 0.0,
-                "node_failure_histogram": {},
-                "busiest_hours": [],
-            })
+            return JSONResponse({"success_rate": 0.0, "avg_duration_s": 0.0,
+                                 "node_failure_histogram": {}, "busiest_hours": []})
 
-    # ------------------------------------------------------------------
-    # GET /api/metrics  (Phase 6 Observability)
     @app.get("/api/metrics")
     async def api_metrics() -> JSONResponse:
         try:
@@ -256,61 +150,35 @@ def create_app(
             snapshot = {"error": str(exc)}
         return JSONResponse({"metrics": snapshot, "ts": time.time()})
 
-    # ------------------------------------------------------------------
-    # GET /api/recommendations  (Phase 7D — Sovereign Advisor)
-    # ------------------------------------------------------------------
-
     @app.get("/api/recommendations")
     async def api_recommendations() -> JSONResponse:
         try:
             from pradyos.oracle.advisor import SovereignAdvisor
             from pradyos.core.audit import get_audit_log
             from pradyos.core.metrics import get_registry
-
             advisor = SovereignAdvisor(
                 audit_log=get_audit_log(),
                 metrics_registry=get_registry(),
                 campaign_registry=campaign_registry,
             )
             recs = advisor.recommend(n=5)
-            return JSONResponse({
-                "recommendations": [r.to_dict() for r in recs],
-                "ts": time.time(),
-            })
-        except Exception as exc:  # noqa: BLE001
+            return JSONResponse({"recommendations": [r.to_dict() for r in recs], "ts": time.time()})
+        except Exception as exc:
             log.debug("Recommendations unavailable: %s", exc)
             return JSONResponse({"recommendations": [], "ts": time.time()})
 
-    # ------------------------------------------------------------------
-    # GET /api/v1/dashboard  (Phase 12 -- Observability Dashboard)
-    # ------------------------------------------------------------------
-
     @app.get("/api/v1/dashboard")
     async def api_dashboard() -> JSONResponse:
+        _zero = {"bus_events": [], "quarantine": [], "system_health": {
+            "status": "ok", "active_tasks": 0, "dead_letter_count": 0, "last_event_ts": None}}
         if observability_dashboard is None:
-            return JSONResponse(
-                {"bus_events": [], "quarantine": [], "system_health": {
-                    "status": "ok", "active_tasks": 0,
-                    "dead_letter_count": 0, "last_event_ts": None,
-                }},
-                status_code=200,
-            )
+            return JSONResponse(_zero, status_code=200)
         try:
             snap = observability_dashboard.get_live_snapshot()
             return JSONResponse(snap.to_dict(), status_code=200)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.debug("ObservabilityDashboard.get_live_snapshot failed: %s", exc)
-            return JSONResponse(
-                {"bus_events": [], "quarantine": [], "system_health": {
-                    "status": "ok", "active_tasks": 0,
-                    "dead_letter_count": 0, "last_event_ts": None,
-                }},
-                status_code=200,
-            )
-
-    # ------------------------------------------------------------------
-    # GET /api/v1/campaigns/monitor  (Phase 13 -- Campaign Monitor)
-    # ------------------------------------------------------------------
+            return JSONResponse(_zero, status_code=200)
 
     @app.get("/api/v1/campaigns/monitor")
     async def api_campaigns_monitor() -> JSONResponse:
@@ -320,14 +188,9 @@ def create_app(
         try:
             snap = campaign_monitor.get_snapshot()
             return JSONResponse(snap.to_dict(), status_code=200)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.debug("CampaignMonitor.get_snapshot failed: %s", exc)
             return JSONResponse(_zero, status_code=200)
-
-    # ------------------------------------------------------------------
-    # GET  /api/v1/policy/rules  (Phase 14 -- Policy Engine)
-    # POST /api/v1/policy/rules
-    # ------------------------------------------------------------------
 
     @app.get("/api/v1/policy/rules")
     async def api_policy_get_rules() -> JSONResponse:
@@ -346,8 +209,57 @@ def create_app(
             policy_engine.load(rules)
         return JSONResponse({"loaded": len(rules)}, status_code=200)
 
-        # POST /api/approve/{task_id}
     # ------------------------------------------------------------------
+    # Phase 15 -- Sovereign Scheduler endpoints
+    # ------------------------------------------------------------------
+
+    @app.get("/api/v1/scheduler/jobs")
+    async def api_scheduler_get_jobs() -> JSONResponse:
+        if scheduler is None:
+            return JSONResponse({"jobs": []}, status_code=200)
+        return JSONResponse({"jobs": scheduler.get_jobs()}, status_code=200)
+
+    @app.post("/api/v1/scheduler/jobs")
+    async def api_scheduler_add_job(request: Request) -> JSONResponse:
+        if scheduler is None:
+            return JSONResponse(
+                {"job_id": None, "cron_expr": None, "campaign_spec": {},
+                 "priority": 5, "sla_seconds": None, "next_run": 0.0, "enabled": True},
+                status_code=200,
+            )
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        job = scheduler.add_job(
+            job_id=body.get("job_id", ""),
+            cron_expr=body.get("cron_expr", "* * * * *"),
+            campaign_spec=body.get("campaign_spec", {}),
+            priority=body.get("priority", 5),
+            sla_seconds=body.get("sla_seconds", None),
+        )
+        return JSONResponse(job, status_code=200)
+
+    @app.delete("/api/v1/scheduler/jobs/{job_id}")
+    async def api_scheduler_remove_job(job_id: str) -> JSONResponse:
+        if scheduler is None:
+            return JSONResponse({"removed": False}, status_code=200)
+        removed = scheduler.remove_job(job_id)
+        return JSONResponse({"removed": removed}, status_code=200)
+
+    @app.post("/api/v1/scheduler/jobs/{job_id}/enable")
+    async def api_scheduler_enable_job(job_id: str) -> JSONResponse:
+        if scheduler is None:
+            return JSONResponse({"enabled": True}, status_code=200)
+        scheduler.enable_job(job_id)
+        return JSONResponse({"enabled": True}, status_code=200)
+
+    @app.post("/api/v1/scheduler/jobs/{job_id}/disable")
+    async def api_scheduler_disable_job(job_id: str) -> JSONResponse:
+        if scheduler is None:
+            return JSONResponse({"disabled": True}, status_code=200)
+        scheduler.disable_job(job_id)
+        return JSONResponse({"disabled": True}, status_code=200)
 
     @app.post("/api/approve/{task_id}")
     async def api_approve(task_id: str) -> JSONResponse:
@@ -357,10 +269,6 @@ def create_app(
             bus.publish("sovereign.approved", {"task_id": task_id})
         return JSONResponse({"ok": True, "task_id": task_id, "decision": "approved", "ts": record["ts"]})
 
-    # ------------------------------------------------------------------
-    # POST /api/reject/{task_id}
-    # ------------------------------------------------------------------
-
     @app.post("/api/reject/{task_id}")
     async def api_reject(task_id: str) -> JSONResponse:
         record = _write_decision(task_id, "rejected")
@@ -369,173 +277,51 @@ def create_app(
             bus.publish("sovereign.rejected", {"task_id": task_id})
         return JSONResponse({"ok": True, "task_id": task_id, "decision": "rejected", "ts": record["ts"]})
 
-    # ------------------------------------------------------------------
-    # GET /stream  (Server-Sent Events)
-    # ------------------------------------------------------------------
-
     @app.get("/stream")
     async def stream_events() -> StreamingResponse:
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
         return StreamingResponse(
             _sse_generator(queue),
             media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-            },
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     return app
 
 
-# ---------------------------------------------------------------------------
-# Checkpoint summary helper
-# ---------------------------------------------------------------------------
-
-
 def _read_checkpoint_summary(checkpoint_store: Any) -> dict[str, Any]:
-    """Extract a lightweight status snapshot from the checkpoint store."""
     if hasattr(checkpoint_store, "snapshot"):
         try:
             result = checkpoint_store.snapshot()
             if isinstance(result, dict):
                 return result
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     if hasattr(checkpoint_store, "path"):
         try:
             p = Path(checkpoint_store.path)
             if p.exists():
-                size = p.stat().st_size
-                return {"file": str(p), "size_bytes": size}
-        except Exception:  # noqa: BLE001
+                return {"file": str(p), "size_bytes": p.stat().st_size}
+        except Exception:
             pass
     return {"status": "available"}
 
 
-# ---------------------------------------------------------------------------
-# Dashboard HTML (inline -- no external files required)
-# ---------------------------------------------------------------------------
 
-_DASHBOARD_HTML = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRADY OS -- Sovereign Dashboard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0a0a0f; color: #e0e0f0; font-family: 'Courier New', monospace; }
-    header { background: #12121e; border-bottom: 1px solid #2a2a4a; padding: 1rem 2rem;
-             display: flex; align-items: center; justify-content: space-between; }
-    header h1 { font-size: 1.4rem; color: #7b8fff; letter-spacing: 2px; }
-    header .badge { font-size: 0.75rem; color: #4caf50; border: 1px solid #4caf50;
-                    padding: 2px 8px; border-radius: 4px; }
-    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-    .card { background: #12121e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 1.2rem; }
-    .card h2 { font-size: 0.85rem; color: #7b8fff; text-transform: uppercase;
-                letter-spacing: 1px; margin-bottom: 0.8rem; }
-    .stat { display: flex; justify-content: space-between; padding: 4px 0;
-            border-bottom: 1px solid #1e1e32; font-size: 0.85rem; }
-    .stat:last-child { border-bottom: none; }
-    .stat .val { color: #a0cfff; }
-    #log { background: #0d0d16; border: 1px solid #2a2a4a; border-radius: 8px;
-           padding: 1rem; margin-top: 1rem; height: 200px; overflow-y: auto;
-           font-size: 0.8rem; color: #6a6a9a; }
-    #log p { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>PRADY OS -- SOVEREIGN</h1>
-    <span class="badge" id="status-badge">ONLINE</span>
-  </header>
-  <main>
-    <div class="grid">
-      <div class="card" id="status-card">
-        <h2>System Status</h2>
-        <div class="stat"><span>Kernel</span><span class="val" id="s-kernel">--</span></div>
-        <div class="stat"><span>Warden</span><span class="val" id="s-warden">--</span></div>
-        <div class="stat"><span>Campaigns</span><span class="val" id="s-campaigns">--</span></div>
-        <div class="stat"><span>Last refresh</span><span class="val" id="s-ts">--</span></div>
-      </div>
-      <div class="card">
-        <h2>Event Stream</h2>
-        <div id="log"><p>Connecting...</p></div>
-      </div>
-    </div>
-  </main>
-  <script>
-    async function fetchStatus() {
-      try {
-        const r = await fetch('/api/status');
-        const d = await r.json();
-        document.getElementById('s-kernel').textContent =
-          d.checkpoint && d.checkpoint.file ? 'checkpoint ok' : 'active';
-        document.getElementById('s-warden').textContent =
-          d.warden ? d.warden.status : 'unknown';
-        document.getElementById('s-campaigns').textContent =
-          d.active_campaigns ? d.active_campaigns.length : '0';
-        document.getElementById('s-ts').textContent =
-          new Date(d.timestamp * 1000).toLocaleTimeString();
-      } catch(e) { console.error(e); }
-    }
-    fetchStatus();
-    setInterval(fetchStatus, 5000);
-
-    const log = document.getElementById('log');
-    log.innerHTML = '';
-    const es = new EventSource('/stream');
-    es.onmessage = e => {
-      const p = document.createElement('p');
-      p.textContent = e.data.slice(0, 120);
-      log.prepend(p);
-      if (log.children.length > 50) log.removeChild(log.lastChild);
-    };
-    es.onerror = () => {
-      const p = document.createElement('p');
-      p.textContent = '[stream disconnected]';
-      log.prepend(p);
-    };
-  </script>
-</body>
-</html>
-"""
-
-
-# ---------------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------------
-
+_DASHBOARD_HTML = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>PRADY OS -- Sovereign Dashboard</title>\n  <style>\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n    body { background: #0a0a0f; color: #e0e0f0; font-family: \'Courier New\', monospace; }\n    header { background: #12121e; border-bottom: 1px solid #2a2a4a; padding: 1rem 2rem;\n             display: flex; align-items: center; justify-content: space-between; }\n    header h1 { font-size: 1.4rem; color: #7b8fff; letter-spacing: 2px; }\n    header .badge { font-size: 0.75rem; color: #4caf50; border: 1px solid #4caf50;\n                    padding: 2px 8px; border-radius: 4px; }\n    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }\n    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }\n    .card { background: #12121e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 1.2rem; }\n    .card h2 { font-size: 0.85rem; color: #7b8fff; text-transform: uppercase;\n                letter-spacing: 1px; margin-bottom: 0.8rem; }\n    .stat { display: flex; justify-content: space-between; padding: 4px 0;\n            border-bottom: 1px solid #1e1e32; font-size: 0.85rem; }\n    .stat:last-child { border-bottom: none; }\n    .stat .val { color: #a0cfff; }\n    #log { background: #0d0d16; border: 1px solid #2a2a4a; border-radius: 8px;\n           padding: 1rem; margin-top: 1rem; height: 200px; overflow-y: auto;\n           font-size: 0.8rem; color: #6a6a9a; }\n    #log p { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }\n  </style>\n</head>\n<body>\n  <header>\n    <h1>PRADY OS -- SOVEREIGN</h1>\n    <span class="badge" id="status-badge">ONLINE</span>\n  </header>\n  <main>\n    <div class="grid">\n      <div class="card" id="status-card">\n        <h2>System Status</h2>\n        <div class="stat"><span>Kernel</span><span class="val" id="s-kernel">--</span></div>\n        <div class="stat"><span>Warden</span><span class="val" id="s-warden">--</span></div>\n        <div class="stat"><span>Campaigns</span><span class="val" id="s-campaigns">--</span></div>\n        <div class="stat"><span>Last refresh</span><span class="val" id="s-ts">--</span></div>\n      </div>\n      <div class="card">\n        <h2>Event Stream</h2>\n        <div id="log"><p>Connecting...</p></div>\n      </div>\n    </div>\n  </main>\n  <script>\n    async function fetchStatus() {\n      try {\n        const r = await fetch(\'/api/status\');\n        const d = await r.json();\n        document.getElementById(\'s-kernel\').textContent =\n          d.checkpoint && d.checkpoint.file ? \'checkpoint ok\' : \'active\';\n        document.getElementById(\'s-warden\').textContent =\n          d.warden ? d.warden.status : \'unknown\';\n        document.getElementById(\'s-campaigns\').textContent =\n          d.active_campaigns ? d.active_campaigns.length : \'0\';\n        document.getElementById(\'s-ts\').textContent =\n          new Date(d.timestamp * 1000).toLocaleTimeString();\n      } catch(e) { console.error(e); }\n    }\n    fetchStatus();\n    setInterval(fetchStatus, 5000);\n    const log = document.getElementById(\'log\');\n    log.innerHTML = \'\';\n    const es = new EventSource(\'/stream\');\n    es.onmessage = e => {\n      const p = document.createElement(\'p\');\n      p.textContent = e.data.slice(0, 120);\n      log.prepend(p);\n      if (log.children.length > 50) log.removeChild(log.lastChild);\n    };\n    es.onerror = () => {\n      const p = document.createElement(\'p\');\n      p.textContent = \'[stream disconnected]\';\n      log.prepend(p);\n    };\n  </script>\n</body>\n</html>'
 
 def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
-
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
     from pradyos.imperium.checkpoint import CheckpointStore
-
     bus = get_bus()
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()
-
-    app = create_app(
-        campaign_registry=registry,
-        checkpoint_store=checkpoint,
-        bus=bus,
-    )
-
+    app = create_app(campaign_registry=registry, checkpoint_store=checkpoint, bus=bus)
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        loop="asyncio",
-        log_level="info",
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
 
 
 if __name__ == "__main__":

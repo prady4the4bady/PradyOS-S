@@ -95,6 +95,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 14
     "tests/test_policy_engine.py",
     "tests/test_policy_web.py",
+    # Phase 15
+    "tests/test_sovereign_scheduler.py",
+    "tests/test_scheduler_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -400,9 +403,4 @@ def main(argv: list[str] | None = None) -> int:
         print_result(label, passed, duration, output, verbose=args.verbose)
         results.append((label, passed, duration))
         if not passed:
-            any_failed = True
-            if args.fast:
-                break
-
-    print_summary(results)
-  
+            any_f

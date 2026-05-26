@@ -198,6 +198,32 @@ inter-process bus live across Docker and systemd planes:
   snapshot reference, multi-task quarantine, and WARDEN notification.
 - ✅ 11E: `scripts/prove.py` updated; README Phase Map updated.
 
+**Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
+- ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
+  injectable `clock` for deterministic testing. Pure-stdlib 5-field cron parser
+  supporting `*`, `*/N`, and single-integer fields for minute/hour/dom/month/dow.
+  `next_run_after(cron_expr, after_ts)` scans minute-by-minute in UTC.
+  `add_job()` stores job dicts with `job_id`, `cron_expr`, `campaign_spec`,
+  `priority`, `sla_seconds`, `next_run`, `enabled`. `remove_job()` / `enable_job()`
+  / `disable_job()` return bool. `tick()` fires all enabled jobs whose
+  `next_run <= clock()`, publishes `"scheduler.job.fired"` bus events, advances
+  `next_run`, and returns the list of fired job_ids. `start()` / `stop()` manage a
+  daemon background thread; both are idempotent. Thread-safe via `threading.Lock`.
+- ✅ 15B: `pradyos/sovereign_web.py` — five new endpoints wired via optional
+  `scheduler` param in `create_app()`: `GET /api/v1/scheduler/jobs`,
+  `POST /api/v1/scheduler/jobs`, `DELETE /api/v1/scheduler/jobs/{job_id}`,
+  `POST /api/v1/scheduler/jobs/{job_id}/enable`,
+  `POST /api/v1/scheduler/jobs/{job_id}/disable`. All return HTTP 200; safe
+  empty responses when scheduler not injected.
+- ✅ 15C: `tests/test_sovereign_scheduler.py` — 20 unit tests covering all
+  scheduler methods, cron parsing, clock injection, bus event payload, copy
+  isolation, idempotent start/stop, and job-id collision overwrite.
+- ✅ 15D: `tests/test_scheduler_web.py` — 10 FastAPI TestClient tests:
+  GET/POST/DELETE/enable/disable endpoints, required keys, GET-after-POST
+  reflection, and response shape.
+- ✅ 15E: `scripts/prove.py` updated with both new test modules (47 total).
+- ✅ 15F: README Phase Map updated; Phase 16 planned.
+
 **Phase 14 — Complete.** All 46 test modules green. Policy engine —
 IMPERIUM enforces Sovereign-configured rules at dispatch time:
 - ✅ 14A: `pradyos/imperium/policy_engine.py` — `PolicyEngine` class
@@ -244,31 +270,4 @@ the Sovereign watches every campaign step execute in real time:
   when no monitor is injected.
 - ✅ 13C: `pradyos/aurora_throne/textual_app.py` — `CampaignMonitorScreen`
   (Textual `Screen` subclass) renders three live panels: **Active Campaigns** |
-  **Step Timeline** | **TITAN Ops Feed**. Refreshes every 2 s. Accessible via
-  the `c` keybind from `ThroneApp`; `escape` / `q` dismisses.
-- ✅ 13D: `tests/test_campaign_monitor.py` — 20 unit tests: snapshot type,
-  ring-buffer caps (100/50) and eviction, active_campaigns reflection,
-  _on_campaign_event / _on_titan_event appends with ts, start/stop
-  subscribe/unsubscribe, JSON-serialisability, dict key presence, ring-buffer
-  independence, and idempotent double-stop.
-- ✅ 13E: `tests/test_campaign_monitor_web.py` — 10 FastAPI TestClient tests:
-  HTTP 200, required keys, list types, active_campaigns reflection, Content-Type
-  application/json, ts in timeline entries, topic in titan feed entries, and safe
-  fallback with no monitor injected.
-- ✅ 13F: `scripts/prove.py` updated with both new test modules (43 total).
-- ✅ 13G: README Phase Map updated; Phase 14 planned.
-
-**Phase 12 — Complete.** All 44 test modules green. Live observability
-dashboard — the Sovereign sees everything in real time:
-- ✅ 12A: `pradyos/aurora_throne/dashboard.py` — `ObservabilityDashboard`
-  class with a `deque(maxlen=50)` ring buffer, `get_live_snapshot()` →
-  `DashboardSnapshot` (bus_events, quarantine, system_health), `start()`
-  / `stop()` subscribe/unsubscribe on the bus wildcard, and a
-  `_on_bus_event()` subscriber that populates the ring buffer and updates
-  `last_event_ts`. Health thresholds: **ok** (dlq=0, active<5),
-  **degraded** (dlq≥1 or active≥5), **critical** (dlq≥5 or active≥20).
-- ✅ 12B: `pradyos/sovereign_web.py` — `GET /api/v1/dashboard` endpoint
-  wired into the existing FastAPI app via a new `observability_dashboard`
-  constructor parameter. Returns `DashboardSnapshot.to_dict()` as JSON
-  (200); falls back to a zeroed snapshot when no dashboard is injected.
-- ✅ 12C: `pradyos/aurora_throne/textual_app.py` — `DashboardScr
+  **Step
