@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Str
 from pradyos.core.ledger import EventLedger
 from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
 from pradyos.core.bus_inspector import BusInspector  # Phase 27
+from pradyos.core.decision_journal import DecisionJournal  # Phase 28
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -86,6 +87,7 @@ def create_app(
     replay_engine: Any | None = None,
     plugin_sandbox: Any | None = None,
     bus_inspector: Any | None = None,
+    decision_journal: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -609,6 +611,40 @@ def create_app(
                 {"total_events": 0, "buffer_size": 0, "max_size": 0, "topics": {}}
             )
         return JSONResponse(bus_inspector.get_stats())
+
+
+    @app.get("/api/v1/decisions")
+    async def api_decisions_get(
+        limit: int | None = None,
+        offset: int = 0,
+        agent_id: str | None = None,
+        decision_type: str | None = None,
+    ) -> JSONResponse:
+        if decision_journal is None:
+            return JSONResponse({"entries": [], "count": 0, "total": 0})
+        entries = decision_journal.get_entries(
+            limit=limit, offset=offset,
+            agent_id=agent_id, decision_type=decision_type,
+        )
+        total = decision_journal.count()
+        return JSONResponse({
+            "entries": [e.to_dict() for e in entries],
+            "count": len(entries),
+            "total": total,
+        })
+
+    @app.post("/api/v1/decisions")
+    async def api_decisions_post(request: Request) -> JSONResponse:
+        if decision_journal is None:
+            return JSONResponse({"error": "no journal configured"})
+        body = await request.json()
+        entry = decision_journal.record(
+            agent_id=body.get("agent_id", ""),
+            decision_type=body.get("decision_type", ""),
+            rationale=body.get("rationale", ""),
+            outcome=body.get("outcome", ""),
+        )
+        return JSONResponse(entry.to_dict())
 
 
     return app

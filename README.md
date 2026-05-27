@@ -297,7 +297,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 27E: `scripts/prove.py` updated to 71 modules.
 - ✅ 27F: README Phase Map updated; Phase 28 planned.
 
-**Phase 28 — Planned.** Sovereign Decision Journal — a structured log of every autonomous decision made by PradyOS agents, stored as an append-only JSONL file with cryptographic chaining (each entry hashes the previous entry's hash + its own content); exposes `GET /api/v1/decisions` (paginated) and `POST /api/v1/decisions` (record a new decision with agent_id, decision_type, rationale, outcome); stdlib only.
+**Phase 28 — Complete.** All 73 test modules green. Sovereign Decision Journal — an append-only JSONL decision log with cryptographic chaining (each entry embeds the SHA-256 content_hash of the previous entry as prev_hash, genesis uses "0"*64); thread-safe DecisionJournal with file or memory-only mode; GET /api/v1/decisions (paginated, filterable by agent_id/decision_type) and POST /api/v1/decisions (record a new decision with agent_id, decision_type, rationale, outcome); verify_chain() walks the full chain and detects any tampering; stdlib only:
+
+- ✅ 28A: `pradyos/core/decision_journal.py` — DecisionEntry dataclass + DecisionJournal with crypto-chain
+- ✅ 28B: `pradyos/sovereign_web.py` patched — GET/POST /api/v1/decisions wired in
+- ✅ 28C: `tests/test_decision_journal.py` — 20 unit tests (chain, persistence, filters, thread safety)
+- ✅ 28D: `tests/test_decision_web.py` — 10 FastAPI endpoint tests
+- ✅ 28E: `scripts/prove.py` — 73 test modules registered
+- ✅ 28F: README Phase Map updated; Phase 29 planned.
+
+**Phase 29 — Planned.** Sovereign Capability Registry — a self-describing registry where every PradyOS module registers its own capabilities (name, version, provided_apis list, consumed_apis list, status); exposes GET /api/v1/capabilities (full registry), POST /api/v1/capabilities (register/update a capability), GET /api/v1/capabilities/{name} (single capability detail); enables the OS to introspect its own feature surface at runtime; stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
