@@ -22,6 +22,7 @@ from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
 from pradyos.core.snapshot_store import SnapshotStore  # Phase 32
 from pradyos.core.correlation_engine import CorrelationEngine  # Phase 33
 from pradyos.core.integration_bus import SovereignBus  # Phase 34
+from pradyos.core.reactor import ReactorEngine  # Phase 35
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -100,6 +101,7 @@ def create_app(
     snapshot_store: Any | None = None,
     correlation_engine: Any | None = None,
     integration_bus: Any | None = None,
+    reactor_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -837,6 +839,46 @@ def create_app(
         if integration_bus is None:
             return JSONResponse({"wired": {}, "wire_count": 0})
         return JSONResponse(integration_bus.status())
+
+
+    @app.get("/api/v1/reactor/rules")
+    async def api_reactor_rules_list() -> JSONResponse:
+        if reactor_engine is None:
+            return JSONResponse({"rules": []})
+        return JSONResponse({"rules": reactor_engine.list_rules()})
+
+    @app.post("/api/v1/reactor/rules")
+    async def api_reactor_rules_add(request: Request) -> JSONResponse:
+        if reactor_engine is None:
+            return JSONResponse({"error": "no reactor configured"})
+        body = await request.json()
+        rule = reactor_engine.add_rule(
+            decision_type=body["decision_type"],
+            action=body["action"],
+            context_filter=body.get("context_filter"),
+        )
+        return JSONResponse(rule.to_dict())
+
+    @app.delete("/api/v1/reactor/rules/{rule_id}")
+    async def api_reactor_rules_delete(rule_id: str) -> JSONResponse:
+        if reactor_engine is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        removed = reactor_engine.remove_rule(rule_id)
+        if not removed:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+    @app.get("/api/v1/reactor/log")
+    async def api_reactor_log(request: Request) -> JSONResponse:
+        if reactor_engine is None:
+            return JSONResponse({"reactions": []})
+        try:
+            limit = int(request.query_params.get("limit", 100))
+        except (ValueError, TypeError):
+            limit = 100
+        return JSONResponse({
+            "reactions": [r.to_dict() for r in reactor_engine.get_log(limit)],
+        })
 
     return app
 

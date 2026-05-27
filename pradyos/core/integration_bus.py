@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from pradyos.core.bus_inspector import BusInspector
     from pradyos.core.capability_registry import CapabilityRegistry
     from pradyos.core.health_scorecard import HealthScorecard
+    from pradyos.core.reactor import ReactorEngine
 
 
 class SovereignBus:
@@ -20,6 +21,7 @@ class SovereignBus:
         bus_inspector: "BusInspector | None" = None,
         capability_registry: "CapabilityRegistry | None" = None,
         health_scorecard: "HealthScorecard | None" = None,
+        reactor_engine: "ReactorEngine | None" = None,
     ) -> None:
         self._signal_aggregator = signal_aggregator
         self._watchpoint_system = watchpoint_system
@@ -27,6 +29,7 @@ class SovereignBus:
         self._bus_inspector = bus_inspector
         self._capability_registry = capability_registry
         self._health_scorecard = health_scorecard
+        self._reactor_engine = reactor_engine
 
     # ── WIRE 1 ────────────────────────────────────────────────────────────────
 
@@ -44,7 +47,7 @@ class SovereignBus:
             fired = self._watchpoint_system.check(name, value)
             if self._decision_journal is not None:
                 for alert in fired:
-                    self._decision_journal.record(
+                    entry = self._decision_journal.record(
                         agent_id="integration_bus",
                         decision_type="watchpoint_alert",
                         rationale=(
@@ -54,6 +57,8 @@ class SovereignBus:
                         ),
                         outcome=f"alert:{alert.watchpoint_name}",
                     )
+                    if self._reactor_engine is not None:
+                        self._reactor_engine.react(entry)
 
         return pt
 
@@ -85,6 +90,7 @@ class SovereignBus:
             "bus_inspector": self._bus_inspector is not None,
             "capability_registry": self._capability_registry is not None,
             "health_scorecard": self._health_scorecard is not None,
+            "reactor_engine": self._reactor_engine is not None,
         }
         return {
             "wired": wired,
