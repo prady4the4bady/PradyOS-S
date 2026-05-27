@@ -288,7 +288,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 26E: `scripts/prove.py` updated to 69 modules.
 - ✅ 26F: README Phase Map updated; Phase 27 planned.
 
-**Phase 27 — Planned.** Sovereign Event Bus Inspector — a live diagnostic layer that intercepts all messages on the internal event bus, records them to a ring buffer (max 500 entries), and exposes GET /api/v1/bus/events (paginated, filterable by topic) and GET /api/v1/bus/stats (per-topic message counts and rates); stdlib only, no new deps.
+**Phase 27 — Complete.** All 71 test modules green. Sovereign Event Bus Inspector — a live diagnostic ring buffer for all event bus messages:
+
+- ✅ 27A: `pradyos/core/bus_inspector.py` — `BusEvent` dataclass with `to_dict()`; `BusInspector` with `collections.deque` ring buffer (`max_size=500`), `record()`, `get_events()` (topic filter, limit, offset), `get_stats()`, and `clear()`; thread-safe via `threading.Lock`.
+- ✅ 27B: `pradyos/sovereign_web.py` — `GET /api/v1/bus/events` (query params: topic, limit, offset) and `GET /api/v1/bus/stats` wired into `create_app(bus_inspector=...)`; graceful no-op when `bus_inspector=None`.
+- ✅ 27C: `tests/test_bus_inspector.py` — 20 unit tests (init, record, get_events filtering, stats, overflow, clear, to_dict, defaults, thread safety with 100 concurrent records).
+- ✅ 27D: `tests/test_bus_inspector_web.py` — 10 FastAPI TestClient tests for bus events and stats endpoints.
+- ✅ 27E: `scripts/prove.py` updated to 71 modules.
+- ✅ 27F: README Phase Map updated; Phase 28 planned.
+
+**Phase 28 — Planned.** Sovereign Decision Journal — a structured log of every autonomous decision made by PradyOS agents, stored as an append-only JSONL file with cryptographic chaining (each entry hashes the previous entry's hash + its own content); exposes `GET /api/v1/decisions` (paginated) and `POST /api/v1/decisions` (record a new decision with agent_id, decision_type, rationale, outcome); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Str
 
 from pradyos.core.ledger import EventLedger
 from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
+from pradyos.core.bus_inspector import BusInspector  # Phase 27
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -84,6 +85,7 @@ def create_app(
     scorecard: Any | None = None,
     replay_engine: Any | None = None,
     plugin_sandbox: Any | None = None,
+    bus_inspector: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -588,6 +590,26 @@ def create_app(
             "reloaded": len(result),
             "plugins": [p.to_dict() for p in result.values()],
         })
+
+    @app.get("/api/v1/bus/events")
+    async def api_bus_events(
+        topic: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> JSONResponse:
+        if bus_inspector is None:
+            return JSONResponse({"events": [], "count": 0})
+        events = bus_inspector.get_events(topic=topic, limit=limit, offset=offset)
+        return JSONResponse({"events": [e.to_dict() for e in events], "count": len(events)})
+
+    @app.get("/api/v1/bus/stats")
+    async def api_bus_stats() -> JSONResponse:
+        if bus_inspector is None:
+            return JSONResponse(
+                {"total_events": 0, "buffer_size": 0, "max_size": 0, "topics": {}}
+            )
+        return JSONResponse(bus_inspector.get_stats())
+
 
     return app
 
