@@ -21,6 +21,7 @@ from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
 from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
 from pradyos.core.snapshot_store import SnapshotStore  # Phase 32
 from pradyos.core.correlation_engine import CorrelationEngine  # Phase 33
+from pradyos.core.integration_bus import SovereignBus  # Phase 34
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -98,6 +99,7 @@ def create_app(
     signal_aggregator: Any | None = None,
     snapshot_store: Any | None = None,
     correlation_engine: Any | None = None,
+    integration_bus: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -828,6 +830,13 @@ def create_app(
         window = float(body.get("window", 3600))
         result = correlation_engine.correlate(sa, sb, window_secs=window)
         return JSONResponse(result.to_dict())
+
+
+    @app.get("/api/v1/integration/status")
+    async def api_integration_status() -> JSONResponse:
+        if integration_bus is None:
+            return JSONResponse({"wired": {}, "wire_count": 0})
+        return JSONResponse(integration_bus.status())
 
     return app
 

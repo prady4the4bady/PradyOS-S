@@ -351,7 +351,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 33E: `scripts/prove.py` — 83 test modules registered.
 - ✅ 33F: README Phase Map updated; Phase 34 planned.
 
-**Phase 34 — Planned.** Sovereign Integration Bus — the first cross-module wiring phase: creates a SovereignBus class that wires all core modules together so they communicate automatically; specifically: (1) when SignalAggregator.record() is called, auto-call WatchpointSystem.check(name, value) and append any fired alerts to DecisionJournal as decision_type='watchpoint_alert'; (2) when BusInspector.record() is called, auto-call SignalAggregator.record('bus.{topic}', 1.0) to build traffic signals; (3) when CapabilityRegistry.update_status(name, 'degraded') is called, auto-call HealthScorecard.update(name, 0) to reflect degradation; all wiring is optional (each dependency can be None); exposes GET /api/v1/integration/status showing which modules are wired; stdlib only.
+**Phase 34 — Complete.** All 85 test modules green. Sovereign Integration Bus — cross-module wiring layer connecting SignalAggregator, WatchpointSystem, DecisionJournal, BusInspector, CapabilityRegistry, and HealthScorecard; all dependencies optional; stdlib only:
+
+- ✅ 34A: `pradyos/core/integration_bus.py` — `SovereignBus` with three wires: `record_signal()` calls aggregator.record + watchpoint.check + journal.record on alert; `record_bus_event()` calls bus_inspector.record + aggregator.record("bus.{topic}", 1.0); `update_capability()` calls capability_registry.update_status + health_scorecard.update(name, 0) on "degraded"; `status()` returns wired-dict + wire_count.
+- ✅ 34B: `pradyos/sovereign_web.py` patched — `GET /api/v1/integration/status` wired into `create_app(integration_bus=...)`.
+- ✅ 34C: `tests/test_integration_bus.py` — 20 unit tests (init, status structure, wire counts, all three wires, no-crash when deps missing, end-to-end 6-module alert flow).
+- ✅ 34D: `tests/test_integration_web.py` — 10 FastAPI TestClient tests (no-bus fallback, wire_count 0/1/6, all-6 keys, boolean values, wired reflects actual state).
+- ✅ 34E: `scripts/prove.py` — 85 test modules registered.
+- ✅ 34F: README Phase Map updated; Phase 35 planned.
+
+**Phase 35 — Planned.** Sovereign Autonomous Reactor — the OS reacts to alerts without human input: a ReactorEngine maintains a list of rules, each rule maps a decision_type pattern (e.g. 'watchpoint_alert') and optional context filters to an action (a callable or a named action string such as 'log', 'snapshot', 'escalate'); when DecisionJournal records a new entry, the Reactor evaluates all rules and fires matching ones synchronously; fired reactions are appended to an in-memory reaction log (ring buffer, max 1000); exposes GET /api/v1/reactor/rules (list rules), POST /api/v1/reactor/rules (add rule: decision_type, action, optional context_filter dict), DELETE /api/v1/reactor/rules/{rule_id}, GET /api/v1/reactor/log (recent reactions); stdlib only, no threads — reactions fire inline during the journal record call.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

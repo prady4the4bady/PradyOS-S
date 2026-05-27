@@ -152,6 +152,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 33
     "tests/test_correlation_engine.py",
     "tests/test_correlation_web.py",
+    # Phase 34
+    "tests/test_integration_bus.py",
+    "tests/test_integration_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
