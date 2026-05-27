@@ -83,6 +83,7 @@ def create_app(
     rate_limiter: Any | None = None,
     scorecard: Any | None = None,
     replay_engine: Any | None = None,
+    plugin_sandbox: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -568,6 +569,25 @@ def create_app(
                 {"at": ts, "entries": [], "state": {}, "event_count": 0}
             )
         return JSONResponse(replay_engine.replay(ts).to_dict())
+
+    @app.get("/api/v1/plugins")
+    async def api_plugins_list() -> JSONResponse:
+        if plugin_sandbox is None:
+            return JSONResponse({"plugins": [], "status": {}})
+        return JSONResponse({
+            "plugins": [p.to_dict() for p in plugin_sandbox.get_plugins()],
+            "status": plugin_sandbox.status(),
+        })
+
+    @app.post("/api/v1/plugins/reload")
+    async def api_plugins_reload() -> JSONResponse:
+        if plugin_sandbox is None:
+            return JSONResponse({"reloaded": 0, "plugins": []})
+        result = plugin_sandbox.reload_all()
+        return JSONResponse({
+            "reloaded": len(result),
+            "plugins": [p.to_dict() for p in result.values()],
+        })
 
     return app
 

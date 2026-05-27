@@ -128,6 +128,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 25
     "tests/test_audit_replay.py",
     "tests/test_audit_replay_web.py",
+    # Phase 26
+    "tests/test_plugin_sandbox.py",
+    "tests/test_plugin_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -427,4 +430,17 @@ def main(argv: list[str] | None = None) -> int:
 
     for module in existing:
         label = _module_label(module)
-        passed, duration, output = run_mo
+        passed, duration, output = run_module(
+            pytest_cmd, module, fast=args.fast, verbose=args.verbose
+        )
+        print_result(label, passed, duration, output, args.verbose)
+        results.append((label, passed, duration))
+        if not passed:
+            any_failed = True
+
+    print_summary(results)
+    return 1 if any_failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

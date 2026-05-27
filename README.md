@@ -279,7 +279,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 25E: `scripts/prove.py` updated to 67 modules.
 - ✅ 25F: README Phase Map updated; Phase 26 planned.
 
-**Phase 26 — Planned.** Sovereign Plugin Sandbox — a lightweight plugin loader that discovers, validates, and hot-loads Python modules from a `plugins/` directory at runtime; each plugin must export a `PLUGIN_MANIFEST` dict (name, version, hooks list) and one or more hook functions; exposes `GET /api/v1/plugins` (list loaded plugins) and `POST /api/v1/plugins/reload` (rescan and reload); stdlib only.
+**Phase 26 — Complete.** All 69 test modules green. Sovereign Plugin Sandbox — a lightweight plugin loader that discovers, validates, and hot-loads Python modules from a `plugins/` directory at runtime:
+
+- ✅ 26A: `pradyos/core/plugin_sandbox.py` — `PluginManifest` / `LoadedPlugin` dataclasses; `PluginSandbox` with `discover()`, `load()`, `reload_all()`, `get_plugins()`, `unload()`, `status()`; thread-safe via `threading.Lock`.
+- ✅ 26B: `GET /api/v1/plugins` and `POST /api/v1/plugins/reload` wired into `sovereign_web.py`; graceful no-op when `plugin_sandbox=None`.
+- ✅ 26C: `tests/test_plugin_sandbox.py` — 20 unit tests (init, discover, load success/error, reload_all, get_plugins, unload, status, to_dict, thread safety with 20 concurrent loads).
+- ✅ 26D: `tests/test_plugin_web.py` — 10 FastAPI TestClient tests for plugin list and reload endpoints.
+- ✅ 26E: `scripts/prove.py` updated to 69 modules.
+- ✅ 26F: README Phase Map updated; Phase 27 planned.
+
+**Phase 27 — Planned.** Sovereign Event Bus Inspector — a live diagnostic layer that intercepts all messages on the internal event bus, records them to a ring buffer (max 500 entries), and exposes GET /api/v1/bus/events (paginated, filterable by topic) and GET /api/v1/bus/stats (per-topic message counts and rates); stdlib only, no new deps.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
