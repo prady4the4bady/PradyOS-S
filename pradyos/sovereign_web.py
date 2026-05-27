@@ -79,6 +79,7 @@ def create_app(
     intent: Any | None = None,
     config_reloader: Any | None = None,
     metrics: Any | None = None,
+    rate_limiter: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -491,6 +492,48 @@ def create_app(
         if metrics is None:
             return JSONResponse({})
         return JSONResponse(metrics.get_all())
+
+    @app.get("/api/v1/ratelimit/status")
+    async def api_ratelimit_status() -> JSONResponse:
+        if rate_limiter is None:
+            return JSONResponse({
+                "active_clients": 0,
+                "total_hits": 0,
+                "rules": {},
+                "default_limit": 0,
+                "default_window": 0,
+            })
+        return JSONResponse(rate_limiter.status())
+
+    @app.post("/api/v1/ratelimit/rules")
+    async def api_ratelimit_set_rules(request: Request) -> JSONResponse:
+        if rate_limiter is None:
+            return JSONResponse({"set": False})
+        body = await request.json()
+        rate_limiter.set_rule(
+            endpoint=body["endpoint"],
+            limit=int(body["limit"]),
+            window=float(body["window"]),
+        )
+        return JSONResponse({"set": True})
+
+    @app.post("/api/v1/ratelimit/check")
+    async def api_ratelimit_check(request: Request) -> JSONResponse:
+        body = await request.json()
+        client_id = body["client_id"]
+        endpoint = body["endpoint"]
+        if rate_limiter is None:
+            return JSONResponse({
+                "allowed": True,
+                "client_id": client_id,
+                "endpoint": endpoint,
+                "limit": 0,
+                "window_secs": 0,
+                "current": 0,
+                "retry_after": None,
+            })
+        result = rate_limiter.check(client_id=client_id, endpoint=endpoint)
+        return JSONResponse(result.to_dict())
 
     return app
 

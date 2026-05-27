@@ -254,7 +254,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 22E: `scripts/prove.py` updated with both new test modules (61 total).
 - ✅ 22F: README Phase Map updated; Phase 23 planned.
 
-**Phase 23 — Planned.** Sovereign Rate-Limit Shield — a middleware layer that enforces per-client, per-endpoint rate limits using a sliding-window counter stored in memory; exposes /api/v1/ratelimit/status and integrates with the policy engine to block violating requests; stdlib only, no Redis required.
+**Phase 23 — Complete.** All 63 test modules green. Sovereign Rate-Limit Shield — sliding-window, in-memory per-(client_id, endpoint) rate limiter with injectable clock for deterministic testing:
+- ✅ 23A: `pradyos/core/rate_limiter.py` — `RateLimitResult` dataclass with `to_dict()` + `RateLimiter` class. Sliding-window counter prunes timestamps older than `window_secs`. `check()` records hits when allowed, does NOT record when denied; returns `retry_after` seconds until reset. `set_rule()` / `get_rules()` for per-endpoint overrides. `reset(client_id, endpoint?)` clears timestamps. `status()` reports active_clients, total_hits, rules. Thread-safe via `threading.Lock`. Zero external dependencies.
+- ✅ 23B: `pradyos/sovereign_web.py` — patched via script to add `rate_limiter` optional param to `create_app()` and three new endpoints: `GET /api/v1/ratelimit/status` returns limiter.status() or stub; `POST /api/v1/ratelimit/rules` sets per-endpoint rule; `POST /api/v1/ratelimit/check` evaluates a (client_id, endpoint) pair and returns full RateLimitResult dict. `DASHBOARD_HTML` constant untouched.
+- ✅ 23C: `tests/test_rate_limiter.py` — 20 unit tests covering init, check result type, allowed/denied logic, hit recording, sliding window pruning with injectable clock, set_rule/get_rules mutation safety, reset by client and by endpoint, status keys and counts, to_dict keys, retry_after=None/float, 10-hit boundary, cross-endpoint and cross-client independence.
+- ✅ 23D: `tests/test_rate_limit_web.py` — 10 FastAPI TestClient tests: HTTP 200 for all endpoints, required keys in responses, allowed=True under limit, stub behaviour when no limiter injected, rule-then-check enforcement.
+- ✅ 23E: `scripts/prove.py` updated with both new test modules (63 total).
+- ✅ 23F: README Phase Map updated; Phase 24 planned.
+
+**Phase 24 — Planned.** Sovereign Health Scorecard — a composite health score (0–100) computed from warden grid readings, self-heal events, policy violations, scheduler job success rate, and telemetry error rate; exposed as `GET /api/v1/health/score` returning score, grade (A/B/C/D/F), and per-component breakdowns; stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
