@@ -270,7 +270,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 24E: `scripts/prove.py` updated to 65 modules.
 - ✅ 24F: README Phase Map updated; Phase 25 planned.
 
-**Phase 25 — Planned.** Sovereign Audit Replay Engine — a time-travel debugger that reconstructs the PradyOS state at any past timestamp by replaying the append-only audit ledger forward from genesis; exposes `GET /api/v1/audit/replay?at=<unix_ts>` returning the reconstructed state snapshot; stdlib only, no external deps.
+**Phase 25 — Complete.** All 67 test modules green. Sovereign Audit Replay Engine — a time-travel state reconstructor that replays the append-only audit ledger forward from genesis to reconstruct PradyOS state at any past timestamp:
+
+- ✅ 25A: `pradyos/core/audit_replay.py` — `AuditReplayEngine` with `ReplayEntry` / `ReplaySnapshot` dataclasses; thread-safe via `threading.Lock`; supports external ledger or internal entry list.
+- ✅ 25B: `GET /api/v1/audit/replay?at=<unix_ts>` endpoint wired into `sovereign_web.py`; graceful no-op when `replay_engine=None`.
+- ✅ 25C: `tests/test_audit_replay.py` — 20 unit tests (init, filtering, sorting, state merge, thread safety, ledger modes).
+- ✅ 25D: `tests/test_audit_replay_web.py` — 10 FastAPI TestClient tests for the `/api/v1/audit/replay` endpoint.
+- ✅ 25E: `scripts/prove.py` updated to 67 modules.
+- ✅ 25F: README Phase Map updated; Phase 26 planned.
+
+**Phase 26 — Planned.** Sovereign Plugin Sandbox — a lightweight plugin loader that discovers, validates, and hot-loads Python modules from a `plugins/` directory at runtime; each plugin must export a `PLUGIN_MANIFEST` dict (name, version, hooks list) and one or more hook functions; exposes `GET /api/v1/plugins` (list loaded plugins) and `POST /api/v1/plugins/reload` (rescan and reload); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

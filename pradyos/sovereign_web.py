@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
 from pradyos.core.ledger import EventLedger
+from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -81,6 +82,7 @@ def create_app(
     metrics: Any | None = None,
     rate_limiter: Any | None = None,
     scorecard: Any | None = None,
+    replay_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -556,6 +558,16 @@ def create_app(
         details = body.get("details", {})
         scorecard.update(name, score, details)
         return JSONResponse({"updated": True}, status_code=200)
+
+    @app.get("/api/v1/audit/replay")
+    async def api_audit_replay(at: float | None = None) -> JSONResponse:
+        import time as _time
+        ts = at if at is not None else _time.time()
+        if replay_engine is None:
+            return JSONResponse(
+                {"at": ts, "entries": [], "state": {}, "event_count": 0}
+            )
+        return JSONResponse(replay_engine.replay(ts).to_dict())
 
     return app
 
