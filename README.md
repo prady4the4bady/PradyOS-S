@@ -246,7 +246,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 21E: `scripts/prove.py` updated with both new test modules (59 total).
 - ✅ 21F: README Phase Map updated; Phase 22 planned.
 
-**Phase 22 — Planned.** Sovereign Metrics Dashboard — a Prometheus-compatible `/metrics` endpoint that exposes OS-level counters (campaigns run, tasks dispatched, errors, ledger entries, intent suggestions fired) as plain-text Prometheus metrics; no new dependencies.
+**Phase 22 — Complete.** All 61 test modules green. Sovereign Metrics Dashboard — Prometheus-compatible `/metrics` endpoint with OS-level counters:
+- ✅ 22A: `pradyos/core/metrics_registry.py` — `MetricsRegistry` class with thread-safe `increment()`, `set()`, `get()`, `get_all()`, `reset()`, `render_prometheus()`. Pre-registers 8 counters at 0: `pradyos_campaigns_run_total`, `pradyos_tasks_dispatched_total`, `pradyos_errors_total`, `pradyos_ledger_entries_total`, `pradyos_intent_suggestions_total`, `pradyos_policy_violations_total`, `pradyos_scheduler_jobs_fired_total`, `pradyos_config_reloads_total`. Prometheus text export sorted by name; integers rendered without decimal point. Thread-safe via `threading.Lock`. Zero external dependencies.
+- ✅ 22B: `pradyos/sovereign_web.py` — patched via script to add `metrics` optional param to `create_app()` and two new endpoints: `GET /metrics` returns Prometheus plain-text (`text/plain; version=0.0.4`) or empty string when not injected; `GET /api/v1/metrics` returns `registry.get_all()` as JSON or `{}` when not injected. `DASHBOARD_HTML` constant untouched.
+- ✅ 22C: `tests/test_metrics_registry.py` — 20 unit tests covering init, get/increment/set/reset, get_all mutation safety, render_prometheus format (# HELP/# TYPE, sorted output, integer vs float rendering, trailing newline), all 8 pre-registered names, and thread safety (100 concurrent increments).
+- ✅ 22D: `tests/test_metrics_web.py` — 10 FastAPI TestClient tests: HTTP 200 for both endpoints, Content-Type text/plain, non-empty body, # HELP in body, pre-registered name in body, JSON object response, at least one key after increment, no-metrics stub returns 200/empty/`{}`.
+- ✅ 22E: `scripts/prove.py` updated with both new test modules (61 total).
+- ✅ 22F: README Phase Map updated; Phase 23 planned.
+
+**Phase 23 — Planned.** Sovereign Rate-Limit Shield — a middleware layer that enforces per-client, per-endpoint rate limits using a sliding-window counter stored in memory; exposes /api/v1/ratelimit/status and integrates with the policy engine to block violating requests; stdlib only, no Redis required.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

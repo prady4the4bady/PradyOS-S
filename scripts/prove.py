@@ -116,6 +116,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 21
     "tests/test_config_hot_reload.py",
     "tests/test_config_reload_web.py",
+    # Phase 22
+    "tests/test_metrics_registry.py",
+    "tests/test_metrics_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

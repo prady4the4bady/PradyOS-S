@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
 from pradyos.core.ledger import EventLedger
 from pradyos.sovereign.audit_ui import build_audit_html
@@ -78,6 +78,7 @@ def create_app(
     ledger: Any | None = None,
     intent: Any | None = None,
     config_reloader: Any | None = None,
+    metrics: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -472,6 +473,24 @@ def create_app(
             },
             status_code=200,
         )
+
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics() -> PlainTextResponse:
+        if metrics is None:
+            return PlainTextResponse(
+                "",
+                media_type="text/plain; version=0.0.4; charset=utf-8",
+            )
+        return PlainTextResponse(
+            metrics.render_prometheus(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
+    @app.get("/api/v1/metrics")
+    async def api_metrics() -> JSONResponse:
+        if metrics is None:
+            return JSONResponse({})
+        return JSONResponse(metrics.get_all())
 
     return app
 
