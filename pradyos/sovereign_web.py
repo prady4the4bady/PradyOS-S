@@ -24,6 +24,7 @@ from pradyos.core.correlation_engine import CorrelationEngine  # Phase 33
 from pradyos.core.integration_bus import SovereignBus  # Phase 34
 from pradyos.core.reactor import ReactorEngine  # Phase 35
 from pradyos.core.state_manager import StateManager  # Phase 36
+from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -104,6 +105,7 @@ def create_app(
     integration_bus: Any | None = None,
     reactor_engine: Any | None = None,
     state_manager: Any | None = None,
+    healing_monitor: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -927,6 +929,32 @@ def create_app(
                 "hook_count": 0,
             })
         return JSONResponse(state_manager.status())
+
+
+    @app.get("/api/v1/healer/components")
+    async def api_healer_components() -> JSONResponse:
+        if healing_monitor is None:
+            return JSONResponse({"components": []})
+        return JSONResponse({"components": healing_monitor.list_components()})
+
+    @app.post("/api/v1/healer/check")
+    async def api_healer_check() -> JSONResponse:
+        if healing_monitor is None:
+            return JSONResponse({"healed": []})
+        events = healing_monitor.check_and_heal()
+        return JSONResponse({"healed": [e.to_dict() for e in events]})
+
+    @app.get("/api/v1/healer/log")
+    async def api_healer_log(request: Request) -> JSONResponse:
+        if healing_monitor is None:
+            return JSONResponse({"events": []})
+        try:
+            limit = int(request.query_params.get("limit", 100))
+        except (ValueError, TypeError):
+            limit = 100
+        return JSONResponse({
+            "events": [e.to_dict() for e in healing_monitor.get_log(limit)],
+        })
 
     return app
 
