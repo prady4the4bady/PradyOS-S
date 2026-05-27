@@ -27,6 +27,7 @@ from pradyos.core.state_manager import StateManager  # Phase 36
 from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
 from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 38
 from pradyos.core.memory_store import MemoryStore  # Phase 39
+from pradyos.core.control_plane import ControlPlane, VERSION as OS_VERSION  # Phase 40
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -110,6 +111,7 @@ def create_app(
     healing_monitor: Any | None = None,
     task_scheduler: Any | None = None,
     memory_store: Any | None = None,
+    control_plane: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -1041,6 +1043,23 @@ def create_app(
         if not removed:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/os/control")
+    async def api_os_control() -> JSONResponse:
+        if control_plane is None:
+            return JSONResponse({
+                "os_version": OS_VERSION,
+                "uptime_seconds": 0,
+                "modules": {},
+            })
+        return JSONResponse(control_plane.status())
+
+    @app.post("/api/v1/os/tick")
+    async def api_os_tick() -> JSONResponse:
+        if control_plane is None:
+            return JSONResponse({"ticks": [], "healed": [], "reactions": []})
+        return JSONResponse(control_plane.tick())
 
     return app
 

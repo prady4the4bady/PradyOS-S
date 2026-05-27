@@ -405,7 +405,26 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 39E: `scripts/prove.py` — 95 test modules registered.
 - ✅ 39F: README Phase Map updated; Phase 40 planned.
 
-**Phase 40 — Planned.** Sovereign OS Control Plane — the final integration layer: a single GET /api/v1/os/status endpoint that returns a unified snapshot of all active OS modules in one JSON response; the response includes: os_version (str, from a VERSION constant = '0.40.0'), uptime_seconds (float, seconds since create_app() was called), modules (dict of module_name → {present: bool, summary: dict}); each module's summary is obtained by calling a lightweight introspection method on the module if present (e.g. health_scorecard.get_report().to_dict(), signal_aggregator.summary(), task_scheduler.count(), memory_store.count(), healing_monitor.count(), snapshot_store.count(), reactor_engine.count(), state_manager.get_state(), watchpoint_system.count(), correlation_engine.count(), integration_bus.count()); a second endpoint POST /api/v1/os/tick drives the full OS heartbeat: calls task_scheduler.tick() if present, then healing_monitor.check_and_heal() if present, then reactor_engine.react({}) if present — returns {ticks: [TaskRun dicts], healed: [HealingEvent dicts], reactions: [Reaction dicts]}; stdlib only.
+**Phase 40 — Complete.** All 97 test modules green. Sovereign OS Control Plane — the final integration layer. `ControlPlane` wraps all 11 OS modules and provides unified introspection + a single tick heartbeat that drives the scheduler, healer, and reactor in sequence; stdlib only:
+
+- ✅ 40A: `pradyos/core/control_plane.py` — `VERSION = "0.40.0"`; `ControlPlane` with `uptime()` (seconds since init), `_safe_summary()` (handles None/missing-method/exception/non-dict-result), `status()` (returns `{os_version, uptime_seconds, modules: {11 names → {present, summary}}}`), `tick()` (runs `task_scheduler.tick()` → `healing_monitor.check_and_heal()` → `reactor_engine.react({})`, each wrapped in try/except). Introspection map: health_scorecard→get_report, signal_aggregator→list_signals, task_scheduler/memory_store/healing_monitor/snapshot_store/reactor_engine→count, state_manager/watchpoint_system/integration_bus→status, correlation_engine→{} (no method).
+- ✅ 40B: `pradyos/sovereign_web.py` patched — `GET /api/v1/os/control` (unified status), `POST /api/v1/os/tick` (heartbeat) wired into `create_app(control_plane=...)`. **Deviation:** Phase 36 already owns `GET /api/v1/os/status` — the new endpoint uses `/api/v1/os/control` instead to preserve Phase 36 tests.
+- ✅ 40C: `tests/test_control_plane.py` — 20 unit tests (init, uptime, status os_version/uptime/keys/all-11-modules/present/summary, _safe_summary None/works/raises, tick keys/empty/scheduler/healer/exception-swallowing/list, real-modules integration).
+- ✅ 40D: `tests/test_control_web.py` — 10 FastAPI TestClient tests covering both endpoints and all 11 module names in the modules dict.
+- ✅ 40E: `scripts/prove.py` — 97 test modules registered.
+- ✅ 40F: README finalised — PradyOS v0.40.0 COMPLETE.
+
+---
+
+## PradyOS v0.40.0 — Complete
+
+**97 test modules. 40 phases. Stdlib only.**
+
+A fully autonomous OS kernel built in Python, with observe → alert → plan → react → heal → schedule → persist → remember → control-plane capabilities. All modules wired through a single `POST /api/v1/os/tick` heartbeat.
+
+The OS observes its own metrics (`SignalAggregator`), detects thresholds (`WatchpointSystem`), correlates signals (`CorrelationEngine`), records every decision into a cryptographically chained ledger (`DecisionJournal`), reacts to alerts via rules (`ReactorEngine`), self-heals degraded components (`HealingMonitor`), schedules its own work (`TaskScheduler`), persists state across restarts (`SnapshotStore` + `StateManager`), remembers context with TTLs (`MemoryStore`), wires it all together (`SovereignBus`, `IntegrationBus`), and exposes a unified introspection layer (`ControlPlane`).
+
+No Phase 41 planned.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

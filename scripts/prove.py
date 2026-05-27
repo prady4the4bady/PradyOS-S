@@ -170,6 +170,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 39
     "tests/test_memory_store.py",
     "tests/test_memory_web.py",
+    # Phase 40
+    "tests/test_control_plane.py",
+    "tests/test_control_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
