@@ -238,7 +238,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 20E: `scripts/prove.py` updated with both new test modules (57 total).
 - ✅ 20F: README Phase Map updated; Phase 21 planned.
 
-**Phase 21 — Planned.** Sovereign Config Hot-Reload — a file-watcher that monitors a YAML config file for changes and hot-reloads intent engine rules, scheduler jobs, and policy rules without restarting the server; exposes `/api/v1/config/reload` and `/api/v1/config/status`.
+**Phase 21 — Complete.** All 59 test modules green. Sovereign Config Hot-Reload — a file-watcher that monitors a YAML/JSON config file for changes and hot-reloads intent engine rules, scheduler jobs, and policy rules without restarting the server:
+- ✅ 21A: `pradyos/core/config_hot_reload.py` — `ReloadResult` dataclass with `to_dict()`; `ConfigHotReloader` class with `load()`, `start()`, `stop()`, `last_result()`, `status()`. Background daemon thread polls `config_path` every `poll_interval` seconds; reloads on mtime change. Uses `yaml.safe_load` if PyYAML present, falls back to `json.loads` (stdlib-only). Each config section (`intent_rules`, `scheduler_jobs`, `policy_rules`) is optional; missing sections and `None` components are silently skipped. Returns `ReloadResult(success=False, error=…)` on any exception.
+- ✅ 21B: `pradyos/sovereign_web.py` — patched via script to add `config_reloader` param to `create_app()` and two new endpoints: `GET /api/v1/config/status` returns `reloader.status()` (or stub dict when not injected); `POST /api/v1/config/reload` calls `reloader.load()` and returns `result.to_dict()`. `DASHBOARD_HTML` constant untouched.
+- ✅ 21C: `tests/test_config_hot_reload.py` — 20 unit tests covering `ReloadResult.to_dict()` keys, `load()` success/failure paths, all three config sections, missing sections, `None` components, file-not-found, invalid JSON, `status()` keys, `_running` transitions, `last_result()` lifecycle, start/stop cycle, changes list type and content.
+- ✅ 21D: `tests/test_config_reload_web.py` — 10 FastAPI TestClient tests: HTTP 200 for both endpoints, required response keys, no-reloader stubs, valid-reloader success, error=None on success, config_path reflection, changes list type.
+- ✅ 21E: `scripts/prove.py` updated with both new test modules (59 total).
+- ✅ 21F: README Phase Map updated; Phase 22 planned.
+
+**Phase 22 — Planned.** Sovereign Metrics Dashboard — a Prometheus-compatible `/metrics` endpoint that exposes OS-level counters (campaigns run, tasks dispatched, errors, ledger entries, intent suggestions fired) as plain-text Prometheus metrics; no new dependencies.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
@@ -258,33 +266,4 @@ inter-process bus live across Docker and systemd planes:
   `POST /api/v1/scheduler/jobs/{job_id}/disable`. All return HTTP 200; safe
   empty responses when scheduler not injected.
 - ✅ 15C: `tests/test_sovereign_scheduler.py` — 20 unit tests covering all
-  scheduler methods, cron parsing, clock injection, bus event payload, copy
-  isolation, idempotent start/stop, and job-id collision overwrite.
-- ✅ 15D: `tests/test_scheduler_web.py` — 10 FastAPI TestClient tests:
-  GET/POST/DELETE/enable/disable endpoints, required keys, GET-after-POST
-  reflection, and response shape.
-- ✅ 15E: `scripts/prove.py` updated with both new test modules (47 total).
-- ✅ 15F: README Phase Map updated; Phase 16 planned.
-
-**Phase 14 — Complete.** All 46 test modules green. Policy engine —
-IMPERIUM enforces Sovereign-configured rules at dispatch time:
-- ✅ 14A: `pradyos/imperium/policy_engine.py` — `PolicyEngine` class
-  (pure — no bus, no kernel imports) with `load()` / `get_rules()` /
-  `evaluate()` returning a `PolicyVerdict(allowed, reason)` dataclass.
-  Three rule types: **constitutional_guard** (unconditional block),
-  **rate_limit** (timestamp-list counter pruned by `time.time()`),
-  **approval_required** (allowed=True; enforcement delegated to Sovereign).
-  Match semantics: empty dict matches all tasks; string values use substring
-  containment; all keys must satisfy for a rule to fire. Thread-safe via
-  `threading.Lock`. `PolicyViolationError` defined in same module.
-- ✅ 14B: `pradyos/imperium/kernel.py` — `PolicyEngine` injected into
-  `ImperiumKernel.__init__` as optional `policy_engine` param (falls back
-  to permissive engine). `_run_record()` calls `policy_engine.evaluate()`
-  before the constitutional gate; raises `PolicyViolationError` if blocked.
-- ✅ 14C: `pradyos/sovereign_web.py` — `GET /api/v1/policy/rules` returns
-  `{"rules": [...]}` (200); `POST /api/v1/policy/rules` body
-  `{"rules": [...]}` calls `policy_engine.load()`, returns
-  `{"loaded": N}` (200). Wired via new `policy_engine` param in
-  `create_app()`. Falls back to empty rules list when not injected.
-- ✅ 14D: `tests/test_policy_engine.py` — 20 unit tests covering all rule
-  types, match semant
+  scheduler methods, cron parsing, clock injection, bus event payload, 

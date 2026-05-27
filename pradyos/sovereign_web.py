@@ -77,6 +77,7 @@ def create_app(
     graph: Any | None = None,
     ledger: Any | None = None,
     intent: Any | None = None,
+    config_reloader: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -439,6 +440,38 @@ def create_app(
     @app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
     async def audit_trail() -> HTMLResponse:
         return HTMLResponse(content=build_audit_html(), status_code=200)
+
+    # ── Phase 21: Sovereign Config Hot-Reload ───────────────────────────────
+
+    @app.get("/api/v1/config/status")
+    async def config_status() -> JSONResponse:
+        if config_reloader is not None:
+            return JSONResponse(config_reloader.status(), status_code=200)
+        return JSONResponse(
+            {
+                "running": False,
+                "config_path": None,
+                "last_reload": None,
+                "poll_interval": None,
+            },
+            status_code=200,
+        )
+
+    @app.post("/api/v1/config/reload")
+    async def config_reload() -> JSONResponse:
+        import time as _time
+        if config_reloader is not None:
+            result = config_reloader.load()
+            return JSONResponse(result.to_dict(), status_code=200)
+        return JSONResponse(
+            {
+                "success": False,
+                "error": "no reloader configured",
+                "changes": [],
+                "timestamp": _time.time(),
+            },
+            status_code=200,
+        )
 
     return app
 

@@ -113,6 +113,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 20
     "tests/test_audit_ui.py",
     "tests/test_audit_web.py",
+    # Phase 21
+    "tests/test_config_hot_reload.py",
+    "tests/test_config_reload_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -412,7 +415,4 @@ def main(argv: list[str] | None = None) -> int:
 
     for module in existing:
         label = _module_label(module)
-        passed, duration, output = run_module(
-            pytest_cmd, module, fast=args.fast, verbose=args.verbose
-        )
-        
+        passed, duration, output = run_mo
