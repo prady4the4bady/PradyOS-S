@@ -80,6 +80,7 @@ def create_app(
     config_reloader: Any | None = None,
     metrics: Any | None = None,
     rate_limiter: Any | None = None,
+    scorecard: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -534,6 +535,27 @@ def create_app(
             })
         result = rate_limiter.check(client_id=client_id, endpoint=endpoint)
         return JSONResponse(result.to_dict())
+
+    @app.get("/api/v1/health/score")
+    async def api_health_score() -> JSONResponse:
+        import time as _time
+        if scorecard is None:
+            return JSONResponse(
+                {"score": 100.0, "grade": "A", "components": [], "timestamp": _time.time()},
+                status_code=200,
+            )
+        return JSONResponse(scorecard.get_report().to_dict(), status_code=200)
+
+    @app.post("/api/v1/health/update")
+    async def api_health_update(request: Request) -> JSONResponse:
+        if scorecard is None:
+            return JSONResponse({"updated": False}, status_code=200)
+        body = await request.json()
+        name = body["name"]
+        score = float(body["score"])
+        details = body.get("details", {})
+        scorecard.update(name, score, details)
+        return JSONResponse({"updated": True}, status_code=200)
 
     return app
 

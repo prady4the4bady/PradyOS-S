@@ -262,7 +262,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 23E: `scripts/prove.py` updated with both new test modules (63 total).
 - ✅ 23F: README Phase Map updated; Phase 24 planned.
 
-**Phase 24 — Planned.** Sovereign Health Scorecard — a composite health score (0–100) computed from warden grid readings, self-heal events, policy violations, scheduler job success rate, and telemetry error rate; exposed as `GET /api/v1/health/score` returning score, grade (A/B/C/D/F), and per-component breakdowns; stdlib only.
+**Phase 24 — Complete.** All 65 test modules green. Sovereign Health Scorecard — a composite health score (0–100) engine with thread-safe component registry, weighted-average scoring, and A/B/C/D/F grading:
+- ✅ 24A: `pradyos/core/health_scorecard.py` — `ComponentScore` and `HealthReport` dataclasses; `HealthScorecard` class with `register()`, `update()` (clamped 0–100, auto-registers), `get_report()` (weighted average, grade), `reset()`. Thread-safe via `threading.Lock`.
+- ✅ 24B: `pradyos/sovereign_web.py` patched — `scorecard` optional param added to `create_app()`; `GET /api/v1/health/score` returns composite report; `POST /api/v1/health/update` accepts name/score/details and calls `scorecard.update()`. Safe empty responses when scorecard not injected.
+- ✅ 24C: `tests/test_health_scorecard.py` — 20 unit tests covering init, default report, grade boundaries (A/B/C/D/F), clamping, auto-register, explicit weights, weighted average, `reset()`, `to_dict()` keys, details default, and 50-thread concurrency.
+- ✅ 24D: `tests/test_health_web.py` — 10 FastAPI TestClient tests covering GET/POST endpoints, no-scorecard fallbacks (score=100, updated=false), update-then-get round-trip, and grade A/F scenarios.
+- ✅ 24E: `scripts/prove.py` updated to 65 modules.
+- ✅ 24F: README Phase Map updated; Phase 25 planned.
+
+**Phase 25 — Planned.** Sovereign Audit Replay Engine — a time-travel debugger that reconstructs the PradyOS state at any past timestamp by replaying the append-only audit ledger forward from genesis; exposes `GET /api/v1/audit/replay?at=<unix_ts>` returning the reconstructed state snapshot; stdlib only, no external deps.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

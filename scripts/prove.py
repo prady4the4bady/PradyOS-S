@@ -122,6 +122,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 23
     "tests/test_rate_limiter.py",
     "tests/test_rate_limit_web.py",
+    # Phase 24
+    "tests/test_health_scorecard.py",
+    "tests/test_health_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
