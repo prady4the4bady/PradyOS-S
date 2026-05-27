@@ -16,6 +16,7 @@ from pradyos.core.ledger import EventLedger
 from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
 from pradyos.core.bus_inspector import BusInspector  # Phase 27
 from pradyos.core.decision_journal import DecisionJournal  # Phase 28
+from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -88,6 +89,7 @@ def create_app(
     plugin_sandbox: Any | None = None,
     bus_inspector: Any | None = None,
     decision_journal: Any | None = None,
+    capability_registry: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -645,6 +647,40 @@ def create_app(
             outcome=body.get("outcome", ""),
         )
         return JSONResponse(entry.to_dict())
+
+
+    @app.get("/api/v1/capabilities")
+    async def api_capabilities_get() -> JSONResponse:
+        if capability_registry is None:
+            return JSONResponse({"capabilities": [], "summary": {}})
+        return JSONResponse({
+            "capabilities": [c.to_dict() for c in capability_registry.list_all()],
+            "summary": capability_registry.summary(),
+        })
+
+    @app.post("/api/v1/capabilities")
+    async def api_capabilities_post(request: Request) -> JSONResponse:
+        if capability_registry is None:
+            return JSONResponse({"error": "no registry configured"})
+        body = await request.json()
+        cap = capability_registry.register(
+            name=body.get("name", ""),
+            version=body.get("version", ""),
+            provided_apis=body.get("provided_apis", []),
+            consumed_apis=body.get("consumed_apis", []),
+            status=body.get("status", "active"),
+            metadata=body.get("metadata", {}),
+        )
+        return JSONResponse(cap.to_dict())
+
+    @app.get("/api/v1/capabilities/{cap_name}")
+    async def api_capabilities_get_one(cap_name: str) -> JSONResponse:
+        if capability_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        cap = capability_registry.get(cap_name)
+        if cap is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(cap.to_dict())
 
 
     return app

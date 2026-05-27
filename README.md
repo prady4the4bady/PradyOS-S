@@ -306,7 +306,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 28E: `scripts/prove.py` — 73 test modules registered
 - ✅ 28F: README Phase Map updated; Phase 29 planned.
 
-**Phase 29 — Planned.** Sovereign Capability Registry — a self-describing registry where every PradyOS module registers its own capabilities (name, version, provided_apis list, consumed_apis list, status); exposes GET /api/v1/capabilities (full registry), POST /api/v1/capabilities (register/update a capability), GET /api/v1/capabilities/{name} (single capability detail); enables the OS to introspect its own feature surface at runtime; stdlib only.
+**Phase 29 — Complete.** All 75 test modules green. Sovereign Capability Registry — a self-describing runtime registry where every PradyOS module registers its own capabilities (name, version, provided_apis, consumed_apis, status); enables the OS to introspect its own feature surface at runtime; stdlib only:
+
+- ✅ 29A: `pradyos/core/capability_registry.py` — `Capability` dataclass with `to_dict()`; `CapabilityRegistry` with `register()`, `get()`, `list_all()`, `update_status()`, `unregister()`, `summary()` (api_surface counts unique provided_apis); thread-safe via `threading.Lock`.
+- ✅ 29B: `pradyos/sovereign_web.py` patched — `GET /api/v1/capabilities` (full list + summary), `POST /api/v1/capabilities` (register/overwrite), `GET /api/v1/capabilities/{name}` (single lookup with 404) wired into `create_app(capability_registry=...)`.
+- ✅ 29C: `tests/test_capability_registry.py` — 20 unit tests (init, register, get, list_all sorted, overwrite, update_status, unregister, summary keys/counts/api_surface dedup, defaults, to_dict, thread safety with 50 concurrent registrations).
+- ✅ 29D: `tests/test_capability_web.py` — 10 FastAPI TestClient tests for all 3 endpoints including no-registry fallbacks, 404 handling, and summary count propagation.
+- ✅ 29E: `scripts/prove.py` — 75 test modules registered.
+- ✅ 29F: README Phase Map updated; Phase 30 planned.
+
+**Phase 30 — Planned.** Sovereign Watchpoint System — an assertion-based runtime monitor that lets any module register named watchpoints (threshold comparisons on numeric values: gt, lt, gte, lte, eq); when a watchpoint fires, it emits a structured alert with severity (info/warn/critical) and records it to an alert log; exposes GET /api/v1/watchpoints (list all), POST /api/v1/watchpoints (register), POST /api/v1/watchpoints/check (evaluate a value against all matching watchpoints); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

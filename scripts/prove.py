@@ -137,6 +137,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 28
     "tests/test_decision_journal.py",
     "tests/test_decision_web.py",
+    # Phase 29
+    "tests/test_capability_registry.py",
+    "tests/test_capability_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
