@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from pradyos.core.ledger import EventLedger
+from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
 
@@ -431,6 +432,13 @@ def create_app(
         data = [s.to_dict() for s in suggestions]
         return JSONResponse({"suggestions": data, "count": len(data)}, status_code=200)
 
+
+
+    # ── Phase 20: Sovereign Audit Trail UI ──────────────────────────────────
+
+    @app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
+    async def audit_trail() -> HTMLResponse:
+        return HTMLResponse(content=build_audit_html(), status_code=200)
 
     return app
 

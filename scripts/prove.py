@@ -110,6 +110,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 19
     "tests/test_intent_engine.py",
     "tests/test_intent_web.py",
+    # Phase 20
+    "tests/test_audit_ui.py",
+    "tests/test_audit_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
@@ -412,5 +415,4 @@ def main(argv: list[str] | None = None) -> int:
         passed, duration, output = run_module(
             pytest_cmd, module, fast=args.fast, verbose=args.verbose
         )
-        print_result(label, passed, duration, output, verbose=args.verbose)
         

@@ -230,7 +230,15 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 19E: `scripts/prove.py` updated with both new test modules (55 total).
 - ✅ 19F: README Phase Map updated; Phase 20 planned.
 
-**Phase 20 — Planned.** Sovereign Audit Trail UI — a read-only, paginated web UI served at `/audit` that renders the event ledger, telemetry spans, and intent suggestions in a single timeline view; no new dependencies, pure HTML/CSS/JS served from the existing FastAPI app.
+**Phase 20 — Complete.** All 57 test modules green. Sovereign Audit Trail UI — a self-contained dark-themed HTML page served at `/audit` that fetches live data from three API endpoints (`/api/v1/ledger`, `/api/v1/telemetry`, `/api/v1/intent/suggest`) and auto-refreshes every 10 seconds; pure HTML/CSS/JS, no external dependencies:
+- ✅ 20A: `pradyos/sovereign/audit_ui.py` — `AUDIT_HTML` constant (complete self-contained HTML page) and `build_audit_html() -> str` function. Three sections: **Event Ledger** (seq#, timestamp, service, event, payload, hash), **Telemetry Spans** (span_id, trace_id, name, service, start, duration_ms, status), **Intent Suggestions** (action, priority, reason, rule, params). Each section shows up to 20 most-recent items; graceful "No data" when APIs return empty. Auto-refresh every 10 s via `setInterval`. Dark theme consistent with the existing dashboard.
+- ✅ 20B: `pradyos/sovereign_web.py` — patched via script to add `from pradyos.sovereign.audit_ui import build_audit_html` and `GET /audit` endpoint returning `HTMLResponse(build_audit_html())`. `DASHBOARD_HTML` constant untouched.
+- ✅ 20C: `tests/test_audit_ui.py` — 10 unit tests: non-empty return, DOCTYPE, ledger/telemetry/intent API URLs, all three section headings, auto-refresh logic, idempotence.
+- ✅ 20D: `tests/test_audit_web.py` — 10 FastAPI TestClient tests: HTTP 200, Content-Type text/html, DOCTYPE, all three section headings, all three API URL references, idempotence.
+- ✅ 20E: `scripts/prove.py` updated with both new test modules (57 total).
+- ✅ 20F: README Phase Map updated; Phase 21 planned.
+
+**Phase 21 — Planned.** Sovereign Config Hot-Reload — a file-watcher that monitors a YAML config file for changes and hot-reloads intent engine rules, scheduler jobs, and policy rules without restarting the server; exposes `/api/v1/config/reload` and `/api/v1/config/status`.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
@@ -279,29 +287,4 @@ IMPERIUM enforces Sovereign-configured rules at dispatch time:
   `{"loaded": N}` (200). Wired via new `policy_engine` param in
   `create_app()`. Falls back to empty rules list when not injected.
 - ✅ 14D: `tests/test_policy_engine.py` — 20 unit tests covering all rule
-  types, match semantics, rate-limit windowing (mock time), thread safety,
-  `load()` replacement, `get_rules()` copy isolation, `to_dict()` keys,
-  reason strings, multi-rule first-wins, and integration with
-  `ImperiumKernel` raising `PolicyViolationError`.
-- ✅ 14E: `tests/test_policy_web.py` — 10 FastAPI TestClient tests: HTTP 200
-  on GET and POST, required keys (`rules` / `loaded`), `loaded` count,
-  GET-after-POST reflection, empty-POST clears rules, and Content-Type
-  application/json on both endpoints.
-- ✅ 14F: `scripts/prove.py` updated with both new test modules (46 total).
-- ✅ 14G: README Phase Map updated; Phase 15 planned.
-
-**Phase 13 — Complete.** All 43 test modules green. Live campaign monitor —
-the Sovereign watches every campaign step execute in real time:
-- ✅ 13A: `pradyos/aurora_throne/campaign_monitor.py` — `CampaignMonitor` class
-  with `deque(maxlen=100)` step_timeline and `deque(maxlen=50)` titan_ops_feed ring
-  buffers, `get_snapshot()` → `CampaignMonitorSnapshot` (active_campaigns,
-  step_timeline, titan_ops_feed), `start()` / `stop()` subscribe/unsubscribe on
-  the bus wildcard, `_on_campaign_event()` and `_on_titan_event()` route events by
-  prefix.
-- ✅ 13B: `pradyos/sovereign_web.py` — `GET /api/v1/campaigns/monitor` endpoint
-  wired into `create_app()` via new `campaign_monitor` parameter. Returns
-  `CampaignMonitorSnapshot.to_dict()` as JSON (200); falls back to zeroed snapshot
-  when no monitor is injected.
-- ✅ 13C: `pradyos/aurora_throne/textual_app.py` — `CampaignMonitorScreen`
-  (Textual `Screen` subclass) renders three live panels: **Active Campaigns** |
-  **Step
+  types, match semant
