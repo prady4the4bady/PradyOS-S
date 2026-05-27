@@ -369,7 +369,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 35E: `scripts/prove.py` — 87 test modules registered.
 - ✅ 35F: README Phase Map updated; Phase 36 planned.
 
-**Phase 36 — Planned.** Sovereign State Persistence — the OS survives restarts: a StateManager wraps the SnapshotStore and provides save_state(module, key, data) and load_state(module, key) helpers; on first boot it checks for existing snapshots and restores them; a ShutdownHook registers cleanup callables that are called in order when os_shutdown() is invoked; exposes POST /api/v1/os/shutdown (calls all shutdown hooks, saves final state snapshot for each registered module), GET /api/v1/os/state/{module} (list saved state keys for a module), GET /api/v1/os/state/{module}/{key} (retrieve latest snapshot); stdlib only.
+**Phase 36 — Complete.** All 89 test modules green. Sovereign State Persistence — `StateManager` wraps the SnapshotStore with module-scoped helpers and ordered shutdown hooks; on shutdown, all hooks fire in registration order and the result list captures `name:ok` or `name:error:...` per hook; stdlib only:
+
+- ✅ 36A: `pradyos/core/state_manager.py` — `StateManager` with `register_module()` (dedup), `save_state()`/`load_state()` (return None when no store), `register_hook(name, fn)` (preserves order), `shutdown()` (fires hooks in order, swallows exceptions into result strings, returns list), `status()` (store_connected, registered_modules, hook_count); thread-safe via `threading.Lock`.
+- ✅ 36B: `pradyos/sovereign_web.py` patched — `POST /api/v1/os/shutdown` (hook results), `GET /api/v1/os/state/{module}` (list keys), `GET /api/v1/os/state/{module}/{key}?version=N` (load, 404 if missing), `POST /api/v1/os/state/{module}/{key}` (save), `GET /api/v1/os/status` wired into `create_app(state_manager=...)`.
+- ✅ 36C: `tests/test_state_manager.py` — 20 unit tests (init, register_module dedup, save/load None when no store, version=N, register_hook, shutdown returns list/ok/error continues/order/empty, status keys/connection/modules/hook_count).
+- ✅ 36D: `tests/test_state_web.py` — 10 FastAPI TestClient tests (status no-sm, shutdown 200/no-sm/hook fires, state list/no-sm, save error no-sm, get unknown 404, full save→load flow).
+- ✅ 36E: `scripts/prove.py` — 89 test modules registered.
+- ✅ 36F: README Phase Map updated; Phase 37 planned.
+
+**Phase 37 — Planned.** Sovereign Self-Healing Monitor — the OS detects and auto-repairs degraded components: a HealingMonitor holds a registry of components with their health thresholds and repair callables; it polls HealthScorecard.get_report() on demand (not on a thread — polling is triggered by calling check_and_heal()); for each component whose score is below its threshold, it calls the registered repair callable, records a HealingEvent (component, score_before, score_after, action_taken, healed_at) and appends to a ring-buffer log (max 500); exposes GET /api/v1/healer/components (list registered components + thresholds), POST /api/v1/healer/check (trigger check_and_heal, returns list of HealingEvent dicts), GET /api/v1/healer/log (recent healing events); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
