@@ -342,7 +342,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 32E: `scripts/prove.py` — 81 test modules registered.
 - ✅ 32F: README Phase Map updated; Phase 33 planned.
 
-**Phase 33 — Planned.** Sovereign Correlation Engine — finds temporal correlations between named signals in the SignalAggregator; given two signal names and a time window, computes Pearson correlation coefficient (stdlib only, no numpy), returns the coefficient, sample size, and a qualitative label (strong-positive, moderate-positive, weak, moderate-negative, strong-negative); exposes GET /api/v1/correlate?signal_a=X&signal_b=Y&window=N (window in seconds, default 3600) and POST /api/v1/correlate (same but via body for complex queries); stdlib only.
+**Phase 33 — Complete.** All 83 test modules green. Sovereign Correlation Engine — temporal Pearson correlation between named SignalAggregator signals using nearest-neighbour timestamp pairing; stdlib only, no numpy:
+
+- ✅ 33A: `pradyos/core/correlation_engine.py` — `CorrelationResult` dataclass with `to_dict()` (NaN → None for JSON); `CorrelationEngine.correlate()` filters by window, pairs by nearest timestamp, computes population-stddev Pearson r, returns qualitative label (strong-positive ≥0.7, moderate-positive ≥0.4, weak >-0.4, moderate-negative >-0.7, strong-negative); handles <2 samples or zero-stddev → NaN with label="weak".
+- ✅ 33B: `pradyos/sovereign_web.py` patched — `GET /api/v1/correlate?signal_a=X&signal_b=Y&window=N` and `POST /api/v1/correlate` wired into `create_app(correlation_engine=...)`.
+- ✅ 33C: `tests/test_correlation_engine.py` — 20 unit tests (init, return type, no-overlap, perfect positive, perfect negative, constant→nan, single-point→nan, window filter, window=0, label thresholds, to_dict keys, computed_at, window_secs, names, nearest-neighbour pairing, read-only, large dataset 1000 pts).
+- ✅ 33D: `tests/test_correlation_web.py` — 10 FastAPI TestClient tests (no-engine/missing-params for GET+POST, valid GET/POST 200, all fields present, window=0→sample_size=0, identical signals→coefficient=1.0).
+- ✅ 33E: `scripts/prove.py` — 83 test modules registered.
+- ✅ 33F: README Phase Map updated; Phase 34 planned.
+
+**Phase 34 — Planned.** Sovereign Integration Bus — the first cross-module wiring phase: creates a SovereignBus class that wires all core modules together so they communicate automatically; specifically: (1) when SignalAggregator.record() is called, auto-call WatchpointSystem.check(name, value) and append any fired alerts to DecisionJournal as decision_type='watchpoint_alert'; (2) when BusInspector.record() is called, auto-call SignalAggregator.record('bus.{topic}', 1.0) to build traffic signals; (3) when CapabilityRegistry.update_status(name, 'degraded') is called, auto-call HealthScorecard.update(name, 0) to reflect degradation; all wiring is optional (each dependency can be None); exposes GET /api/v1/integration/status showing which modules are wired; stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

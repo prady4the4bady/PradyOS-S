@@ -20,6 +20,7 @@ from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
 from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
 from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
 from pradyos.core.snapshot_store import SnapshotStore  # Phase 32
+from pradyos.core.correlation_engine import CorrelationEngine  # Phase 33
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -96,6 +97,7 @@ def create_app(
     watchpoint_system: Any | None = None,
     signal_aggregator: Any | None = None,
     snapshot_store: Any | None = None,
+    correlation_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -797,6 +799,35 @@ def create_app(
         if not removed:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/correlate")
+    async def api_correlate_get(request: Request) -> JSONResponse:
+        if correlation_engine is None:
+            return JSONResponse({"error": "no correlation engine configured"})
+        sa = request.query_params.get("signal_a")
+        sb = request.query_params.get("signal_b")
+        if not sa or not sb:
+            return JSONResponse({"error": "signal_a and signal_b are required"})
+        try:
+            window = float(request.query_params.get("window", 3600))
+        except (ValueError, TypeError):
+            window = 3600.0
+        result = correlation_engine.correlate(sa, sb, window_secs=window)
+        return JSONResponse(result.to_dict())
+
+    @app.post("/api/v1/correlate")
+    async def api_correlate_post(request: Request) -> JSONResponse:
+        if correlation_engine is None:
+            return JSONResponse({"error": "no correlation engine configured"})
+        body = await request.json()
+        sa = body.get("signal_a")
+        sb = body.get("signal_b")
+        if not sa or not sb:
+            return JSONResponse({"error": "signal_a and signal_b are required"})
+        window = float(body.get("window", 3600))
+        result = correlation_engine.correlate(sa, sb, window_secs=window)
+        return JSONResponse(result.to_dict())
 
     return app
 

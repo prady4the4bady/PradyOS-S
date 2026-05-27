@@ -149,6 +149,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 32
     "tests/test_snapshot_store.py",
     "tests/test_snapshot_web.py",
+    # Phase 33
+    "tests/test_correlation_engine.py",
+    "tests/test_correlation_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
