@@ -333,7 +333,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 31E: `scripts/prove.py` — 79 test modules registered.
 - ✅ 31F: README Phase Map updated; Phase 32 planned.
 
-**Phase 32 — Planned.** Sovereign Snapshot Store — lets any module persist and restore arbitrary JSON-serialisable state snapshots identified by a (namespace, key) pair; each snapshot is versioned (auto-incrementing integer version), timestamped, and stored as JSONL on disk (one file per namespace); exposes GET /api/v1/snapshots/{namespace} (list all keys + latest version), POST /api/v1/snapshots/{namespace}/{key} (save a new snapshot version), GET /api/v1/snapshots/{namespace}/{key} (retrieve latest or ?version=N), DELETE /api/v1/snapshots/{namespace}/{key} (remove all versions); stdlib only.
+**Phase 32 — Complete.** All 81 test modules green. Sovereign Snapshot Store — versioned, namespaced JSON snapshot persistence with optional JSONL file backend; each (namespace, key) pair accumulates auto-incrementing version history; thread-safe; reloads from disk on re-init; stdlib only:
+
+- ✅ 32A: `pradyos/core/snapshot_store.py` — `Snapshot` dataclass with `to_dict()`; `SnapshotStore` with `save()` (auto-increment version, optional JSONL append), `get()` (latest or specific version), `list_keys()` (sorted, with versions/latest_version/latest_saved_at), `delete()` (memory-only tombstone), `count()` (global or namespace-scoped); memory-only mode when `base_dir=None`; thread-safe via `threading.Lock`.
+- ✅ 32B: `pradyos/sovereign_web.py` patched — `GET /api/v1/snapshots/{namespace}` (list keys), `POST /api/v1/snapshots/{namespace}/{key}` (save), `GET /api/v1/snapshots/{namespace}/{key}` (retrieve, ?version=N, 404 if missing), `DELETE /api/v1/snapshots/{namespace}/{key}` (remove, 404 if missing) wired into `create_app(snapshot_store=...)`.
+- ✅ 32C: `tests/test_snapshot_store.py` — 20 unit tests (init, save, version increment, get latest/specific/unknown, list_keys sorted/fields/count/unknown-ns, delete/unknown, count global/scoped, JSONL persist, reload, reloaded-get, thread-safety 50 concurrent saves with no version gaps).
+- ✅ 32D: `tests/test_snapshot_web.py` — 10 FastAPI TestClient tests for all 4 endpoints including no-store fallbacks, 404 for unknown key, version=2 on second save, and end-to-end POST→GET→DELETE.
+- ✅ 32E: `scripts/prove.py` — 81 test modules registered.
+- ✅ 32F: README Phase Map updated; Phase 33 planned.
+
+**Phase 33 — Planned.** Sovereign Correlation Engine — finds temporal correlations between named signals in the SignalAggregator; given two signal names and a time window, computes Pearson correlation coefficient (stdlib only, no numpy), returns the coefficient, sample size, and a qualitative label (strong-positive, moderate-positive, weak, moderate-negative, strong-negative); exposes GET /api/v1/correlate?signal_a=X&signal_b=Y&window=N (window in seconds, default 3600) and POST /api/v1/correlate (same but via body for complex queries); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

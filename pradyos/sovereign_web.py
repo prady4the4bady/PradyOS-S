@@ -19,6 +19,7 @@ from pradyos.core.decision_journal import DecisionJournal  # Phase 28
 from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
 from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
 from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
+from pradyos.core.snapshot_store import SnapshotStore  # Phase 32
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -94,6 +95,7 @@ def create_app(
     capability_registry: Any | None = None,
     watchpoint_system: Any | None = None,
     signal_aggregator: Any | None = None,
+    snapshot_store: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -757,6 +759,44 @@ def create_app(
             "count": len(points),
             "stats": signal_aggregator.stats(name),
         })
+
+
+    @app.get("/api/v1/snapshots/{namespace}")
+    async def api_snapshots_list(namespace: str) -> JSONResponse:
+        if snapshot_store is None:
+            return JSONResponse({"namespace": namespace, "keys": []})
+        return JSONResponse({
+            "namespace": namespace,
+            "keys": snapshot_store.list_keys(namespace),
+        })
+
+    @app.post("/api/v1/snapshots/{namespace}/{key}")
+    async def api_snapshots_save(namespace: str, key: str, request: Request) -> JSONResponse:
+        if snapshot_store is None:
+            return JSONResponse({"error": "no snapshot store configured"})
+        body = await request.json()
+        snap = snapshot_store.save(namespace=namespace, key=key, data=body["data"])
+        return JSONResponse(snap.to_dict())
+
+    @app.get("/api/v1/snapshots/{namespace}/{key}")
+    async def api_snapshots_get(namespace: str, key: str, request: Request) -> JSONResponse:
+        if snapshot_store is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        raw = request.query_params.get("version")
+        version = int(raw) if raw is not None else None
+        snap = snapshot_store.get(namespace=namespace, key=key, version=version)
+        if snap is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(snap.to_dict())
+
+    @app.delete("/api/v1/snapshots/{namespace}/{key}")
+    async def api_snapshots_delete(namespace: str, key: str) -> JSONResponse:
+        if snapshot_store is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        removed = snapshot_store.delete(namespace=namespace, key=key)
+        if not removed:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
 
     return app
 
