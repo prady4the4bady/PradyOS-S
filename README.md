@@ -315,7 +315,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 29E: `scripts/prove.py` — 75 test modules registered.
 - ✅ 29F: README Phase Map updated; Phase 30 planned.
 
-**Phase 30 — Planned.** Sovereign Watchpoint System — an assertion-based runtime monitor that lets any module register named watchpoints (threshold comparisons on numeric values: gt, lt, gte, lte, eq); when a watchpoint fires, it emits a structured alert with severity (info/warn/critical) and records it to an alert log; exposes GET /api/v1/watchpoints (list all), POST /api/v1/watchpoints (register), POST /api/v1/watchpoints/check (evaluate a value against all matching watchpoints); stdlib only.
+**Phase 30 — Complete.** All 77 test modules green. Sovereign Watchpoint System — an assertion-based runtime monitor where any module registers named threshold watchpoints (gt, lt, gte, lte, eq) against named numeric metrics; when a watchpoint fires it emits a structured alert with severity (info/warn/critical) and appends it to a thread-safe ring-buffer alert log; stdlib only:
+
+- ✅ 30A: `pradyos/core/watchpoint.py` — `Watchpoint` and `Alert` dataclasses with `to_dict()`; `WatchpointSystem` with `register()` (validates operator + severity), `check()` (evaluates all enabled matching watchpoints), `get_alerts()` (filter by name/severity, limit), `get_watchpoints()` (sorted by name), `disable()`, `enable()`, `status()`; thread-safe via `threading.Lock`; ring buffer via `collections.deque(maxlen=max_alerts)` with `_total_alerts` counter.
+- ✅ 30B: `pradyos/sovereign_web.py` patched — `GET /api/v1/watchpoints` (list + status), `POST /api/v1/watchpoints` (register), `POST /api/v1/watchpoints/check` (evaluate metric value) wired into `create_app(watchpoint_system=...)`.
+- ✅ 30C: `tests/test_watchpoint.py` — 20 unit tests (init, register, all 5 operators, disabled skip, disable/enable, get_alerts oldest-first/filter/limit, status keys, thread safety with 50 concurrent checks).
+- ✅ 30D: `tests/test_watchpoint_web.py` — 10 FastAPI TestClient tests for all 3 endpoints including no-system fallbacks and end-to-end fire-and-check.
+- ✅ 30E: `scripts/prove.py` — 77 test modules registered.
+- ✅ 30F: README Phase Map updated; Phase 31 planned.
+
+**Phase 31 — Planned.** Sovereign Signal Aggregator — collects named numeric signals from any module (via POST /api/v1/signals), stores them in a time-series ring buffer per signal name (max 10000 points total), and exposes GET /api/v1/signals/{name} (last N points, default 100), GET /api/v1/signals (list all signal names + latest value + count), and GET /api/v1/signals/{name}/stats (min, max, mean, stddev, count over the stored window); stdlib only, no numpy.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

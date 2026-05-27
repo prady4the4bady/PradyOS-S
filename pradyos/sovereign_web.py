@@ -17,6 +17,7 @@ from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
 from pradyos.core.bus_inspector import BusInspector  # Phase 27
 from pradyos.core.decision_journal import DecisionJournal  # Phase 28
 from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
+from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -90,6 +91,7 @@ def create_app(
     bus_inspector: Any | None = None,
     decision_journal: Any | None = None,
     capability_registry: Any | None = None,
+    watchpoint_system: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -682,6 +684,42 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(cap.to_dict())
 
+
+
+    @app.get("/api/v1/watchpoints")
+    async def api_watchpoints_get() -> JSONResponse:
+        if watchpoint_system is None:
+            return JSONResponse({"watchpoints": [], "status": {}})
+        return JSONResponse({
+            "watchpoints": [w.to_dict() for w in watchpoint_system.get_watchpoints()],
+            "status": watchpoint_system.status(),
+        })
+
+    @app.post("/api/v1/watchpoints")
+    async def api_watchpoints_post(request: Request) -> JSONResponse:
+        if watchpoint_system is None:
+            return JSONResponse({"error": "no watchpoint system configured"})
+        body = await request.json()
+        wp = watchpoint_system.register(
+            name=body["name"],
+            metric=body["metric"],
+            operator=body["operator"],
+            threshold=float(body["threshold"]),
+            severity=body.get("severity", "warn"),
+            enabled=bool(body.get("enabled", True)),
+        )
+        return JSONResponse(wp.to_dict())
+
+    @app.post("/api/v1/watchpoints/check")
+    async def api_watchpoints_check(request: Request) -> JSONResponse:
+        if watchpoint_system is None:
+            return JSONResponse({"alerts": [], "count": 0})
+        body = await request.json()
+        fired = watchpoint_system.check(
+            metric=body["metric"],
+            value=float(body["value"]),
+        )
+        return JSONResponse({"alerts": [a.to_dict() for a in fired], "count": len(fired)})
 
     return app
 
