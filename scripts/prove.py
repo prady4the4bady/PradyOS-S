@@ -167,6 +167,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 38
     "tests/test_task_scheduler.py",
     "tests/test_task_scheduler_web.py",
+    # Phase 39
+    "tests/test_memory_store.py",
+    "tests/test_memory_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

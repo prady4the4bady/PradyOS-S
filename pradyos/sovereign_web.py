@@ -26,6 +26,7 @@ from pradyos.core.reactor import ReactorEngine  # Phase 35
 from pradyos.core.state_manager import StateManager  # Phase 36
 from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
 from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 38
+from pradyos.core.memory_store import MemoryStore  # Phase 39
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -108,6 +109,7 @@ def create_app(
     state_manager: Any | None = None,
     healing_monitor: Any | None = None,
     task_scheduler: Any | None = None,
+    memory_store: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -992,6 +994,53 @@ def create_app(
             return JSONResponse({"runs": []})
         runs = task_scheduler.tick()
         return JSONResponse({"runs": [r.to_dict() for r in runs]})
+
+
+    @app.get("/api/v1/memory/search")
+    async def api_memory_search(request: Request) -> JSONResponse:
+        tag = request.query_params.get("tag")
+        if memory_store is None or not tag:
+            return JSONResponse({"entries": []})
+        return JSONResponse({
+            "entries": [e.to_dict() for e in memory_store.search(tag)],
+        })
+
+    @app.post("/api/v1/memory/expire")
+    async def api_memory_expire() -> JSONResponse:
+        if memory_store is None:
+            return JSONResponse({"expired": 0})
+        return JSONResponse({"expired": memory_store.expire()})
+
+    @app.post("/api/v1/memory/{key}")
+    async def api_memory_store(key: str, request: Request) -> JSONResponse:
+        if memory_store is None:
+            return JSONResponse({"error": "no memory store configured"})
+        body = await request.json()
+        entry = memory_store.store(
+            key=key,
+            value=body["value"],
+            tags=body.get("tags") or [],
+            ttl=body.get("ttl"),
+        )
+        return JSONResponse(entry.to_dict())
+
+    @app.get("/api/v1/memory/{key}")
+    async def api_memory_recall(key: str) -> JSONResponse:
+        if memory_store is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        entry = memory_store.recall(key)
+        if entry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(entry.to_dict())
+
+    @app.delete("/api/v1/memory/{key}")
+    async def api_memory_forget(key: str) -> JSONResponse:
+        if memory_store is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        removed = memory_store.forget(key)
+        if not removed:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
 
     return app
 
