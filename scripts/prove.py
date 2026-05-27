@@ -164,6 +164,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 37
     "tests/test_healing_monitor.py",
     "tests/test_healing_web.py",
+    # Phase 38
+    "tests/test_task_scheduler.py",
+    "tests/test_task_scheduler_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

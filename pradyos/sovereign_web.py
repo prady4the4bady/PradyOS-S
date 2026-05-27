@@ -25,6 +25,7 @@ from pradyos.core.integration_bus import SovereignBus  # Phase 34
 from pradyos.core.reactor import ReactorEngine  # Phase 35
 from pradyos.core.state_manager import StateManager  # Phase 36
 from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
+from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 38
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -106,6 +107,7 @@ def create_app(
     reactor_engine: Any | None = None,
     state_manager: Any | None = None,
     healing_monitor: Any | None = None,
+    task_scheduler: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -955,6 +957,41 @@ def create_app(
         return JSONResponse({
             "events": [e.to_dict() for e in healing_monitor.get_log(limit)],
         })
+
+
+    @app.get("/api/v1/scheduler/tasks")
+    async def api_scheduler_tasks_list() -> JSONResponse:
+        if task_scheduler is None:
+            return JSONResponse({"tasks": []})
+        return JSONResponse({"tasks": task_scheduler.list_tasks()})
+
+    @app.post("/api/v1/scheduler/tasks")
+    async def api_scheduler_tasks_add(request: Request) -> JSONResponse:
+        if task_scheduler is None:
+            return JSONResponse({"error": "no scheduler configured"})
+        body = await request.json()
+        task = task_scheduler.register(
+            name=body["name"],
+            interval_seconds=float(body["interval_seconds"]),
+            fn=lambda: None,
+        )
+        return JSONResponse(task.to_dict())
+
+    @app.delete("/api/v1/scheduler/tasks/{name}")
+    async def api_scheduler_tasks_delete(name: str) -> JSONResponse:
+        if task_scheduler is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        removed = task_scheduler.unregister(name)
+        if not removed:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+    @app.post("/api/v1/scheduler/tick")
+    async def api_scheduler_tick() -> JSONResponse:
+        if task_scheduler is None:
+            return JSONResponse({"runs": []})
+        runs = task_scheduler.tick()
+        return JSONResponse({"runs": [r.to_dict() for r in runs]})
 
     return app
 
