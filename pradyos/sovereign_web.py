@@ -18,6 +18,7 @@ from pradyos.core.bus_inspector import BusInspector  # Phase 27
 from pradyos.core.decision_journal import DecisionJournal  # Phase 28
 from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
 from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
+from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -92,6 +93,7 @@ def create_app(
     decision_journal: Any | None = None,
     capability_registry: Any | None = None,
     watchpoint_system: Any | None = None,
+    signal_aggregator: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -720,6 +722,41 @@ def create_app(
             value=float(body["value"]),
         )
         return JSONResponse({"alerts": [a.to_dict() for a in fired], "count": len(fired)})
+
+
+    @app.get("/api/v1/signals")
+    async def api_signals_list() -> JSONResponse:
+        if signal_aggregator is None:
+            return JSONResponse({"signals": []})
+        return JSONResponse({"signals": signal_aggregator.list_signals()})
+
+    @app.post("/api/v1/signals")
+    async def api_signals_record(request: Request) -> JSONResponse:
+        if signal_aggregator is None:
+            return JSONResponse({"error": "no signal aggregator configured"})
+        body = await request.json()
+        pt = signal_aggregator.record(
+            name=body["name"],
+            value=float(body["value"]),
+            timestamp=body.get("timestamp"),
+        )
+        return JSONResponse(pt.to_dict())
+
+    @app.get("/api/v1/signals/{name}")
+    async def api_signals_get(name: str, request: Request) -> JSONResponse:
+        if signal_aggregator is None:
+            return JSONResponse({"name": name, "points": [], "count": 0, "stats": None})
+        try:
+            limit = int(request.query_params.get("limit", 100))
+        except (ValueError, TypeError):
+            limit = 100
+        points = signal_aggregator.get(name, limit=limit)
+        return JSONResponse({
+            "name": name,
+            "points": [pt.to_dict() for pt in points],
+            "count": len(points),
+            "stats": signal_aggregator.stats(name),
+        })
 
     return app
 

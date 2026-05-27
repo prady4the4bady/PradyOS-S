@@ -324,7 +324,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 30E: `scripts/prove.py` — 77 test modules registered.
 - ✅ 30F: README Phase Map updated; Phase 31 planned.
 
-**Phase 31 — Planned.** Sovereign Signal Aggregator — collects named numeric signals from any module (via POST /api/v1/signals), stores them in a time-series ring buffer per signal name (max 10000 points total), and exposes GET /api/v1/signals/{name} (last N points, default 100), GET /api/v1/signals (list all signal names + latest value + count), and GET /api/v1/signals/{name}/stats (min, max, mean, stddev, count over the stored window); stdlib only, no numpy.
+**Phase 31 — Complete.** All 79 test modules green. Sovereign Signal Aggregator — a time-series ring buffer that collects named numeric signals from any module, stores them per-signal in a `collections.deque` (max_total cap), and computes live stats (min, max, mean, population stddev) on demand; stdlib only, no numpy:
+
+- ✅ 31A: `pradyos/core/signal_aggregator.py` — `SignalPoint` dataclass with `to_dict()`; `SignalAggregator` with `record()` (auto-creates per-signal deque, supports custom timestamp), `get()` (last-N oldest-first), `list_signals()` (sorted by name, count + latest), `stats()` (min/max/mean/population-stddev, returns None for unknown signal); thread-safe via `threading.Lock`.
+- ✅ 31B: `pradyos/sovereign_web.py` patched — `GET /api/v1/signals` (list all), `POST /api/v1/signals` (record point), `GET /api/v1/signals/{name}` (last N points + stats, never 404) wired into `create_app(signal_aggregator=...)`.
+- ✅ 31C: `tests/test_signal_aggregator.py` — 20 unit tests (init, record, get oldest-first/limit/all, list_signals sorted/keys/latest, stats None/keys/min-max/mean/stddev/single-point, custom timestamp, thread safety 50 concurrent, count consistency).
+- ✅ 31D: `tests/test_signal_web.py` — 10 FastAPI TestClient tests for all 3 endpoints including no-aggregator fallbacks, end-to-end POST→GET, and unknown-signal 200 with empty points.
+- ✅ 31E: `scripts/prove.py` — 79 test modules registered.
+- ✅ 31F: README Phase Map updated; Phase 32 planned.
+
+**Phase 32 — Planned.** Sovereign Snapshot Store — lets any module persist and restore arbitrary JSON-serialisable state snapshots identified by a (namespace, key) pair; each snapshot is versioned (auto-incrementing integer version), timestamped, and stored as JSONL on disk (one file per namespace); exposes GET /api/v1/snapshots/{namespace} (list all keys + latest version), POST /api/v1/snapshots/{namespace}/{key} (save a new snapshot version), GET /api/v1/snapshots/{namespace}/{key} (retrieve latest or ?version=N), DELETE /api/v1/snapshots/{namespace}/{key} (remove all versions); stdlib only.
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with

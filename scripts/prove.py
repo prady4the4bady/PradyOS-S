@@ -143,6 +143,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 30
     "tests/test_watchpoint.py",
     "tests/test_watchpoint_web.py",
+    # Phase 31
+    "tests/test_signal_aggregator.py",
+    "tests/test_signal_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
