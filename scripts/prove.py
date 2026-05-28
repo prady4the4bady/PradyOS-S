@@ -179,6 +179,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 42
     "tests/test_cli.py",
     "tests/test_lifespan_web.py",
+    # Phase 43
+    "tests/test_guardrail.py",
+    "tests/test_approval_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

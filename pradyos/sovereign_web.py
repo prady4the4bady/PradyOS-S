@@ -30,6 +30,8 @@ from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 3
 from pradyos.core.memory_store import MemoryStore  # Phase 39
 from pradyos.core.control_plane import ControlPlane, VERSION as OS_VERSION  # Phase 40
 from pradyos.core.heartbeat import HeartbeatLoop  # Phase 41
+from pradyos.core.guardrail import GuardrailGate, RiskLevel  # Phase 43
+from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 43
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -115,6 +117,8 @@ def create_app(
     memory_store: Any | None = None,
     control_plane: Any | None = None,
     heartbeat: Any | None = None,
+    guardrail_gate: Any | None = None,
+    approval_queue: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1089,6 +1093,82 @@ def create_app(
             return JSONResponse({"stopped": False})
         await heartbeat.stop()
         return JSONResponse({"stopped": True})
+
+
+    @app.get("/api/v1/guardrail/status")
+    async def api_guardrail_status() -> JSONResponse:
+        if guardrail_gate is None:
+            return JSONResponse({"auto_approve_levels": [], "queue_size": 0})
+        return JSONResponse(guardrail_gate.status())
+
+    @app.post("/api/v1/guardrail/submit")
+    async def api_guardrail_submit(request: Request) -> JSONResponse:
+        if guardrail_gate is None:
+            return JSONResponse({"error": "no guardrail gate configured"}, status_code=400)
+        body = await request.json()
+        try:
+            risk = RiskLevel(body["risk_level"])
+        except (KeyError, ValueError):
+            return JSONResponse({"error": "invalid risk_level"}, status_code=400)
+        try:
+            req = guardrail_gate.submit(
+                action=body["action"],
+                risk_level=risk,
+                payload=body.get("payload") or {},
+                reason=body.get("reason"),
+            )
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        return JSONResponse(req.to_dict())
+
+    @app.get("/api/v1/approvals")
+    async def api_approvals_list(request: Request) -> JSONResponse:
+        if approval_queue is None:
+            return JSONResponse({"entries": []})
+        status_param = request.query_params.get("status")
+        status_filter = None
+        if status_param:
+            try:
+                status_filter = ApprovalStatus(status_param)
+            except ValueError:
+                return JSONResponse({"error": "invalid status"}, status_code=400)
+        entries = approval_queue.list_by_status(status_filter)
+        return JSONResponse({"entries": [e.to_dict() for e in entries]})
+
+    @app.post("/api/v1/approvals/{entry_id}/approve")
+    async def api_approvals_approve(entry_id: str, request: Request) -> JSONResponse:
+        if approval_queue is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        note = body.get("resolver_note") if isinstance(body, dict) else None
+        entry = approval_queue.approve(entry_id, resolver_note=note)
+        if entry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(entry.to_dict())
+
+    @app.post("/api/v1/approvals/{entry_id}/reject")
+    async def api_approvals_reject(entry_id: str, request: Request) -> JSONResponse:
+        if approval_queue is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        note = body.get("resolver_note") if isinstance(body, dict) else None
+        entry = approval_queue.reject(entry_id, resolver_note=note)
+        if entry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(entry.to_dict())
+
+    @app.post("/api/v1/approvals/expire")
+    async def api_approvals_expire() -> JSONResponse:
+        if approval_queue is None:
+            return JSONResponse({"expired": 0})
+        expired = approval_queue.expire_stale()
+        return JSONResponse({"expired": len(expired)})
 
     return app
 

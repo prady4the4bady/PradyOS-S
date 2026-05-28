@@ -432,7 +432,17 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 42E: `scripts/prove.py` — 102 test modules registered.
 - ✅ 42F: README Phase Map updated; Phase 43 planned.
 
-**Phase 43 — Planned.** Sovereign Config Schema — a JSON Schema validator for PradyOS runtime configuration; define a ConfigSchema dataclass with validate(data: dict) -> list[str] (returns list of error strings, empty if valid); support required fields, type checking (str/int/float/bool/list/dict), min/max for numbers, min_length/max_length for strings, enum values, and nested schemas; stdlib only (no jsonschema library); expose POST /api/v1/config/validate with body {schema: dict, data: dict} returning {valid: bool, errors: list[str]}; 20 unit tests + 10 web tests.
+**Phase 43 — Complete.** All 104 test modules green. **The most important phase.** Without this, the OS cannot safely act autonomously. `GuardrailGate` classifies every intended action by risk (SAFE/LOW/MEDIUM/HIGH/CRITICAL); SAFE/LOW are auto-approved with journal trail; MEDIUM/HIGH/CRITICAL are queued in `ApprovalQueue` for explicit user approval; CRITICAL requires a `reason`. The queue supports approve/reject/expire-stale with TTL fallback. Stdlib only, thread-safe:
+
+- ✅ 43A: `pradyos/core/guardrail.py` — `RiskLevel` enum, `ActionRequest` dataclass (uuid id + to_dict), `GuardrailGate.submit()` (raises ValueError on CRITICAL+no-reason, auto-approves SAFE/LOW with journal record, queues MEDIUM/HIGH/CRITICAL), `status()` (auto_approve_levels + pending queue_size).
+- ✅ 43B: `pradyos/core/approval_queue.py` — `ApprovalStatus` enum (PENDING/APPROVED/REJECTED/EXPIRED), `ApprovalEntry` dataclass, `ApprovalQueue` with `add()` (creates PENDING from request), `approve()`/`reject()` (sets resolved_at + resolver_note), `expire_stale()` (TTL sweep), `get()`, `list_by_status()` (sorted by requested_at), `count()` (by status string/enum/None); thread-safe via `threading.Lock`.
+- ✅ 43C: `pradyos/sovereign_web.py` patched — `GET /api/v1/guardrail/status`, `POST /api/v1/guardrail/submit`, `GET /api/v1/approvals?status=X`, `POST /api/v1/approvals/{id}/approve`, `POST /api/v1/approvals/{id}/reject`, `POST /api/v1/approvals/expire` wired into `create_app(guardrail_gate=..., approval_queue=...)`.
+- ✅ 43D: `tests/test_guardrail.py` — 20 unit tests covering ActionRequest fields/serialization, RiskLevel enum, gate init/submit-safe/submit-low/submit-medium-queues/submit-high-queues, CRITICAL-no-reason raises, CRITICAL-with-reason queues, journal integration (auto vs pending), status keys, queue add/approve/reject/expire/count.
+- ✅ 43E: `tests/test_approval_web.py` — 10 FastAPI tests (guardrail status no-gate/with-gate, submit safe/medium/invalid-risk, approvals list, approve/reject endpoints, expire count, full submit-HIGH→approve→list-shows-approved flow).
+- ✅ 43F: `scripts/prove.py` — 104 test modules registered.
+- ✅ 43G: README Phase Map updated; Phase 44 planned.
+
+**Phase 44 — Planned.** Sovereign ExecutionEngine — sandboxed subprocess runner that ONLY executes actions that have been APPROVED by the GuardrailGate; ExecutionEngine.run(entry: ApprovalEntry) checks entry.status == APPROVED before running; executes via subprocess.run with a configurable allowlist of permitted commands (default: empty — everything blocked unless explicitly allowed); captures stdout/stderr/returncode; records result to DecisionJournal; exposes POST /api/v1/execute/{entry_id} (runs the approved action), GET /api/v1/execute/history (past runs); stdlib only.
 
 ---
 
