@@ -34,6 +34,7 @@ from pradyos.core.guardrail import GuardrailGate, RiskLevel  # Phase 43
 from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 43
 from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Phase 44
 from pradyos.core.reasoning_engine import ReasoningEngine  # Phase 45
+from pradyos.core.web_agent import WebAgent  # Phase 46
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -123,6 +124,7 @@ def create_app(
     approval_queue: Any | None = None,
     execution_engine: Any | None = None,
     reasoning_engine: Any | None = None,
+    web_agent: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1239,6 +1241,36 @@ def create_app(
             state=body.get("state") or {},
         )
         return JSONResponse(plan.to_dict())
+
+
+    @app.get("/api/v1/web/status")
+    async def api_web_status() -> JSONResponse:
+        if web_agent is None:
+            return JSONResponse({
+                "cache_enabled": False,
+                "guardrail_enabled": False,
+                "max_age": 3600,
+                "timeout": 10,
+            })
+        return JSONResponse(web_agent.status())
+
+    @app.get("/api/v1/web/fetch")
+    async def api_web_fetch(url: str) -> JSONResponse:
+        if web_agent is None:
+            return JSONResponse({"error": "no web agent configured"}, status_code=400)
+        result = web_agent.fetch(url)
+        return JSONResponse(result.to_dict())
+
+    @app.post("/api/v1/web/search")
+    async def api_web_search(request: Request) -> JSONResponse:
+        if web_agent is None:
+            return JSONResponse({"error": "no web agent configured"}, status_code=400)
+        body = await request.json()
+        if "query" not in body:
+            return JSONResponse({"error": "missing 'query' key"}, status_code=400)
+        max_results = int(body.get("max_results", 5))
+        results = web_agent.search(query=str(body["query"]), max_results=max_results)
+        return JSONResponse({"results": [r.to_dict() for r in results]})
 
     return app
 

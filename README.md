@@ -460,7 +460,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 45E: `scripts/prove.py` — 108 test modules registered.
 - ✅ 45F: README Phase Map updated; Phase 46 planned.
 
-**Phase 46 — Planned.** Sovereign WebAgent — stdlib-only HTTP research agent; WebAgent.fetch(url: str) -> WebResult (url, status_code, body_text, content_type, fetched_at, error); WebAgent.search(query: str, engine_url: str | None) -> list[WebResult] (builds a simple GET query, fetches top results from a configurable search endpoint — default DuckDuckGo HTML, parses result links from raw HTML using html.parser, returns up to 5 WebResults); every fetch goes through the GuardrailGate with risk_level=LOW for plain fetches and MEDIUM for search queries; results cached in SnapshotStore (namespace='web_cache', key=url, TTL-equivalent via saved_at + max_age param); exposes GET /api/v1/web/fetch?url=X, POST /api/v1/web/search {query, max_results}; stdlib only (urllib, html.parser); 20 unit tests + 10 web tests.
+**Phase 46 — Complete.** All 110 test modules green. Sovereign WebAgent — stdlib-only HTTP research agent (urllib + html.parser, no requests/httpx); guardrail-gated fetches with SnapshotStore-backed caching and HTML link extraction for search:
+
+- ✅ 46A: `pradyos/core/web_agent.py` — `WebResult` dataclass with `to_dict()`; `WebAgent` with `fetch(url)` (cache check → guardrail check → urlopen → cache save), `search(query, engine_url, max_results)` (guardrail check → fetch DDG HTML → `_LinkParser` extracts hrefs → fetch each link, excluding engine domain), `status()` (cache/guardrail flags + max_age + timeout); thread-safe via `threading.Lock`; duck-typed guardrail: prefers `gate.evaluate()` (mock-friendly), falls back to Phase 43 `gate.submit()` with AUTO_APPROVE_LEVELS check; DDG `/l/?uddg=` redirect URLs are unwrapped via `_extract_absolute_url`.
+- ✅ 46B: `pradyos/sovereign_web.py` patched — `GET /api/v1/web/status`, `GET /api/v1/web/fetch?url=X`, `POST /api/v1/web/search` (400 on missing query / no agent) wired into `create_app(web_agent=...)`.
+- ✅ 46C: `tests/test_web_agent.py` — 20 unit tests; ZERO real HTTP — all `urllib.request.urlopen` mocked via `unittest.mock.patch`. Covers WebResult fields, init, fetch success/failure/cache-hit/cache-miss/cache-save, guardrail block + approve, search list/blocked/fetch-fail, HTML link parsing, max_results, engine-domain exclusion, status keys/cache_enabled/guardrail_enabled.
+- ✅ 46D: `tests/test_web_agent_web.py` — 10 FastAPI TestClient tests using a `_StubAgent`: status 200/keys/defaults, fetch 422-no-url / 400-no-agent / WebResult fields, search 400-no-agent / 400-no-query / results key / results is list.
+- ✅ 46E: `scripts/prove.py` — 110 test modules registered.
+- ✅ 46F: README Phase Map updated; Phase 47 planned.
+
+**Phase 47 — Planned.** Sovereign MemoryGraph — a lightweight in-memory directed graph that stores named entities (nodes) and typed relationships (edges); supports add_node(name, metadata), add_edge(src, dst, relation, weight=1.0), get_neighbors(name, relation=None), shortest_path(src, dst) via BFS; persists to JSONL via SnapshotStore (namespace='memory_graph'); exposes GET /api/v1/graph/nodes, POST /api/v1/graph/nodes, POST /api/v1/graph/edges, GET /api/v1/graph/neighbors/{name}, GET /api/v1/graph/path?src=X&dst=Y; stdlib only; 20 unit + 10 web tests.
 
 ---
 
