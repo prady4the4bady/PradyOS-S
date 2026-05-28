@@ -40,6 +40,7 @@ from pradyos.core.event_store import EventStore  # Phase 48
 from pradyos.core.task_queue import TaskQueue  # Phase 49
 from pradyos.core.pubsub import PubSubBroker  # Phase 50
 from pradyos.core.statesync import StateSyncManager  # Phase 51
+from pradyos.core.distributed_lock import LockManager  # Phase 52
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -135,6 +136,7 @@ def create_app(
     task_queue: Any | None = None,
     pubsub: Any | None = None,
     statesync: Any | None = None,
+    lock_manager: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1512,6 +1514,60 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"stopped": True})
+
+
+    @app.get("/api/v1/locks")
+    async def api_locks_list() -> JSONResponse:
+        if lock_manager is None:
+            return JSONResponse({"locks": [], "count": 0})
+        locks = lock_manager.list_locks()
+        return JSONResponse({"locks": locks, "count": len(locks)})
+
+    @app.post("/api/v1/locks")
+    async def api_locks_acquire(request: Request) -> JSONResponse:
+        if lock_manager is None:
+            return JSONResponse({"error": "no lock manager configured"}, status_code=400)
+        body = await request.json()
+        for key in ("name", "holder_id"):
+            if key not in body:
+                return JSONResponse(
+                    {"error": f"missing required key: {key}"},
+                    status_code=400,
+                )
+        ttl = float(body.get("ttl", 30))
+        lock = lock_manager.acquire(
+            name=str(body["name"]),
+            holder_id=str(body["holder_id"]),
+            ttl=ttl,
+        )
+        if lock is None:
+            return JSONResponse({"error": "already locked"}, status_code=409)
+        return JSONResponse(lock.to_dict())
+
+    @app.post("/api/v1/locks/{name}/refresh")
+    async def api_locks_refresh(name: str, request: Request) -> JSONResponse:
+        if lock_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        body = await request.json()
+        if "holder_id" not in body:
+            return JSONResponse(
+                {"error": "missing required key: holder_id"},
+                status_code=400,
+            )
+        ttl = float(body.get("ttl", 30))
+        ok = lock_manager.refresh(name=name, holder_id=str(body["holder_id"]), ttl=ttl)
+        if not ok:
+            return JSONResponse({"error": "not found or wrong holder"}, status_code=404)
+        return JSONResponse({"refreshed": True})
+
+    @app.delete("/api/v1/locks/{name}")
+    async def api_locks_release(name: str, holder_id: str) -> JSONResponse:
+        if lock_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = lock_manager.release(name=name, holder_id=holder_id)
+        if not ok:
+            return JSONResponse({"error": "not found or wrong holder"}, status_code=404)
+        return JSONResponse({"released": True})
 
     return app
 
