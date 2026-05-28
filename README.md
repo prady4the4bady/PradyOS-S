@@ -451,7 +451,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 44E: `scripts/prove.py` — 106 test modules registered.
 - ✅ 44F: README Phase Map updated; Phase 45 planned.
 
-**Phase 45 — Planned.** Sovereign ReasoningEngine — a chain-of-thought planner that takes a goal string and a snapshot of current OS state (modules, signals, recent decisions), produces an ordered list of ActionRequests to achieve the goal; uses a simple rule-based forward-chaining reasoner (stdlib only, no LLM calls); each reasoning step has a precondition dict, an action string, a risk_level, and a rationale; the engine exposes POST /api/v1/reason with body {goal: str, state: dict} and returns {steps: list[{action, risk_level, rationale}], confidence: float (0-1)}; confidence is computed as fraction of preconditions satisfied by current state; 20 unit tests + 10 web tests.
+**Phase 45 — Complete.** All 108 test modules green. Sovereign ReasoningEngine — forward-chaining planner; given a goal string and a state snapshot, matches rules by trigger substring (case-insensitive), orders steps so satisfied-precondition steps fire first, and computes confidence as the fraction of all precondition pairs across all steps satisfied by the state. Stdlib only, no LLM calls:
+
+- ✅ 45A: `pradyos/core/reasoning_engine.py` — `ReasoningStep` + `ReasoningPlan` dataclasses with `to_dict()`; `ReasoningEngine` with `add_rule()` (validates required keys: trigger/action/risk_level/rationale/preconditions), `rule_count()`, `plan(goal, state)` (substring trigger match → ordered steps → confidence rounded to 4dp; vacuous 1.0 when no steps or no preconditions), `status()` (rule_count + auto_approve_levels); thread-safe via `threading.Lock`.
+- ✅ 45B: `pradyos/sovereign_web.py` patched — `GET /api/v1/reason/status`, `POST /api/v1/reason/rules` (400 on missing keys), `POST /api/v1/reason` (400 on missing goal) wired into `create_app(reasoning_engine=...)`.
+- ✅ 45C: `tests/test_reasoning_engine.py` — 20 unit tests (init/rule_count, add_rule increments/validates, plan empty/match/no-match, step fields, ordering satisfied-first, confidence 1.0/partial 0.5/zero, state_used echo, created_at recent, status keys, 20 concurrent add_rule).
+- ✅ 45D: `tests/test_reasoning_web.py` — 10 FastAPI TestClient tests covering all 3 endpoints, no-engine 400, missing-key 400, response shape, full add-rule → reason flow.
+- ✅ 45E: `scripts/prove.py` — 108 test modules registered.
+- ✅ 45F: README Phase Map updated; Phase 46 planned.
+
+**Phase 46 — Planned.** Sovereign WebAgent — stdlib-only HTTP research agent; WebAgent.fetch(url: str) -> WebResult (url, status_code, body_text, content_type, fetched_at, error); WebAgent.search(query: str, engine_url: str | None) -> list[WebResult] (builds a simple GET query, fetches top results from a configurable search endpoint — default DuckDuckGo HTML, parses result links from raw HTML using html.parser, returns up to 5 WebResults); every fetch goes through the GuardrailGate with risk_level=LOW for plain fetches and MEDIUM for search queries; results cached in SnapshotStore (namespace='web_cache', key=url, TTL-equivalent via saved_at + max_age param); exposes GET /api/v1/web/fetch?url=X, POST /api/v1/web/search {query, max_results}; stdlib only (urllib, html.parser); 20 unit tests + 10 web tests.
 
 ---
 

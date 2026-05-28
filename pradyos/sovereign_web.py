@@ -33,6 +33,7 @@ from pradyos.core.heartbeat import HeartbeatLoop  # Phase 41
 from pradyos.core.guardrail import GuardrailGate, RiskLevel  # Phase 43
 from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 43
 from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Phase 44
+from pradyos.core.reasoning_engine import ReasoningEngine  # Phase 45
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -121,6 +122,7 @@ def create_app(
     guardrail_gate: Any | None = None,
     approval_queue: Any | None = None,
     execution_engine: Any | None = None,
+    reasoning_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1206,6 +1208,37 @@ def create_app(
             return JSONResponse({"error": "entry not found"}, status_code=404)
         result = execution_engine.run(entry)
         return JSONResponse(result.to_dict())
+
+
+    @app.get("/api/v1/reason/status")
+    async def api_reason_status() -> JSONResponse:
+        if reasoning_engine is None:
+            return JSONResponse({"rule_count": 0, "auto_approve_levels": []})
+        return JSONResponse(reasoning_engine.status())
+
+    @app.post("/api/v1/reason/rules")
+    async def api_reason_add_rule(request: Request) -> JSONResponse:
+        if reasoning_engine is None:
+            return JSONResponse({"error": "no reasoning engine configured"}, status_code=400)
+        body = await request.json()
+        try:
+            reasoning_engine.add_rule(body)
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        return JSONResponse({"rule_count": reasoning_engine.rule_count()})
+
+    @app.post("/api/v1/reason")
+    async def api_reason(request: Request) -> JSONResponse:
+        if reasoning_engine is None:
+            return JSONResponse({"error": "no reasoning engine configured"}, status_code=400)
+        body = await request.json()
+        if "goal" not in body:
+            return JSONResponse({"error": "missing 'goal' key"}, status_code=400)
+        plan = reasoning_engine.plan(
+            goal=str(body["goal"]),
+            state=body.get("state") or {},
+        )
+        return JSONResponse(plan.to_dict())
 
     return app
 

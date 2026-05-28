@@ -185,6 +185,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 44
     "tests/test_execution_engine.py",
     "tests/test_execution_web.py",
+    # Phase 45
+    "tests/test_reasoning_engine.py",
+    "tests/test_reasoning_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
