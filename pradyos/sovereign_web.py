@@ -159,6 +159,7 @@ def create_app(
     tag_index: Any | None = None,
     router_registry: Any | None = None,
     aggregate_registry: Any | None = None,
+    command_bus: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2285,6 +2286,51 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
+
+    # ── Phase 64: Command Bus ────────────────────────────────────────────────
+
+    @app.get("/api/v1/commands/handlers")
+    async def api_commands_handlers() -> JSONResponse:
+        if command_bus is None:
+            return JSONResponse({"handlers": []})
+        return JSONResponse({"handlers": command_bus.list_handlers()})
+
+    @app.post("/api/v1/commands/dispatch")
+    async def api_commands_dispatch(request: Request) -> JSONResponse:
+        if command_bus is None:
+            return JSONResponse({"error": "no command bus configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse(
+                {"error": "missing required key: name"},
+                status_code=400,
+            )
+        payload = body.get("payload") or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        result = command_bus.dispatch(str(body["name"]), payload)
+        return JSONResponse(result.to_dict())
+
+    @app.get("/api/v1/commands/history")
+    async def api_commands_history(request: Request) -> JSONResponse:
+        if command_bus is None:
+            return JSONResponse({"history": []})
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(0, min(200, limit))
+        results = command_bus.history(limit=limit)
+        return JSONResponse({"history": [r.to_dict() for r in results]})
+
+    @app.delete("/api/v1/commands/handlers/{name}")
+    async def api_commands_unregister(name: str) -> JSONResponse:
+        if command_bus is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = command_bus.unregister(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"unregistered": True})
 
     return app
 

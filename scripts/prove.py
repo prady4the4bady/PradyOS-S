@@ -242,6 +242,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 63
     "tests/test_aggregate_root.py",
     "tests/test_aggregate_web.py",
+    # Phase 64
+    "tests/test_command_bus.py",
+    "tests/test_command_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
