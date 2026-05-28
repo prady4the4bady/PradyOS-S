@@ -218,6 +218,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 55
     "tests/test_bulkhead_pool.py",
     "tests/test_bulkhead_web.py",
+    # Phase 56
+    "tests/test_timeout_guard.py",
+    "tests/test_timeout_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
