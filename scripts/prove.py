@@ -209,6 +209,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 52
     "tests/test_distributed_lock.py",
     "tests/test_distributed_lock_web.py",
+    # Phase 53
+    "tests/test_circuit_breaker.py",
+    "tests/test_circuit_breaker_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

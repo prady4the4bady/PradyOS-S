@@ -41,6 +41,7 @@ from pradyos.core.task_queue import TaskQueue  # Phase 49
 from pradyos.core.pubsub import PubSubBroker  # Phase 50
 from pradyos.core.statesync import StateSyncManager  # Phase 51
 from pradyos.core.distributed_lock import LockManager  # Phase 52
+from pradyos.core.circuit_breaker import CircuitBreaker, BreakerState  # Phase 53
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -137,6 +138,7 @@ def create_app(
     pubsub: Any | None = None,
     statesync: Any | None = None,
     lock_manager: Any | None = None,
+    circuit_breaker: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1568,6 +1570,47 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found or wrong holder"}, status_code=404)
         return JSONResponse({"released": True})
+
+
+    @app.get("/api/v1/breakers")
+    async def api_breakers_list() -> JSONResponse:
+        if circuit_breaker is None:
+            return JSONResponse({"breakers": [], "count": 0})
+        return JSONResponse({
+            "breakers": circuit_breaker.list_breakers(),
+            "count": circuit_breaker.count(),
+        })
+
+    @app.post("/api/v1/breakers")
+    async def api_breakers_register(request: Request) -> JSONResponse:
+        if circuit_breaker is None:
+            return JSONResponse({"error": "no circuit breaker configured"}, status_code=400)
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse({"error": "missing required key: name"}, status_code=400)
+        name = str(body["name"])
+        # Ensure breaker state exists by triggering create-or-get.
+        with circuit_breaker._lock:
+            bs = circuit_breaker._get_or_create_locked(name)
+        return JSONResponse(bs.to_dict())
+
+    @app.post("/api/v1/breakers/{name}/reset")
+    async def api_breakers_reset(name: str) -> JSONResponse:
+        if circuit_breaker is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = circuit_breaker.reset(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"reset": True})
+
+    @app.get("/api/v1/breakers/{name}")
+    async def api_breakers_get(name: str) -> JSONResponse:
+        if circuit_breaker is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        bs = circuit_breaker.get_state(name)
+        if bs is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(bs.to_dict())
 
     return app
 
