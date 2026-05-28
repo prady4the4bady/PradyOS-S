@@ -160,6 +160,7 @@ def create_app(
     router_registry: Any | None = None,
     aggregate_registry: Any | None = None,
     command_bus: Any | None = None,
+    query_bus: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2328,6 +2329,51 @@ def create_app(
         if command_bus is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         ok = command_bus.unregister(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"unregistered": True})
+
+    # ── Phase 65: Query Bus ──────────────────────────────────────────────────
+
+    @app.get("/api/v1/queries/handlers")
+    async def api_queries_handlers() -> JSONResponse:
+        if query_bus is None:
+            return JSONResponse({"handlers": []})
+        return JSONResponse({"handlers": query_bus.list_handlers()})
+
+    @app.post("/api/v1/queries/execute")
+    async def api_queries_execute(request: Request) -> JSONResponse:
+        if query_bus is None:
+            return JSONResponse({"error": "no query bus configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse(
+                {"error": "missing required key: name"},
+                status_code=400,
+            )
+        params = body.get("params") or {}
+        if not isinstance(params, dict):
+            params = {}
+        result = query_bus.query(str(body["name"]), params)
+        return JSONResponse(result.to_dict())
+
+    @app.get("/api/v1/queries/history")
+    async def api_queries_history(request: Request) -> JSONResponse:
+        if query_bus is None:
+            return JSONResponse({"history": []})
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(0, min(200, limit))
+        results = query_bus.history(limit=limit)
+        return JSONResponse({"history": [r.to_dict() for r in results]})
+
+    @app.delete("/api/v1/queries/handlers/{name}")
+    async def api_queries_unregister(name: str) -> JSONResponse:
+        if query_bus is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = query_bus.unregister(name)
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"unregistered": True})
