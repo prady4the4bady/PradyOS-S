@@ -45,6 +45,7 @@ from pradyos.core.circuit_breaker import CircuitBreaker, BreakerState  # Phase 5
 from pradyos.core.retry_policy import RetryPolicy  # Phase 54
 from pradyos.core.bulkhead_pool import BulkheadManager, BulkheadRejectedError  # Phase 55
 from pradyos.core.timeout_guard import TimeoutGuard, TimeoutExpiredError  # Phase 56
+from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  # Phase 57
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -145,6 +146,7 @@ def create_app(
     retry_policy: Any | None = None,
     bulkhead_manager: Any | None = None,
     timeout_guard: Any | None = None,
+    semaphore_gate: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1819,6 +1821,75 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cleared": True})
+
+
+    @app.get("/api/v1/semaphores")
+    async def api_semaphores_list() -> JSONResponse:
+        if semaphore_gate is None:
+            return JSONResponse({"names": [], "count": 0})
+        names = semaphore_gate.list_names()
+        return JSONResponse({"names": names, "count": len(names)})
+
+    @app.post("/api/v1/semaphores")
+    async def api_semaphores_create(request: Request) -> JSONResponse:
+        if semaphore_gate is None:
+            return JSONResponse({"error": "no semaphore gate configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse({"error": "missing required key: name"}, status_code=400)
+        capacity = int(body.get("capacity", 1))
+        try:
+            stats = semaphore_gate.create(name=str(body["name"]), capacity=capacity)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=409)
+        return JSONResponse(stats.to_dict())
+
+    @app.post("/api/v1/semaphores/{name}/acquire")
+    async def api_semaphores_acquire(name: str, request: Request) -> JSONResponse:
+        if semaphore_gate is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        # Default to 5s cap for HTTP safety — never block indefinitely from a web call.
+        raw_timeout = body.get("timeout", 5.0)
+        timeout_v = None if raw_timeout is None else float(raw_timeout)
+        try:
+            ok = semaphore_gate.acquire(name, timeout=timeout_v)
+            stats = semaphore_gate.get_stats(name)
+        except SemaphoreNotFoundError:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({
+            "name": name,
+            "acquired": bool(ok),
+            "stats": stats.to_dict(),
+        })
+
+    @app.post("/api/v1/semaphores/{name}/release")
+    async def api_semaphores_release(name: str) -> JSONResponse:
+        if semaphore_gate is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            semaphore_gate.release(name)
+            stats = semaphore_gate.get_stats(name)
+        except SemaphoreNotFoundError:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({
+            "name": name,
+            "released": True,
+            "stats": stats.to_dict(),
+        })
+
+    @app.get("/api/v1/semaphores/{name}")
+    async def api_semaphores_get(name: str) -> JSONResponse:
+        if semaphore_gate is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            stats = semaphore_gate.get_stats(name)
+        except SemaphoreNotFoundError:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(stats.to_dict())
 
     return app
 
