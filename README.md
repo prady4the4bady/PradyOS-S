@@ -568,7 +568,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 57E: `scripts/prove.py` — 132 test modules registered.
 - ✅ 57F: README Phase Map updated; Phase 58 planned.
 
-**Phase 58 — Planned.** Sovereign EventFilter — a declarative, composable filter pipeline for the existing Bus Inspector (Phase 27); EventFilter accepts a list of FilterRule(field, op, value) where op ∈ {eq, neq, gt, lt, gte, lte, contains, startswith, endswith, regex}; match(event_dict) returns True/False; compose(rules, mode='AND'|'OR') builds compound matchers; EventFilterRegistry stores named filters, apply(filter_name, events) returns only matching events; exposes GET /api/v1/filters (list), POST /api/v1/filters (create: body={name, rules, mode}), POST /api/v1/filters/{name}/apply (body={events:[]}), DELETE /api/v1/filters/{name}; stdlib only (re module for regex op); 20 unit + 10 web tests.
+**Phase 58 — Complete.** All 134 test modules green. Sovereign EventFilter — declarative, composable filter pipeline over event dicts; 10 operators (eq/neq/gt/lt/gte/lte/contains/startswith/endswith/regex); dot-notation field paths with safe missing-key handling; AND/OR compounds; named filter registry. Stdlib only:
+
+- ✅ 58A: `pradyos/core/event_filter.py` — `FilterRule(field, op, value)` with `matches(event)` (`_resolve` walks dot-notation paths returning a `_MISSING` sentinel rather than raising; numeric comparison when both sides numeric, string comparison otherwise; regex compile errors return False; unknown op returns False); `EventFilter(rules, mode='AND')` (validates mode → ValueError, empty rules passes all); `EventFilterRegistry` with `register()` (overwrite ok), `get()`, `delete()`, `list_names()` (sorted), `apply(name, events)` (KeyError on unknown name → web layer translates to 404); thread-safe via `threading.Lock`.
+- ✅ 58B: `pradyos/sovereign_web.py` patched — `GET /api/v1/filters`, `POST /api/v1/filters` (400 on missing name or invalid mode), `POST /api/v1/filters/{name}/apply` (404 on unknown name), `DELETE /api/v1/filters/{name}` wired into `create_app(event_filter_registry=...)`. The literal `/apply` POST is registered BEFORE the DELETE `/{name}` so it isn't captured as the name param.
+- ✅ 58C: `tests/test_event_filter.py` — 20 unit tests (each of the 10 ops, missing-field-no-raise, dot-notation nested, unknown-op-false, EventFilter AND all-match/one-miss, OR one-match/all-miss, empty rules pass, invalid mode ValueError, registry register/get/apply/unknown-KeyError/delete-list).
+- ✅ 58D: `tests/test_filter_web.py` — 10 FastAPI TestClient tests covering all 4 endpoints, no-registry fallbacks, 400 on invalid mode, 404 on unknown name, full create→apply→delete flow with zero/positive match counts.
+- ✅ 58E: `scripts/prove.py` — 134 test modules registered.
+- ✅ 58F: README Phase Map updated; Phase 59 planned.
+
+**Phase 59 — Planned.** Sovereign ThrottleMap — per-key sliding-window rate limiter distinct from the global Phase 23 rate-limit shield; ThrottleMap tracks call timestamps in a deque per key; allow(key, limit, window) → bool (True if under limit, False if exceeded, auto-purges old timestamps); reset(key) clears history; stats(key) → {key, limit, window, calls_in_window, allowed_total, rejected_total}; list_keys() sorted; thread-safe via threading.Lock; exposes GET /api/v1/throttle (list keys), POST /api/v1/throttle/check (body={key, limit, window}), GET /api/v1/throttle/{key} (stats), DELETE /api/v1/throttle/{key} (reset); stdlib only (collections.deque, time.monotonic); 20 unit + 10 web tests.
 
 ---
 

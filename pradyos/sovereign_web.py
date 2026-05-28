@@ -46,6 +46,7 @@ from pradyos.core.retry_policy import RetryPolicy  # Phase 54
 from pradyos.core.bulkhead_pool import BulkheadManager, BulkheadRejectedError  # Phase 55
 from pradyos.core.timeout_guard import TimeoutGuard, TimeoutExpiredError  # Phase 56
 from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  # Phase 57
+from pradyos.core.event_filter import EventFilterRegistry, FilterRule  # Phase 58
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -147,6 +148,7 @@ def create_app(
     bulkhead_manager: Any | None = None,
     timeout_guard: Any | None = None,
     semaphore_gate: Any | None = None,
+    event_filter_registry: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1890,6 +1892,67 @@ def create_app(
         except SemaphoreNotFoundError:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(stats.to_dict())
+
+
+    @app.get("/api/v1/filters")
+    async def api_filters_list() -> JSONResponse:
+        if event_filter_registry is None:
+            return JSONResponse({"names": [], "count": 0})
+        names = event_filter_registry.list_names()
+        return JSONResponse({"names": names, "count": len(names)})
+
+    @app.post("/api/v1/filters")
+    async def api_filters_create(request: Request) -> JSONResponse:
+        if event_filter_registry is None:
+            return JSONResponse({"error": "no filter registry configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse({"error": "missing required key: name"}, status_code=400)
+        mode = str(body.get("mode", "AND"))
+        if mode not in ("AND", "OR"):
+            return JSONResponse({"error": "mode must be AND or OR"}, status_code=400)
+        rules_raw = body.get("rules") or []
+        rules = []
+        for r in rules_raw:
+            if not isinstance(r, dict):
+                continue
+            rules.append(FilterRule(
+                field=str(r.get("field", "")),
+                op=str(r.get("op", "")),
+                value=r.get("value"),
+            ))
+        name = str(body["name"])
+        filt = event_filter_registry.register(name, rules, mode)
+        result = {"name": name}
+        result.update(filt.to_dict())
+        return JSONResponse(result)
+
+    @app.post("/api/v1/filters/{name}/apply")
+    async def api_filters_apply(name: str, request: Request) -> JSONResponse:
+        if event_filter_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        body = await request.json()
+        events = body.get("events") or []
+        if not isinstance(events, list):
+            events = []
+        try:
+            matched = event_filter_registry.apply(name, events)
+        except KeyError:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({
+            "name": name,
+            "matched": len(matched),
+            "events": matched,
+        })
+
+    @app.delete("/api/v1/filters/{name}")
+    async def api_filters_delete(name: str) -> JSONResponse:
+        if event_filter_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = event_filter_registry.delete(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
 
     return app
 

@@ -224,6 +224,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 57
     "tests/test_semaphore_gate.py",
     "tests/test_semaphore_web.py",
+    # Phase 58
+    "tests/test_event_filter.py",
+    "tests/test_filter_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
