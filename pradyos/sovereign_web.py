@@ -49,6 +49,7 @@ from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  #
 from pradyos.core.event_filter import EventFilterRegistry, FilterRule  # Phase 58
 from pradyos.core.throttle_map import ThrottleMap  # Phase 59
 from pradyos.core.pipeline_chain import PipelineRegistry, PipelineChain, Step, StepError  # Phase 60
+from pradyos.core.tag_index import TagIndex  # Phase 61
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -153,6 +154,7 @@ def create_app(
     event_filter_registry: Any | None = None,
     throttle_map: Any | None = None,
     pipeline_registry: Any | None = None,
+    tag_index: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2088,6 +2090,63 @@ def create_app(
         if pipeline_registry is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         ok = pipeline_registry.delete(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/tags")
+    async def api_tags_list() -> JSONResponse:
+        if tag_index is None:
+            return JSONResponse({"tags": [], "total": 0})
+        all_tags = tag_index.list_tags()
+        return JSONResponse({"tags": all_tags, "total": len(all_tags)})
+
+    @app.post("/api/v1/tags/tag")
+    async def api_tags_tag(request: Request) -> JSONResponse:
+        if tag_index is None:
+            return JSONResponse({"error": "no tag index configured"})
+        body = await request.json()
+        item_id = str(body.get("item_id", ""))
+        tags = body.get("tags") or []
+        if not isinstance(tags, list):
+            tags = []
+        tag_index.tag(item_id, *[str(t) for t in tags])
+        return JSONResponse({"tagged": True, "item_id": item_id, "tags": list(tags)})
+
+    @app.post("/api/v1/tags/untag")
+    async def api_tags_untag(request: Request) -> JSONResponse:
+        if tag_index is None:
+            return JSONResponse({"error": "no tag index configured"})
+        body = await request.json()
+        item_id = str(body.get("item_id", ""))
+        tags = body.get("tags") or []
+        if not isinstance(tags, list):
+            tags = []
+        tag_index.untag(item_id, *[str(t) for t in tags])
+        return JSONResponse({"untagged": True, "item_id": item_id, "tags": list(tags)})
+
+    @app.get("/api/v1/tags/items/{tag}")
+    async def api_tags_items_for(tag: str) -> JSONResponse:
+        if tag_index is None:
+            return JSONResponse({"tag": tag, "items": []})
+        return JSONResponse({"tag": tag, "items": tag_index.items(tag)})
+
+    @app.get("/api/v1/tags/search")
+    async def api_tags_search(request: Request) -> JSONResponse:
+        raw = request.query_params.get("tags", "")
+        mode = request.query_params.get("mode", "all")
+        tags = [t.strip() for t in raw.split(",") if t.strip()]
+        if tag_index is None:
+            return JSONResponse({"tags": tags, "mode": mode, "results": []})
+        results = tag_index.search(*tags, mode=mode)
+        return JSONResponse({"tags": tags, "mode": mode, "results": results})
+
+    @app.delete("/api/v1/tags/items/{item_id}")
+    async def api_tags_delete_item(item_id: str) -> JSONResponse:
+        if tag_index is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = tag_index.delete_item(item_id)
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
