@@ -28,6 +28,7 @@ from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
 from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 38
 from pradyos.core.memory_store import MemoryStore  # Phase 39
 from pradyos.core.control_plane import ControlPlane, VERSION as OS_VERSION  # Phase 40
+from pradyos.core.heartbeat import HeartbeatLoop  # Phase 41
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -112,6 +113,7 @@ def create_app(
     task_scheduler: Any | None = None,
     memory_store: Any | None = None,
     control_plane: Any | None = None,
+    heartbeat: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
@@ -1060,6 +1062,34 @@ def create_app(
         if control_plane is None:
             return JSONResponse({"ticks": [], "healed": [], "reactions": []})
         return JSONResponse(control_plane.tick())
+
+
+    @app.on_event("startup")
+    async def _heartbeat_startup() -> None:
+        if heartbeat is not None:
+            await heartbeat.start()
+
+    @app.on_event("shutdown")
+    async def _heartbeat_shutdown() -> None:
+        if heartbeat is not None:
+            await heartbeat.stop()
+
+    @app.get("/api/v1/heartbeat/status")
+    async def api_heartbeat_status() -> JSONResponse:
+        if heartbeat is None:
+            return JSONResponse({
+                "running": False,
+                "tick_count": 0,
+                "interval_seconds": 0,
+            })
+        return JSONResponse(heartbeat.status())
+
+    @app.post("/api/v1/heartbeat/stop")
+    async def api_heartbeat_stop() -> JSONResponse:
+        if heartbeat is None:
+            return JSONResponse({"stopped": False})
+        await heartbeat.stop()
+        return JSONResponse({"stopped": True})
 
     return app
 

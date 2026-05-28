@@ -412,19 +412,28 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 40C: `tests/test_control_plane.py` — 20 unit tests (init, uptime, status os_version/uptime/keys/all-11-modules/present/summary, _safe_summary None/works/raises, tick keys/empty/scheduler/healer/exception-swallowing/list, real-modules integration).
 - ✅ 40D: `tests/test_control_web.py` — 10 FastAPI TestClient tests covering both endpoints and all 11 module names in the modules dict.
 - ✅ 40E: `scripts/prove.py` — 97 test modules registered.
-- ✅ 40F: README finalised — PradyOS v0.40.0 COMPLETE.
+- ✅ 40F: README Phase Map updated; Phase 41 planned.
+
+**Phase 41 — Complete.** All 99 test modules green. Sovereign Heartbeat Loop — async background driver that calls `ControlPlane.tick()` on a fixed interval, transforming the OS from on-demand to self-driving; FastAPI startup/shutdown lifecycle hooks auto-start and auto-stop the loop; stdlib + asyncio only:
+
+- ✅ 41A: `pradyos/core/heartbeat.py` — `HeartbeatConfig` (interval_seconds default 5.0, max_ticks optional cap), `HeartbeatLoop` with `start()` (idempotent), `stop()` (graceful with timeout fallback to cancel), `_loop()` (swallows tick exceptions, increments thread-safe counter, stops at max_ticks), `status()`; thread-safe via `threading.Lock` on `tick_count`.
+- ✅ 41B: `pradyos/sovereign_web.py` patched — `@app.on_event("startup")` auto-calls `heartbeat.start()`, `@app.on_event("shutdown")` calls `heartbeat.stop()`; `GET /api/v1/heartbeat/status` (status dict), `POST /api/v1/heartbeat/stop` (graceful stop) wired into `create_app(heartbeat=...)`. Used `on_event` decorators (not lifespan) to avoid modifying the existing `FastAPI()` call.
+- ✅ 41C: `tests/test_heartbeat.py` — 20 unit tests using pytest-asyncio (auto mode): config defaults/keys/storage, init/status, start/stop, double-start no-op, max_ticks=1/3/5 exact stops, control_plane.tick() called per loop, no-CP no-error, exception-swallowing, status reflects state, tick_count persists across stop.
+- ✅ 41D: `tests/test_heartbeat_web.py` — 10 FastAPI TestClient tests: status 200/no-hb defaults/required keys/zero before run/interval matches/custom interval, stop 200/no-hb stopped=False/with-hb stopped=True, end-to-end heartbeat-drives-control-plane via asyncio.run.
+- ✅ 41E: `scripts/prove.py` — 99 test modules registered.
+- ✅ 41F: README Phase Map updated; Phase 42 planned.
+
+**Phase 42 — Planned.** Sovereign CLI — a command-line interface that connects to a running PradyOS instance over HTTP and provides: pradyos status (calls GET /api/v1/os/control and pretty-prints module status table), pradyos tick (calls POST /api/v1/os/tick), pradyos memory get <key>, pradyos memory set <key> <value>, pradyos signals (lists all signals), pradyos heartbeat (shows heartbeat status); uses stdlib urllib only — no requests/httpx; single executable script at pradyos/cli.py with argparse; target URL configurable via --url flag (default http://localhost:8000).
 
 ---
 
-## PradyOS v0.40.0 — Complete
+## PradyOS v0.41.0 — Self-Driving
 
-**97 test modules. 40 phases. Stdlib only.**
+**99 test modules. 41 phases. Stdlib + asyncio only.**
 
-A fully autonomous OS kernel built in Python, with observe → alert → plan → react → heal → schedule → persist → remember → control-plane capabilities. All modules wired through a single `POST /api/v1/os/tick` heartbeat.
+A fully autonomous, self-driving OS kernel built in Python, with observe → alert → plan → react → heal → schedule → persist → remember → control-plane → heartbeat capabilities. The OS now drives itself — `HeartbeatLoop` ticks `ControlPlane` on a fixed cadence, which in turn ticks the scheduler, healer, and reactor in sequence. No external orchestrator needed.
 
-The OS observes its own metrics (`SignalAggregator`), detects thresholds (`WatchpointSystem`), correlates signals (`CorrelationEngine`), records every decision into a cryptographically chained ledger (`DecisionJournal`), reacts to alerts via rules (`ReactorEngine`), self-heals degraded components (`HealingMonitor`), schedules its own work (`TaskScheduler`), persists state across restarts (`SnapshotStore` + `StateManager`), remembers context with TTLs (`MemoryStore`), wires it all together (`SovereignBus`, `IntegrationBus`), and exposes a unified introspection layer (`ControlPlane`).
-
-No Phase 41 planned.
+The OS observes its own metrics (`SignalAggregator`), detects thresholds (`WatchpointSystem`), correlates signals (`CorrelationEngine`), records every decision into a cryptographically chained ledger (`DecisionJournal`), reacts to alerts via rules (`ReactorEngine`), self-heals degraded components (`HealingMonitor`), schedules its own work (`TaskScheduler`), persists state across restarts (`SnapshotStore` + `StateManager`), remembers context with TTLs (`MemoryStore`), wires it all together (`SovereignBus`), exposes a unified introspection layer (`ControlPlane`), and drives itself forward through an async loop (`HeartbeatLoop`).
 
 **Phase 15 — Complete.** All 47 test modules green. Sovereign Scheduler — cron-style recurring campaigns with priority queues and SLA-aware routing:
 - ✅ 15A: `pradyos/sovereign/scheduler.py` — `SovereignScheduler` class with
