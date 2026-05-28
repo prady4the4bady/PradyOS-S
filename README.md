@@ -442,7 +442,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 43F: `scripts/prove.py` — 104 test modules registered.
 - ✅ 43G: README Phase Map updated; Phase 44 planned.
 
-**Phase 44 — Planned.** Sovereign ExecutionEngine — sandboxed subprocess runner that ONLY executes actions that have been APPROVED by the GuardrailGate; ExecutionEngine.run(entry: ApprovalEntry) checks entry.status == APPROVED before running; executes via subprocess.run with a configurable allowlist of permitted commands (default: empty — everything blocked unless explicitly allowed); captures stdout/stderr/returncode; records result to DecisionJournal; exposes POST /api/v1/execute/{entry_id} (runs the approved action), GET /api/v1/execute/history (past runs); stdlib only.
+**Phase 44 — Complete.** All 106 test modules green. Sovereign ExecutionEngine — the bridge between "OS decided" and "OS acted". Enforces two hard rules: (1) `entry.status == APPROVED` (PENDING→BLOCKED, REJECTED→REJECTED, EXPIRED→EXPIRED); (2) base command must be on the explicit allowlist (empty allowlist = locked engine). Every run recorded to DecisionJournal:
+
+- ✅ 44A: `pradyos/core/execution_engine.py` — `ExecutionStatus` enum (SUCCESS/FAILED/BLOCKED/REJECTED/EXPIRED), `ExecutionResult` dataclass with `to_dict()`, `ExecutionEngine` with `run(entry, timeout=None)` (status+allowlist gates, `subprocess.run` with capture+text+timeout, blocked/rejected/expired do NOT append to history), `history(limit)`, `status()` (allowlist + total_runs + last_status); thread-safe via `threading.Lock`.
+- ✅ 44B: `pradyos/sovereign_web.py` patched — `GET /api/v1/execute/status`, `GET /api/v1/execute/history?limit=N`, `POST /api/v1/execute/{entry_id}` (looks up via `approval_queue.get`, 404 if missing, 400 if no engine) wired into `create_app(execution_engine=...)`.
+- ✅ 44C: `tests/test_execution_engine.py` — 20 unit tests; uses `sys.executable -c "<code>"` instead of `echo` for cross-platform safety (Windows has no `echo` binary). Covers init/status, PENDING→BLOCKED, REJECTED, EXPIRED, not-in-allowlist BLOCKED, empty allowlist locks, SUCCESS with stdout/returncode/duration, history append, FAILED nonzero exit, journal recording, BLOCKED-no-history, history limit/empty, thread safety with 10 concurrent runs, last_status tracking.
+- ✅ 44D: `tests/test_execution_web.py` — 10 FastAPI TestClient tests covering all 3 endpoints, no-engine fallbacks, unknown-entry 404, PENDING→blocked, APPROVED+allowlist→success, history reflects runs.
+- ✅ 44E: `scripts/prove.py` — 106 test modules registered.
+- ✅ 44F: README Phase Map updated; Phase 45 planned.
+
+**Phase 45 — Planned.** Sovereign ReasoningEngine — a chain-of-thought planner that takes a goal string and a snapshot of current OS state (modules, signals, recent decisions), produces an ordered list of ActionRequests to achieve the goal; uses a simple rule-based forward-chaining reasoner (stdlib only, no LLM calls); each reasoning step has a precondition dict, an action string, a risk_level, and a rationale; the engine exposes POST /api/v1/reason with body {goal: str, state: dict} and returns {steps: list[{action, risk_level, rationale}], confidence: float (0-1)}; confidence is computed as fraction of preconditions satisfied by current state; 20 unit tests + 10 web tests.
 
 ---
 

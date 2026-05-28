@@ -32,6 +32,7 @@ from pradyos.core.control_plane import ControlPlane, VERSION as OS_VERSION  # Ph
 from pradyos.core.heartbeat import HeartbeatLoop  # Phase 41
 from pradyos.core.guardrail import GuardrailGate, RiskLevel  # Phase 43
 from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 43
+from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Phase 44
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -119,6 +120,7 @@ def create_app(
     heartbeat: Any | None = None,
     guardrail_gate: Any | None = None,
     approval_queue: Any | None = None,
+    execution_engine: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1169,6 +1171,41 @@ def create_app(
             return JSONResponse({"expired": 0})
         expired = approval_queue.expire_stale()
         return JSONResponse({"expired": len(expired)})
+
+
+    @app.get("/api/v1/execute/status")
+    async def api_execute_status() -> JSONResponse:
+        if execution_engine is None:
+            return JSONResponse({
+                "allowlist": [],
+                "total_runs": 0,
+                "last_status": None,
+            })
+        return JSONResponse(execution_engine.status())
+
+    @app.get("/api/v1/execute/history")
+    async def api_execute_history(request: Request) -> JSONResponse:
+        if execution_engine is None:
+            return JSONResponse({"results": []})
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (ValueError, TypeError):
+            limit = 50
+        return JSONResponse({
+            "results": [r.to_dict() for r in execution_engine.history(limit)],
+        })
+
+    @app.post("/api/v1/execute/{entry_id}")
+    async def api_execute_run(entry_id: str) -> JSONResponse:
+        if execution_engine is None:
+            return JSONResponse({"error": "no execution engine configured"}, status_code=400)
+        if approval_queue is None:
+            return JSONResponse({"error": "entry not found"}, status_code=404)
+        entry = approval_queue.get(entry_id)
+        if entry is None:
+            return JSONResponse({"error": "entry not found"}, status_code=404)
+        result = execution_engine.run(entry)
+        return JSONResponse(result.to_dict())
 
     return app
 
