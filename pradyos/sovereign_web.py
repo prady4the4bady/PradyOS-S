@@ -51,6 +51,7 @@ from pradyos.core.throttle_map import ThrottleMap  # Phase 59
 from pradyos.core.pipeline_chain import PipelineRegistry, PipelineChain, Step, StepError  # Phase 60
 from pradyos.core.tag_index import TagIndex  # Phase 61
 from pradyos.core.event_router import RouterRegistry  # Phase 62
+from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -157,6 +158,7 @@ def create_app(
     pipeline_registry: Any | None = None,
     tag_index: Any | None = None,
     router_registry: Any | None = None,
+    aggregate_registry: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2220,6 +2222,66 @@ def create_app(
         if router_registry is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         ok = router_registry.delete(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/aggregates")
+    async def api_aggregates_list() -> JSONResponse:
+        if aggregate_registry is None:
+            return JSONResponse({"aggregates": []})
+        return JSONResponse({"aggregates": aggregate_registry.list_aggregates()})
+
+    @app.post("/api/v1/aggregates/{aggregate_id}/events")
+    async def api_aggregates_apply(aggregate_id: str, request: Request) -> JSONResponse:
+        if aggregate_registry is None:
+            return JSONResponse({"error": "no aggregate registry configured"})
+        body = await request.json()
+        if "event_type" not in body:
+            return JSONResponse({"error": "missing required key: event_type"}, status_code=400)
+        payload = body.get("payload") or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        agg = aggregate_registry.get_or_create(aggregate_id)
+        event = agg.apply(str(body["event_type"]), payload)
+        return JSONResponse(event.to_dict())
+
+    @app.get("/api/v1/aggregates/{aggregate_id}/state")
+    async def api_aggregates_state(aggregate_id: str) -> JSONResponse:
+        if aggregate_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        agg = aggregate_registry.get(aggregate_id)
+        if agg is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({
+            "aggregate_id": agg.aggregate_id,
+            "version": agg.version,
+            "state": agg.get_state(),
+        })
+
+    @app.get("/api/v1/aggregates/{aggregate_id}/events")
+    async def api_aggregates_events(aggregate_id: str, request: Request) -> JSONResponse:
+        if aggregate_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        agg = aggregate_registry.get(aggregate_id)
+        if agg is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            since = int(request.query_params.get("since_version", 0))
+        except (TypeError, ValueError):
+            since = 0
+        events = agg.get_events(since_version=since)
+        return JSONResponse({
+            "aggregate_id": agg.aggregate_id,
+            "events": [e.to_dict() for e in events],
+        })
+
+    @app.delete("/api/v1/aggregates/{aggregate_id}")
+    async def api_aggregates_delete(aggregate_id: str) -> JSONResponse:
+        if aggregate_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = aggregate_registry.delete(aggregate_id)
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})

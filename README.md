@@ -613,7 +613,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 62E: `scripts/prove.py` — 142 test modules registered.
 - ✅ 62F: README Phase Map updated; Phase 63 planned.
 
-**Phase 63 — Planned.** *(awaiting spec).*
+**Phase 63 — Complete.** All 144 test modules green. Sovereign AggregateRoot — domain-driven event-sourced aggregate primitive with monotonic version, in-memory event log, shallow-merge state projection, and replay-from-history support. Stdlib only:
+
+- ✅ 63A: `pradyos/core/aggregate_root.py` — `DomainEvent` dataclass with `to_dict()`; `AggregateRoot(aggregate_id)` with `apply(event_type, payload)` (under lock: increment version, record event, shallow-merge into state), `get_state()` (returns copy), `get_events(since_version=0)` (filtered + sorted), `rebuild_state(events)` (full replay that resets state/version/log first then iterates in version order), `version` property, `event_count()`; `AggregateRegistry` with `get_or_create()` (idempotent), `get()`, `list_aggregates()` (sorted dicts with version/event_count/state_keys), `delete()`, `count()`; thread-safe via `threading.Lock` throughout.
+- ✅ 63B: `pradyos/sovereign_web.py` patched — `GET /api/v1/aggregates`, `POST /api/v1/aggregates/{id}/events` (400 on missing event_type; auto-creates via `get_or_create`), `GET /api/v1/aggregates/{id}/state` (404 if missing), `GET /api/v1/aggregates/{id}/events?since_version=N` (404 if missing), `DELETE /api/v1/aggregates/{id}` wired into `create_app(aggregate_registry=...)`.
+- ✅ 63C: `tests/test_aggregate_root.py` — 20 unit tests (init, apply returns/v1/v2/state-merge, get_state copy-isolation, get_events all/since/sorted, rebuild_state replay/version/count, registry get_or_create/idempotent/get-unknown/list-sorted/list-fields/delete-true/delete-unknown/count, 50 concurrent applies → no version duplicates or gaps).
+- ✅ 63D: `tests/test_aggregate_web.py` — 10 FastAPI TestClient tests covering all 5 endpoints, no-registry fallbacks, 404 on unknown id, version=1 on first POST, since_version=1 skips earlier events.
+- ✅ 63E: `scripts/prove.py` — 144 test modules registered.
+- ✅ 63F: README Phase Map updated; Phase 64 planned.
+
+**Phase 64 — Planned.** Sovereign Command Bus — named command handlers registered at runtime; commands dispatched by name with a payload dict; each handler is a callable(payload: dict) -> dict registered via register(); dispatch() finds the handler, calls it, records a CommandResult(command_name, payload, result, dispatched_at, duration_ms, success); CommandBus tracks all results in a ring buffer (max 500); exposes GET /api/v1/commands/handlers, POST /api/v1/commands/dispatch (body: {name, payload}), GET /api/v1/commands/history?limit=N (default 50, max 200), DELETE /api/v1/commands/handlers/{name}; stdlib only; thread-safe.
 
 ---
 
