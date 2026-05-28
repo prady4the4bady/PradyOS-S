@@ -47,6 +47,7 @@ from pradyos.core.bulkhead_pool import BulkheadManager, BulkheadRejectedError  #
 from pradyos.core.timeout_guard import TimeoutGuard, TimeoutExpiredError  # Phase 56
 from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  # Phase 57
 from pradyos.core.event_filter import EventFilterRegistry, FilterRule  # Phase 58
+from pradyos.core.throttle_map import ThrottleMap  # Phase 59
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -149,6 +150,7 @@ def create_app(
     timeout_guard: Any | None = None,
     semaphore_gate: Any | None = None,
     event_filter_registry: Any | None = None,
+    throttle_map: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1950,6 +1952,70 @@ def create_app(
         if event_filter_registry is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         ok = event_filter_registry.delete(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/throttle")
+    async def api_throttle_list() -> JSONResponse:
+        if throttle_map is None:
+            return JSONResponse({"keys": [], "count": 0})
+        keys = throttle_map.list_keys()
+        return JSONResponse({"keys": keys, "count": len(keys)})
+
+    @app.post("/api/v1/throttle/check")
+    async def api_throttle_check(request: Request) -> JSONResponse:
+        if throttle_map is None:
+            return JSONResponse({"error": "no throttle map configured"})
+        body = await request.json()
+        for k in ("key", "limit", "window"):
+            if k not in body:
+                return JSONResponse(
+                    {"error": f"missing required key: {k}"},
+                    status_code=400,
+                )
+        key = str(body["key"])
+        try:
+            limit = int(body["limit"])
+            window = float(body["window"])
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"error": "limit must be int and window must be float"},
+                status_code=400,
+            )
+        allowed = throttle_map.allow(key, limit, window)
+        return JSONResponse({"key": key, "allowed": bool(allowed)})
+
+    @app.get("/api/v1/throttle/{key}")
+    async def api_throttle_stats(key: str, request: Request) -> JSONResponse:
+        if throttle_map is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        limit_q = request.query_params.get("limit")
+        window_q = request.query_params.get("window")
+        if limit_q is None or window_q is None:
+            return JSONResponse(
+                {"error": "limit and window query params required"},
+                status_code=400,
+            )
+        try:
+            limit = int(limit_q)
+            window = float(window_q)
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"error": "limit must be int and window must be float"},
+                status_code=400,
+            )
+        stats = throttle_map.stats(key, limit, window)
+        if stats is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(stats)
+
+    @app.delete("/api/v1/throttle/{key}")
+    async def api_throttle_delete(key: str) -> JSONResponse:
+        if throttle_map is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = throttle_map.delete(key)
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
