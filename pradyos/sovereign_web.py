@@ -48,6 +48,7 @@ from pradyos.core.timeout_guard import TimeoutGuard, TimeoutExpiredError  # Phas
 from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  # Phase 57
 from pradyos.core.event_filter import EventFilterRegistry, FilterRule  # Phase 58
 from pradyos.core.throttle_map import ThrottleMap  # Phase 59
+from pradyos.core.pipeline_chain import PipelineRegistry, PipelineChain, Step, StepError  # Phase 60
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -151,6 +152,7 @@ def create_app(
     semaphore_gate: Any | None = None,
     event_filter_registry: Any | None = None,
     throttle_map: Any | None = None,
+    pipeline_registry: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2016,6 +2018,76 @@ def create_app(
         if throttle_map is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         ok = throttle_map.delete(key)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"deleted": True})
+
+
+    @app.get("/api/v1/pipelines")
+    async def api_pipelines_list() -> JSONResponse:
+        if pipeline_registry is None:
+            return JSONResponse({"pipelines": [], "count": 0})
+        names = pipeline_registry.list_chains()
+        return JSONResponse({"pipelines": names, "count": len(names)})
+
+    @app.post("/api/v1/pipelines")
+    async def api_pipelines_create(request: Request) -> JSONResponse:
+        if pipeline_registry is None:
+            return JSONResponse({"error": "no pipeline registry configured"})
+        body = await request.json()
+        if "name" not in body or "steps" not in body:
+            return JSONResponse(
+                {"error": "missing required keys: name, steps"},
+                status_code=400,
+            )
+        name = str(body["name"])
+        steps_raw = body["steps"]
+        if not isinstance(steps_raw, list):
+            return JSONResponse({"error": "steps must be a list"}, status_code=400)
+        steps = []
+        for s in steps_raw:
+            if not isinstance(s, dict):
+                continue
+            steps.append(Step(
+                name=str(s.get("name", "")),
+                transform_type=str(s.get("transform_type", "")),
+                params=dict(s.get("params") or {}),
+            ))
+        chain = PipelineChain(name=name, steps=steps)
+        pipeline_registry.register(chain)
+        return JSONResponse({
+            "registered": True,
+            "name": name,
+            "step_count": len(steps),
+        })
+
+    @app.post("/api/v1/pipelines/{name}/run")
+    async def api_pipelines_run(name: str, request: Request) -> JSONResponse:
+        if pipeline_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        body = await request.json()
+        if "event" not in body:
+            return JSONResponse(
+                {"error": "missing required key: event"},
+                status_code=400,
+            )
+        event = body["event"] if isinstance(body["event"], dict) else {}
+        try:
+            result = pipeline_registry.run(name, event)
+        except KeyError:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        except StepError as exc:
+            return JSONResponse(
+                {"error": exc.message, "step": exc.step_name},
+                status_code=422,
+            )
+        return JSONResponse({"name": name, "result": result})
+
+    @app.delete("/api/v1/pipelines/{name}")
+    async def api_pipelines_delete(name: str) -> JSONResponse:
+        if pipeline_registry is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = pipeline_registry.delete(name)
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})

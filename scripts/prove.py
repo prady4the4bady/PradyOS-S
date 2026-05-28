@@ -230,6 +230,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 59
     "tests/test_throttle_map.py",
     "tests/test_throttle_web.py",
+    # Phase 60
+    "tests/test_pipeline_chain.py",
+    "tests/test_pipeline_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
