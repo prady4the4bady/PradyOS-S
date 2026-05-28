@@ -191,6 +191,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 46
     "tests/test_web_agent.py",
     "tests/test_web_agent_web.py",
+    # Phase 47
+    "tests/test_memory_graph.py",
+    "tests/test_memory_graph_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

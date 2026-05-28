@@ -35,6 +35,7 @@ from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 4
 from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Phase 44
 from pradyos.core.reasoning_engine import ReasoningEngine  # Phase 45
 from pradyos.core.web_agent import WebAgent  # Phase 46
+from pradyos.core.memory_graph import MemoryGraph as Phase47MemoryGraph  # Phase 47
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -125,6 +126,7 @@ def create_app(
     execution_engine: Any | None = None,
     reasoning_engine: Any | None = None,
     web_agent: Any | None = None,
+    memory_graph: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1271,6 +1273,66 @@ def create_app(
         max_results = int(body.get("max_results", 5))
         results = web_agent.search(query=str(body["query"]), max_results=max_results)
         return JSONResponse({"results": [r.to_dict() for r in results]})
+
+
+    @app.get("/api/v1/memgraph/nodes")
+    async def api_memgraph_nodes_list() -> JSONResponse:
+        if memory_graph is None:
+            return JSONResponse({"nodes": [], "count": 0})
+        return JSONResponse({
+            "nodes": [n.to_dict() for n in memory_graph._nodes.values()],
+            "count": memory_graph.node_count(),
+        })
+
+    @app.post("/api/v1/memgraph/nodes")
+    async def api_memgraph_nodes_add(request: Request) -> JSONResponse:
+        if memory_graph is None:
+            return JSONResponse({"error": "no memory graph configured"}, status_code=400)
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse({"error": "missing 'name' key"}, status_code=400)
+        node = memory_graph.add_node(
+            name=str(body["name"]),
+            metadata=body.get("metadata"),
+        )
+        return JSONResponse(node.to_dict())
+
+    @app.post("/api/v1/memgraph/edges")
+    async def api_memgraph_edges_add(request: Request) -> JSONResponse:
+        if memory_graph is None:
+            return JSONResponse({"error": "no memory graph configured"}, status_code=400)
+        body = await request.json()
+        for key in ("src", "dst", "relation"):
+            if key not in body:
+                return JSONResponse(
+                    {"error": f"missing required key: {key}"},
+                    status_code=400,
+                )
+        edge = memory_graph.add_edge(
+            src=str(body["src"]),
+            dst=str(body["dst"]),
+            relation=str(body["relation"]),
+            weight=float(body.get("weight", 1.0)),
+        )
+        return JSONResponse(edge.to_dict())
+
+    @app.get("/api/v1/memgraph/neighbors/{name}")
+    async def api_memgraph_neighbors(name: str, request: Request) -> JSONResponse:
+        if memory_graph is None:
+            return JSONResponse({"name": name, "neighbors": []})
+        relation = request.query_params.get("relation")
+        neighbors = memory_graph.get_neighbors(name, relation=relation)
+        return JSONResponse({
+            "name": name,
+            "neighbors": [n.to_dict() for n in neighbors],
+        })
+
+    @app.get("/api/v1/memgraph/path")
+    async def api_memgraph_path(src: str, dst: str) -> JSONResponse:
+        if memory_graph is None:
+            return JSONResponse({"src": src, "dst": dst, "path": None})
+        path = memory_graph.shortest_path(src, dst)
+        return JSONResponse({"src": src, "dst": dst, "path": path})
 
     return app
 
