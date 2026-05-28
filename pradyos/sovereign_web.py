@@ -162,6 +162,7 @@ def create_app(
     command_bus: Any | None = None,
     query_bus: Any | None = None,
     saga_orchestrator: Any | None = None,
+    process_manager: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2427,6 +2428,83 @@ def create_app(
         if run is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(run.to_dict())
+
+    # ── Phase 67: Process Manager ────────────────────────────────────────────
+
+    @app.post("/api/v1/processes")
+    async def api_processes_create(request: Request) -> JSONResponse:
+        if process_manager is None:
+            return JSONResponse({"error": "no process manager configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse(
+                {"error": "missing required key: name"},
+                status_code=400,
+            )
+        if "state" not in body:
+            return JSONResponse(
+                {"error": "missing required key: state"},
+                status_code=400,
+            )
+        context = body.get("context") or {}
+        if not isinstance(context, dict):
+            context = {}
+        inst = process_manager.create(
+            name=str(body["name"]),
+            initial_state=str(body["state"]),
+            context=context,
+        )
+        return JSONResponse(inst.to_dict())
+
+    @app.post("/api/v1/processes/{process_id}/transition")
+    async def api_processes_transition(process_id: str, request: Request) -> JSONResponse:
+        if process_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        body = await request.json()
+        if "trigger" not in body:
+            return JSONResponse(
+                {"error": "missing required key: trigger"},
+                status_code=400,
+            )
+        if "state" not in body:
+            return JSONResponse(
+                {"error": "missing required key: state"},
+                status_code=400,
+            )
+        patch = body.get("context_patch") or {}
+        if not isinstance(patch, dict):
+            patch = {}
+        inst = process_manager.transition(
+            process_id=process_id,
+            trigger=str(body["trigger"]),
+            new_state=str(body["state"]),
+            context_patch=patch,
+        )
+        if inst is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(inst.to_dict())
+
+    @app.get("/api/v1/processes/{process_id}")
+    async def api_processes_get(process_id: str) -> JSONResponse:
+        if process_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        inst = process_manager.get(process_id)
+        if inst is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(inst.to_dict())
+
+    @app.get("/api/v1/processes")
+    async def api_processes_list(request: Request) -> JSONResponse:
+        if process_manager is None:
+            return JSONResponse({"processes": []})
+        state = request.query_params.get("state")
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(0, min(500, limit))
+        instances = process_manager.list_processes(state=state, limit=limit)
+        return JSONResponse({"processes": [i.to_dict() for i in instances]})
 
     return app
 

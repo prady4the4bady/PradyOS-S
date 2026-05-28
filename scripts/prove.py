@@ -251,6 +251,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 66
     "tests/test_saga_orchestrator.py",
     "tests/test_saga_web.py",
+    # Phase 67
+    "tests/test_process_manager.py",
+    "tests/test_process_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
