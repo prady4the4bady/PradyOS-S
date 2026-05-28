@@ -212,6 +212,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 53
     "tests/test_circuit_breaker.py",
     "tests/test_circuit_breaker_web.py",
+    # Phase 54
+    "tests/test_retry_policy.py",
+    "tests/test_retry_policy_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

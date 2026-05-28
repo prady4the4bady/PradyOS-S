@@ -42,6 +42,7 @@ from pradyos.core.pubsub import PubSubBroker  # Phase 50
 from pradyos.core.statesync import StateSyncManager  # Phase 51
 from pradyos.core.distributed_lock import LockManager  # Phase 52
 from pradyos.core.circuit_breaker import CircuitBreaker, BreakerState  # Phase 53
+from pradyos.core.retry_policy import RetryPolicy  # Phase 54
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -139,6 +140,7 @@ def create_app(
     statesync: Any | None = None,
     lock_manager: Any | None = None,
     circuit_breaker: Any | None = None,
+    retry_policy: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1611,6 +1613,67 @@ def create_app(
         if bs is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(bs.to_dict())
+
+
+    @app.get("/api/v1/retry")
+    async def api_retry_list() -> JSONResponse:
+        if retry_policy is None:
+            return JSONResponse({"names": [], "count": 0})
+        return JSONResponse({
+            "names": retry_policy.list_names(),
+            "count": retry_policy.count(),
+        })
+
+    @app.post("/api/v1/retry/execute")
+    async def api_retry_execute(request: Request) -> JSONResponse:
+        if retry_policy is None:
+            return JSONResponse({"error": "no retry policy configured"})
+        body = await request.json()
+        name = str(body.get("name", "default"))
+        should_fail = bool(body.get("should_fail", False))
+        fail_attempts = int(body.get("fail_attempts", 0))
+
+        # Built-in test fn: fails the first `fail_attempts` calls, then succeeds.
+        counter = {"n": 0}
+
+        def _test_fn():
+            counter["n"] += 1
+            if should_fail and counter["n"] <= fail_attempts:
+                raise RuntimeError("simulated failure")
+            return "ok"
+
+        result: str | None = None
+        error: str | None = None
+        try:
+            result = retry_policy.execute(name, _test_fn)
+        except Exception as exc:
+            error = repr(exc)
+
+        attempts = len(retry_policy.get_history(name))
+        return JSONResponse({
+            "name": name,
+            "result": result,
+            "attempts": attempts,
+            "error": error,
+        })
+
+    @app.get("/api/v1/retry/{name}/history")
+    async def api_retry_history(name: str) -> JSONResponse:
+        if retry_policy is None:
+            return JSONResponse({"name": name, "history": []})
+        return JSONResponse({
+            "name": name,
+            "history": retry_policy.get_history(name),
+        })
+
+    @app.delete("/api/v1/retry/{name}/history")
+    async def api_retry_clear(name: str) -> JSONResponse:
+        if retry_policy is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = retry_policy.clear_history(name)
+        if not ok:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse({"cleared": True})
 
     return app
 
