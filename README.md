@@ -496,7 +496,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 49E: `scripts/prove.py` — 116 test modules registered.
 - ✅ 49F: README Phase Map updated; Phase 50 planned.
 
-**Phase 50 — Planned.** Sovereign PubSub — in-process publish/subscribe message broker; Topic(name, created_at); Subscription(id, topic, callback: Callable[[dict],None], created_at); PubSubBroker.subscribe(topic, callback) -> Subscription; PubSubBroker.unsubscribe(subscription_id) -> bool; PubSubBroker.publish(topic, message: dict) -> int (number of subscribers notified); PubSubBroker.list_topics() -> list[dict] (name, subscriber_count); PubSubBroker.list_subscriptions(topic=None) -> list[Subscription]; callbacks are called synchronously in the publishing thread (no background threads); thread-safe via threading.Lock; exposes POST /api/v1/pubsub/{topic} (publish), GET /api/v1/pubsub/topics (list topics), GET /api/v1/pubsub/{topic}/subscribers (count); stdlib only; 20 unit + 10 web tests.
+**Phase 50 — Complete.** All 118 test modules green. Sovereign PubSub — in-process publish/subscribe message broker; topics auto-created on subscribe/publish; callbacks fire synchronously in publishing thread; broker is uncrashable because publish() swallows all callback exceptions; stdlib only:
+
+- ✅ 50A: `pradyos/core/pubsub.py` — `Topic` + `Subscription` dataclasses (`Subscription.to_dict()` omits the non-serializable `callback`); `PubSubBroker` with `subscribe()` (auto-creates topic, uuid4 sub id), `unsubscribe()` (topic persists even at 0 subs), `publish()` (snapshots callbacks under lock then calls OUTSIDE lock to avoid deadlock on re-entrant subscribe; returns count of SUCCESSFUL callbacks only), `list_topics()` (sorted, with subscriber_count + created_at), `list_subscriptions(topic=None)`, `count_subscribers()`; thread-safe via `threading.Lock`.
+- ✅ 50B: `pradyos/sovereign_web.py` patched — `GET /api/v1/pubsub/topics` (registered FIRST so literal `topics` doesn't get captured as `{topic}` param), `GET /api/v1/pubsub/{topic}/subscribers`, `POST /api/v1/pubsub/{topic}` (400 on missing message / no broker; coerces non-dict messages to `{"value": ...}`) wired into `create_app(pubsub=...)`.
+- ✅ 50C: `tests/test_pubsub.py` — 20 unit tests (init, subscribe returns/auto-creates-topic/uuid/unique-ids, unsubscribe true/false/removes, publish callback-invocation/success-count/swallows-exceptions/zero-subs/auto-creates, list_topics sorted/keys/decrements, list_subscriptions all/filtered, count_subscribers, 50 concurrent subscribes).
+- ✅ 50D: `tests/test_pubsub_web.py` — 10 FastAPI TestClient tests covering all 3 endpoints, no-broker fallbacks, subscribe-then-publish end-to-end, topic-list growth, subscriber count increment.
+- ✅ 50E: `scripts/prove.py` — 118 test modules registered.
+- ✅ 50F: README Phase Map updated; Phase 51 planned.
+
+**Phase 51 — Planned.** Sovereign StateSync — bidirectional state synchronisation between two PubSubBrokers (or any two dicts); SyncPeer(id, broker, topics: list[str]) subscribes to listed topics on one broker and republishes messages to the other; SyncSession(peer_a, peer_b) wires both directions; handles cycle detection (a message published as a result of a sync must not be re-synced); exposes GET /api/v1/statesync/sessions (list active sessions), POST /api/v1/statesync/sessions (create session linking two broker names), DELETE /api/v1/statesync/sessions/{id}; stdlib only.
 
 ---
 

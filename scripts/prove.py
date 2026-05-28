@@ -200,6 +200,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 49
     "tests/test_task_queue.py",
     "tests/test_task_queue_web.py",
+    # Phase 50
+    "tests/test_pubsub.py",
+    "tests/test_pubsub_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

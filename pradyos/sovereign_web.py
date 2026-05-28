@@ -38,6 +38,7 @@ from pradyos.core.web_agent import WebAgent  # Phase 46
 from pradyos.core.memory_graph import MemoryGraph as Phase47MemoryGraph  # Phase 47
 from pradyos.core.event_store import EventStore  # Phase 48
 from pradyos.core.task_queue import TaskQueue  # Phase 49
+from pradyos.core.pubsub import PubSubBroker  # Phase 50
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -131,6 +132,7 @@ def create_app(
     memory_graph: Any | None = None,
     event_store: Any | None = None,
     task_queue: Any | None = None,
+    pubsub: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1436,6 +1438,34 @@ def create_app(
         if not cancelled:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cancelled": True})
+
+
+    @app.get("/api/v1/pubsub/topics")
+    async def api_pubsub_topics() -> JSONResponse:
+        if pubsub is None:
+            return JSONResponse({"topics": [], "count": 0})
+        topics = pubsub.list_topics()
+        return JSONResponse({"topics": topics, "count": len(topics)})
+
+    @app.get("/api/v1/pubsub/{topic}/subscribers")
+    async def api_pubsub_subscribers(topic: str) -> JSONResponse:
+        if pubsub is None:
+            return JSONResponse({"topic": topic, "subscriber_count": 0})
+        return JSONResponse({
+            "topic": topic,
+            "subscriber_count": pubsub.count_subscribers(topic),
+        })
+
+    @app.post("/api/v1/pubsub/{topic}")
+    async def api_pubsub_publish(topic: str, request: Request) -> JSONResponse:
+        if pubsub is None:
+            return JSONResponse({"error": "no pubsub configured"}, status_code=400)
+        body = await request.json()
+        if "message" not in body:
+            return JSONResponse({"error": "missing 'message' key"}, status_code=400)
+        message = body["message"] if isinstance(body["message"], dict) else {"value": body["message"]}
+        notified = pubsub.publish(topic, message)
+        return JSONResponse({"topic": topic, "notified": notified})
 
     return app
 
