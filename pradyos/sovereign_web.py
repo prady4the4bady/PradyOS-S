@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Any, AsyncGenerator
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
@@ -116,7 +117,15 @@ def create_app(
     heartbeat: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
-    app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs")
+    @asynccontextmanager
+    async def _lifespan(app):
+        if heartbeat is not None:
+            await heartbeat.start()
+        yield
+        if heartbeat is not None:
+            await heartbeat.stop()
+
+    app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs", lifespan=_lifespan)
 
     if bus is not None:
         bus.subscribe("*", _publish_to_sse)
@@ -1063,16 +1072,6 @@ def create_app(
             return JSONResponse({"ticks": [], "healed": [], "reactions": []})
         return JSONResponse(control_plane.tick())
 
-
-    @app.on_event("startup")
-    async def _heartbeat_startup() -> None:
-        if heartbeat is not None:
-            await heartbeat.start()
-
-    @app.on_event("shutdown")
-    async def _heartbeat_shutdown() -> None:
-        if heartbeat is not None:
-            await heartbeat.stop()
 
     @app.get("/api/v1/heartbeat/status")
     async def api_heartbeat_status() -> JSONResponse:

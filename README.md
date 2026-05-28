@@ -423,7 +423,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 41E: `scripts/prove.py` — 99 test modules registered.
 - ✅ 41F: README Phase Map updated; Phase 42 planned.
 
-**Phase 42 — Planned.** Sovereign CLI — a command-line interface that connects to a running PradyOS instance over HTTP and provides: pradyos status (calls GET /api/v1/os/control and pretty-prints module status table), pradyos tick (calls POST /api/v1/os/tick), pradyos memory get <key>, pradyos memory set <key> <value>, pradyos signals (lists all signals), pradyos heartbeat (shows heartbeat status); uses stdlib urllib only — no requests/httpx; single executable script at pradyos/cli.py with argparse; target URL configurable via --url flag (default http://localhost:8000).
+**Phase 42 — Complete.** All 102 test modules green. Two-part phase: (A) `on_event` → `lifespan` migration eliminates the 36 FastAPI deprecation warnings from Phase 41; (B) `pradyos/cli.py` — stdlib-only HTTP client for a running PradyOS instance:
+
+- ✅ 42A: `pradyos/sovereign_web.py` patched — added `from contextlib import asynccontextmanager`, injected `_lifespan` context manager inside `create_app()` (start heartbeat on enter, stop on exit), changed `FastAPI(...)` call to include `lifespan=_lifespan`, deleted both `@app.on_event` blocks. Verified: `grep on_event` → empty; Phase 41 heartbeat web tests pass with `-W error::DeprecationWarning` (zero warnings).
+- ✅ 42B: `pradyos/cli.py` — `argparse` + `urllib.request` only; commands: `status` (GET /api/v1/os/control + table), `tick`, `signals`, `signal <name> [--limit N]`, `memory get/set [--namespace] [--ttl]`, `heartbeat`, `health`; `--url` flag (default http://localhost:8000); 5s timeout; clean error messages on HTTP/connection failure; all command logic in `run_*()` functions, importable; `_http_get`/`_http_post`/`_table` helpers; entry via `python -m pradyos.cli`.
+- ✅ 42C: `tests/test_cli.py` — 20 unit tests using `unittest.mock.patch` on `urllib.request.urlopen` (CM-style mock); covers status/tick/signals/signal_detail/memory get-set/heartbeat/health + `_http_get`/`_http_post` request shape and Content-Type header.
+- ✅ 42D: `tests/test_lifespan_web.py` — 10 FastAPI TestClient tests using context-manager pattern to fire lifespan: app starts without DeprecationWarning, heartbeat auto-start/stop, no-heartbeat clean start, status endpoint reflects running=True, POST /stop during lifespan, max_ticks advances, no on_event warning on `create_app()`, param wiring.
+- ✅ 42E: `scripts/prove.py` — 102 test modules registered.
+- ✅ 42F: README Phase Map updated; Phase 43 planned.
+
+**Phase 43 — Planned.** Sovereign Config Schema — a JSON Schema validator for PradyOS runtime configuration; define a ConfigSchema dataclass with validate(data: dict) -> list[str] (returns list of error strings, empty if valid); support required fields, type checking (str/int/float/bool/list/dict), min/max for numbers, min_length/max_length for strings, enum values, and nested schemas; stdlib only (no jsonschema library); expose POST /api/v1/config/validate with body {schema: dict, data: dict} returning {valid: bool, errors: list[str]}; 20 unit tests + 10 web tests.
 
 ---
 
