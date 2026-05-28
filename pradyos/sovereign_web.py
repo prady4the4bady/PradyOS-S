@@ -161,6 +161,7 @@ def create_app(
     aggregate_registry: Any | None = None,
     command_bus: Any | None = None,
     query_bus: Any | None = None,
+    saga_orchestrator: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2377,6 +2378,55 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"unregistered": True})
+
+    # ── Phase 66: Saga Orchestrator ──────────────────────────────────────────
+
+    @app.post("/api/v1/sagas/run")
+    async def api_sagas_run(request: Request) -> JSONResponse:
+        if saga_orchestrator is None:
+            return JSONResponse({"error": "no saga orchestrator configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse(
+                {"error": "missing required key: name"},
+                status_code=400,
+            )
+        if "steps" not in body or not isinstance(body["steps"], list):
+            return JSONResponse(
+                {"error": "missing or invalid 'steps' (must be a list)"},
+                status_code=400,
+            )
+        steps = [str(s) for s in body["steps"]]
+        payload = body.get("payload") or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        saga_run = saga_orchestrator.run(
+            saga_name=str(body["name"]),
+            steps=steps,
+            initial_payload=payload,
+        )
+        return JSONResponse(saga_run.to_dict())
+
+    @app.get("/api/v1/sagas")
+    async def api_sagas_list(request: Request) -> JSONResponse:
+        if saga_orchestrator is None:
+            return JSONResponse({"runs": []})
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(0, min(200, limit))
+        runs = saga_orchestrator.list_runs(limit=limit)
+        return JSONResponse({"runs": [r.to_dict() for r in runs]})
+
+    @app.get("/api/v1/sagas/{saga_id}")
+    async def api_sagas_get(saga_id: str) -> JSONResponse:
+        if saga_orchestrator is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        run = saga_orchestrator.get(saga_id)
+        if run is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(run.to_dict())
 
     return app
 
