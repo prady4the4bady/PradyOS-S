@@ -604,7 +604,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 61E: `scripts/prove.py` — 140 test modules registered.
 - ✅ 61F: README Phase Map updated; Phase 62 planned.
 
-**Phase 62 — Planned.** Sovereign EventRouter — content-based routing for named events; EventRouter holds a list of Route objects (each Route has a name, a match predicate dict identical to EventFilter's condition format, and a destination string); route(event) evaluates all routes in registration order and returns the list of destination strings whose predicates match (empty list if none match); EventRouter also supports a default_destination (str|None) that is appended when no routes match; RouteRegistry stores named routers by string key; exposes GET /api/v1/routers (list), POST /api/v1/routers (create with routes[]), POST /api/v1/routers/{name}/route (body={event:{}}), DELETE /api/v1/routers/{name}; stdlib only; 20 unit + 10 web tests.
+**Phase 62 — Complete.** All 142 test modules green. Sovereign EventRouter — content-based routing for event dicts. Each route has a `name`, an AND-list of predicates (same shape as `EventFilter` conditions), and a `destination` string. `route(event)` returns the sorted list of destinations whose every predicate matches; falls back to `default_destination` (single-element list) when nothing matches. Stdlib only:
+
+- ✅ 62A: `pradyos/core/event_router.py` — `Route` dataclass with `to_dict()` + `matches(event)` (empty predicate list matches anything; all predicates must match for a route to fire); 9 supported ops (eq/neq/gt/lt/gte/lte/contains/startswith/endswith); `_match_one` resolves field via `event.get(field, _MISSING)` and applies the op (missing field → only `neq` is True; numeric coerce to float for gt/lt/gte/lte with string fallback); `EventRouter(default_destination=None)` with `add_route()` (ValueError on duplicate name), `remove_route()`, `route(event)` (snapshots routes under lock, evaluates each, returns sorted destinations or `[default]`), `list_routes()`, `count()`; `RouterRegistry` with `create`/`get`/`delete`/`list_names`; thread-safe via `threading.Lock`.
+- ✅ 62B: `pradyos/sovereign_web.py` patched — `GET /api/v1/routers`, `POST /api/v1/routers` (400 missing name; 409 duplicate; accepts initial `routes[]` array and `default_destination`), `POST /api/v1/routers/{name}/route` (returns `destinations` + `matched` count; 404 if router unknown — registered BEFORE bare `/{name}` DELETE so literal `/route` isn't captured), `DELETE /api/v1/routers/{name}` wired into `create_app(router_registry=...)`.
+- ✅ 62C: `tests/test_event_router.py` — 21 unit tests (init, add_route returns/duplicate-ValueError/registration-order, remove_route true/unknown, route empty-preds-matches-all, each of 9 ops, missing-field eq-false + neq-true, compound predicates AND, multi-route fanout-sorted, default_destination applied/not-applied, registry create/get/delete/duplicate-ValueError).
+- ✅ 62D: `tests/test_event_router_web.py` — 10 FastAPI TestClient tests covering all 4 endpoints, no-registry fallbacks, 400/409 status codes, end-to-end create→route→delete with default_destination behavior.
+- ✅ 62E: `scripts/prove.py` — 142 test modules registered.
+- ✅ 62F: README Phase Map updated; Phase 63 planned.
+
+**Phase 63 — Planned.** *(awaiting spec).*
 
 ---
 

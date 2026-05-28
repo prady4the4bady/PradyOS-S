@@ -236,6 +236,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 61
     "tests/test_tag_index.py",
     "tests/test_tag_web.py",
+    # Phase 62
+    "tests/test_event_router.py",
+    "tests/test_event_router_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
