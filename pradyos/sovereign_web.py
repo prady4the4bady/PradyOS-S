@@ -36,6 +36,7 @@ from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Ph
 from pradyos.core.reasoning_engine import ReasoningEngine  # Phase 45
 from pradyos.core.web_agent import WebAgent  # Phase 46
 from pradyos.core.memory_graph import MemoryGraph as Phase47MemoryGraph  # Phase 47
+from pradyos.core.event_store import EventStore  # Phase 48
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -127,6 +128,7 @@ def create_app(
     reasoning_engine: Any | None = None,
     web_agent: Any | None = None,
     memory_graph: Any | None = None,
+    event_store: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1333,6 +1335,58 @@ def create_app(
             return JSONResponse({"src": src, "dst": dst, "path": None})
         path = memory_graph.shortest_path(src, dst)
         return JSONResponse({"src": src, "dst": dst, "path": path})
+
+
+    @app.get("/api/v1/events/{stream}")
+    async def api_events_read(stream: str, request: Request) -> JSONResponse:
+        if event_store is None:
+            return JSONResponse({"stream": stream, "events": [], "count": 0})
+        try:
+            from_seq = int(request.query_params.get("from_seq", 0))
+        except (ValueError, TypeError):
+            from_seq = 0
+        events = event_store.read(stream, from_seq=from_seq)
+        return JSONResponse({
+            "stream": stream,
+            "events": [e.to_dict() for e in events],
+            "count": len(events),
+        })
+
+    @app.post("/api/v1/events/{stream}/project")
+    async def api_events_project(stream: str, request: Request) -> JSONResponse:
+        if event_store is None:
+            return JSONResponse({"stream": stream, "state": {}})
+        body = await request.json()
+        if "reducer_steps" not in body:
+            return JSONResponse({"error": "missing 'reducer_steps' key"}, status_code=400)
+        initial = body.get("initial") or {}
+        steps = body["reducer_steps"]
+
+        def _reducer(state: dict, event) -> dict:
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                if step.get("match_type") == event.event_type:
+                    state.update(step.get("updates") or {})
+                    break
+            return state
+
+        state = event_store.project(stream, _reducer, initial=initial)
+        return JSONResponse({"stream": stream, "state": state})
+
+    @app.post("/api/v1/events/{stream}")
+    async def api_events_append(stream: str, request: Request) -> JSONResponse:
+        if event_store is None:
+            return JSONResponse({"error": "no event store configured"}, status_code=400)
+        body = await request.json()
+        if "event_type" not in body:
+            return JSONResponse({"error": "missing 'event_type' key"}, status_code=400)
+        event = event_store.append(
+            stream=stream,
+            event_type=str(body["event_type"]),
+            payload=body.get("payload") or {},
+        )
+        return JSONResponse(event.to_dict())
 
     return app
 
