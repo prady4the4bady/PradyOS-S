@@ -215,6 +215,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 54
     "tests/test_retry_policy.py",
     "tests/test_retry_policy_web.py",
+    # Phase 55
+    "tests/test_bulkhead_pool.py",
+    "tests/test_bulkhead_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

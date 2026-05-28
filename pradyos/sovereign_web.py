@@ -43,6 +43,7 @@ from pradyos.core.statesync import StateSyncManager  # Phase 51
 from pradyos.core.distributed_lock import LockManager  # Phase 52
 from pradyos.core.circuit_breaker import CircuitBreaker, BreakerState  # Phase 53
 from pradyos.core.retry_policy import RetryPolicy  # Phase 54
+from pradyos.core.bulkhead_pool import BulkheadManager, BulkheadRejectedError  # Phase 55
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -141,6 +142,7 @@ def create_app(
     lock_manager: Any | None = None,
     circuit_breaker: Any | None = None,
     retry_policy: Any | None = None,
+    bulkhead_manager: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -1674,6 +1676,76 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cleared": True})
+
+
+    @app.get("/api/v1/bulkheads")
+    async def api_bulkheads_list() -> JSONResponse:
+        if bulkhead_manager is None:
+            return JSONResponse({"pools": []})
+        return JSONResponse({"pools": bulkhead_manager.list_pools()})
+
+    @app.post("/api/v1/bulkheads")
+    async def api_bulkheads_create(request: Request) -> JSONResponse:
+        if bulkhead_manager is None:
+            return JSONResponse({"error": "no bulkhead manager configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse({"error": "missing required key: name"}, status_code=400)
+        try:
+            pool = bulkhead_manager.create(
+                name=str(body["name"]),
+                max_workers=int(body.get("max_workers", 4)),
+                queue_depth=int(body.get("queue_depth", 8)),
+            )
+        except ValueError:
+            return JSONResponse({"error": "pool already exists"})
+        return JSONResponse(pool.get_stats().to_dict())
+
+    @app.post("/api/v1/bulkheads/{name}/submit")
+    async def api_bulkheads_submit(name: str, request: Request) -> JSONResponse:
+        if bulkhead_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        pool = bulkhead_manager.get(name)
+        if pool is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        sleep_s = float(body.get("sleep", 0.0))
+
+        import time as _time
+
+        def _no_op() -> str:
+            if sleep_s > 0:
+                _time.sleep(sleep_s)
+            return "ok"
+
+        try:
+            pool.submit(_no_op)
+        except BulkheadRejectedError:
+            return JSONResponse(
+                {
+                    "name": name,
+                    "submitted": False,
+                    "error": "BulkheadRejectedError",
+                },
+                status_code=429,
+            )
+        return JSONResponse({
+            "name": name,
+            "submitted": True,
+            "stats": pool.get_stats().to_dict(),
+        })
+
+    @app.get("/api/v1/bulkheads/{name}")
+    async def api_bulkheads_get(name: str) -> JSONResponse:
+        if bulkhead_manager is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        pool = bulkhead_manager.get(name)
+        if pool is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(pool.get_stats().to_dict())
 
     return app
 
