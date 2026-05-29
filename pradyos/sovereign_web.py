@@ -55,6 +55,7 @@ from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
 from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
 from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 70
 from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phase 71
+from pradyos.core.bloom_filter import BloomFilter  # Phase 72
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -170,6 +171,7 @@ def create_app(
     anomaly_detector: Any | None = None,
     dependency_graph: Any | None = None,
     anomaly_watch: Any | None = None,
+    bloom_filter: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2741,6 +2743,45 @@ def create_app(
         except SourceNotFoundError:
             return JSONResponse({"error": f"no such source: {name}"}, status_code=404)
         return JSONResponse({"name": name, "removed": True})
+
+
+    @app.get("/api/v1/bloom")
+    async def api_bloom_stats() -> JSONResponse:
+        if bloom_filter is None:
+            return JSONResponse({"error": "no bloom filter configured"})
+        return JSONResponse(bloom_filter.stats())
+
+    @app.post("/api/v1/bloom/add")
+    async def api_bloom_add(request: Request) -> JSONResponse:
+        if bloom_filter is None:
+            return JSONResponse({"error": "no bloom filter configured"})
+        body = await request.json()
+        if "items" in body:
+            items = body.get("items")
+            if not isinstance(items, list) or not all(isinstance(x, str) for x in items):
+                return JSONResponse({"error": "items must be a list of strings"}, status_code=422)
+        elif "item" in body:
+            item = body.get("item")
+            if not isinstance(item, str):
+                return JSONResponse({"error": "item must be a string"}, status_code=422)
+            items = [item]
+        else:
+            return JSONResponse({"error": "item or items is required"}, status_code=422)
+        added = bloom_filter.add_many(items)
+        return JSONResponse({"added": added, "count": len(bloom_filter)})
+
+    @app.get("/api/v1/bloom/contains/{item}")
+    async def api_bloom_contains(item: str) -> JSONResponse:
+        if bloom_filter is None:
+            return JSONResponse({"error": "no bloom filter configured"})
+        return JSONResponse({"item": item, "contains": bloom_filter.contains(item)})
+
+    @app.delete("/api/v1/bloom")
+    async def api_bloom_clear() -> JSONResponse:
+        if bloom_filter is None:
+            return JSONResponse({"error": "no bloom filter configured"})
+        bloom_filter.clear()
+        return JSONResponse({"cleared": True})
 
     return app
 
