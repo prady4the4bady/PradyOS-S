@@ -287,6 +287,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 78
     "tests/test_skiplist.py",
     "tests/test_skiplist_web.py",
+    # Phase 79
+    "tests/test_tdigest.py",
+    "tests/test_tdigest_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

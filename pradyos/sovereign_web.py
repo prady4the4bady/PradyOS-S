@@ -62,6 +62,7 @@ from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.core.countminsketch import CountMinSketch  # Phase 76
 from pradyos.core.merkle_tree import MerkleTree  # Phase 77
 from pradyos.core.skiplist import SkipList  # Phase 78
+from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -184,6 +185,7 @@ def create_app(
     countminsketch: Any | None = None,
     merkle_tree: Any | None = None,
     skiplist: Any | None = None,
+    tdigest: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3045,6 +3047,61 @@ def create_app(
             return JSONResponse({"error": "lo and hi are required strings"}, status_code=422)
         pairs = skiplist.range_query(lo, hi)
         return JSONResponse({"lo": lo, "hi": hi, "results": [[k, v] for k, v in pairs], "count": len(pairs)})
+
+
+    @app.get("/api/v1/tdigest")
+    async def api_tdigest_stats() -> JSONResponse:
+        if tdigest is None:
+            return JSONResponse({"error": "no t-digest configured"})
+        return JSONResponse(tdigest.stats())
+
+    @app.post("/api/v1/tdigest/add")
+    async def api_tdigest_add(request: Request) -> JSONResponse:
+        if tdigest is None:
+            return JSONResponse({"error": "no t-digest configured"})
+        body = await request.json()
+        value = body.get("value")
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return JSONResponse({"error": "value must be a number"}, status_code=422)
+        weight = body.get("weight", 1)
+        if not isinstance(weight, (int, float)) or isinstance(weight, bool) or weight <= 0:
+            return JSONResponse({"error": "weight must be a positive number"}, status_code=422)
+        tdigest.add(value, weight)
+        return JSONResponse({"value": value, "weight": weight, "count": tdigest.count})
+
+    @app.post("/api/v1/tdigest/percentile")
+    async def api_tdigest_percentile(request: Request) -> JSONResponse:
+        if tdigest is None:
+            return JSONResponse({"error": "no t-digest configured"})
+        body = await request.json()
+        q = body.get("q")
+        if not isinstance(q, (int, float)) or isinstance(q, bool) or not 0.0 <= q <= 100.0:
+            return JSONResponse({"error": "q must be a number in [0, 100]"}, status_code=422)
+        try:
+            value = tdigest.percentile(q)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        return JSONResponse({"q": q, "value": value})
+
+    @app.post("/api/v1/tdigest/merge")
+    async def api_tdigest_merge(request: Request) -> JSONResponse:
+        if tdigest is None:
+            return JSONResponse({"error": "no t-digest configured"})
+        body = await request.json()
+        values = body.get("values")
+        if not isinstance(values, list) or not all(
+            isinstance(x, (int, float)) and not isinstance(x, bool) for x in values
+        ):
+            return JSONResponse({"error": "values must be a list of numbers"}, status_code=422)
+        other = TDigest()
+        for entry in values:
+            other.add(entry)
+        merged = tdigest.merge(other)
+        result = {"merged": True, "count": merged.count}
+        q = body.get("q")
+        if isinstance(q, (int, float)) and not isinstance(q, bool) and 0.0 <= q <= 100.0 and merged.count > 0:
+            result["percentile"] = merged.percentile(q)
+        return JSONResponse(result)
 
     return app
 
