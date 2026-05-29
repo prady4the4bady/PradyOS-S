@@ -59,6 +59,7 @@ from pradyos.core.bloom_filter import BloomFilter  # Phase 72
 from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
 from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
 from pradyos.core.vectorclock import VectorClock  # Phase 75
+from pradyos.core.countminsketch import CountMinSketch  # Phase 76
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -178,6 +179,7 @@ def create_app(
     hash_ring: Any | None = None,
     hyperloglog: Any | None = None,
     vectorclock: Any | None = None,
+    countminsketch: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2907,6 +2909,55 @@ def create_app(
         except (ValueError, TypeError):
             return JSONResponse({"error": "clock must map actors to non-negative integers"}, status_code=422)
         return JSONResponse({"relation": relation})
+
+
+    @app.get("/api/v1/frequency")
+    async def api_frequency_stats() -> JSONResponse:
+        if countminsketch is None:
+            return JSONResponse({"error": "no frequency sketch configured"})
+        return JSONResponse(countminsketch.stats())
+
+    @app.post("/api/v1/frequency/add")
+    async def api_frequency_add(request: Request) -> JSONResponse:
+        if countminsketch is None:
+            return JSONResponse({"error": "no frequency sketch configured"})
+        body = await request.json()
+        item = body.get("item")
+        if not isinstance(item, str) or not item:
+            return JSONResponse({"error": "item is required"}, status_code=422)
+        count = body.get("count", 1)
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            return JSONResponse({"error": "count must be a positive integer"}, status_code=422)
+        countminsketch.add(item, count)
+        return JSONResponse({"item": item, "count": count, "estimate": countminsketch.estimate(item)})
+
+    @app.post("/api/v1/frequency/estimate")
+    async def api_frequency_estimate(request: Request) -> JSONResponse:
+        if countminsketch is None:
+            return JSONResponse({"error": "no frequency sketch configured"})
+        body = await request.json()
+        item = body.get("item")
+        if not isinstance(item, str) or not item:
+            return JSONResponse({"error": "item is required"}, status_code=422)
+        return JSONResponse({"item": item, "estimate": countminsketch.estimate(item)})
+
+    @app.post("/api/v1/frequency/merge")
+    async def api_frequency_merge(request: Request) -> JSONResponse:
+        if countminsketch is None:
+            return JSONResponse({"error": "no frequency sketch configured"})
+        body = await request.json()
+        items = body.get("items")
+        if not isinstance(items, list) or not all(isinstance(x, str) for x in items):
+            return JSONResponse({"error": "items must be a list of strings"}, status_code=422)
+        other = CountMinSketch(countminsketch.width, countminsketch.depth)
+        for entry in items:
+            other.add(entry)
+        merged = countminsketch.merge(other)
+        result = {"merged": True, "total": merged.stats()["total"]}
+        query = body.get("item")
+        if isinstance(query, str) and query:
+            result["estimate"] = merged.estimate(query)
+        return JSONResponse(result)
 
     return app
 

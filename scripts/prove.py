@@ -278,6 +278,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 75
     "tests/test_vectorclock.py",
     "tests/test_vectorclock_web.py",
+    # Phase 76
+    "tests/test_countminsketch.py",
+    "tests/test_countminsketch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
