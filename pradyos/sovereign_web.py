@@ -61,6 +61,7 @@ from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
 from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.core.countminsketch import CountMinSketch  # Phase 76
 from pradyos.core.merkle_tree import MerkleTree  # Phase 77
+from pradyos.core.skiplist import SkipList  # Phase 78
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -182,6 +183,7 @@ def create_app(
     vectorclock: Any | None = None,
     countminsketch: Any | None = None,
     merkle_tree: Any | None = None,
+    skiplist: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3002,6 +3004,47 @@ def create_app(
         except ValueError as exc:
             return JSONResponse({"error": str(exc)}, status_code=404)
         return JSONResponse({"item": item, "proof": path, "root": merkle_tree.root})
+
+
+    @app.get("/api/v1/skiplist")
+    async def api_skiplist_stats() -> JSONResponse:
+        if skiplist is None:
+            return JSONResponse({"error": "no skip list configured"})
+        return JSONResponse(skiplist.stats())
+
+    @app.post("/api/v1/skiplist/insert")
+    async def api_skiplist_insert(request: Request) -> JSONResponse:
+        if skiplist is None:
+            return JSONResponse({"error": "no skip list configured"})
+        body = await request.json()
+        key = body.get("key")
+        if not isinstance(key, str) or not key:
+            return JSONResponse({"error": "key is required"}, status_code=422)
+        skiplist.insert(key, body.get("value"))
+        return JSONResponse({"key": key, "value": body.get("value"), "size": len(skiplist)})
+
+    @app.post("/api/v1/skiplist/search")
+    async def api_skiplist_search(request: Request) -> JSONResponse:
+        if skiplist is None:
+            return JSONResponse({"error": "no skip list configured"})
+        body = await request.json()
+        key = body.get("key")
+        if not isinstance(key, str) or not key:
+            return JSONResponse({"error": "key is required"}, status_code=422)
+        value = skiplist.search(key)
+        return JSONResponse({"key": key, "value": value, "found": key in skiplist})
+
+    @app.post("/api/v1/skiplist/range")
+    async def api_skiplist_range(request: Request) -> JSONResponse:
+        if skiplist is None:
+            return JSONResponse({"error": "no skip list configured"})
+        body = await request.json()
+        lo = body.get("lo")
+        hi = body.get("hi")
+        if not isinstance(lo, str) or not isinstance(hi, str):
+            return JSONResponse({"error": "lo and hi are required strings"}, status_code=422)
+        pairs = skiplist.range_query(lo, hi)
+        return JSONResponse({"lo": lo, "hi": hi, "results": [[k, v] for k, v in pairs], "count": len(pairs)})
 
     return app
 
