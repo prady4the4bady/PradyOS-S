@@ -703,7 +703,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 72E: `scripts/prove.py` — 161 test modules registered (running total; Phase 72 appends `test_bloom_filter.py` + `test_bloom_filter_web.py`).
 - ✅ 72F: README Phase Map updated; Phase 73 planned.
 
-**Phase 73 — Planned.** Sovereign Consistent Hash Ring — maps keys to nodes with configurable virtual-node replicas for even distribution and minimal reshuffling on membership change; `HashRing` with `add_node` / `remove_node` / `get_node(key)` / `get_nodes(key, count)` and distribution stats, exposed at `/api/v1/hashring`; stdlib only; thread-safe via `threading.Lock`. (Namespace verified free on `origin/main`; the originally-suggested "Metrics Collector" is occupied by Phase 16/22 `/api/v1/metrics`.)
+**Phase 73 — Complete.** All 163 test modules green. Sovereign Consistent Hash Ring — maps arbitrary keys to a changing set of nodes so that adding or removing a node reshuffles only that node's keys, never the rest (the consistent-hashing property). Each node is placed at `replicas` points around a 2^64 SHA-256 ring; a key is owned by the first node clockwise, located in O(log V) via `bisect`. Pure stdlib (`hashlib` + `bisect`); thread-safe via a single `threading.Lock`:
+
+- ✅ 73A: `pradyos/core/hash_ring.py` — `NodeNotFoundError(node)` (carries the offending name); `HashRing(nodes=None, *, replicas=100)` with `add_node` (idempotent), `remove_node` (raises `NodeNotFoundError`), `get_node(key)` (owner, or `None` on an empty ring), `get_nodes(key, count)` (distinct clockwise nodes for replication), `nodes()` / `has_node()`, `distribution(keys)` (per-node key counts), `stats()` (JSON snapshot), and `clear()`. Invalid `replicas` raises `ValueError`.
+- ✅ 73B: `pradyos/sovereign_web.py` patched additively via `scripts/patch_web_phase73.py` (never rewritten; the DASHBOARD_HTML line is asserted byte-length-unchanged; an `ast.parse` gate refuses to write broken code) — added a `hash_ring: Any | None = None` param and 4 endpoints: `GET /api/v1/hashring` (stats), `POST /api/v1/hashring/nodes` (body `{node}`; 422 on missing), `GET /api/v1/hashring/node/{key}` (owner lookup), and `DELETE /api/v1/hashring/nodes/{node}` (404 on unknown); all return `{"error": ...}` when no ring is configured. The `/api/v1/hashring` prefix was verified free against every existing route.
+- ✅ 73C: `tests/test_hash_ring.py` — 25 unit tests (construction + invalid `replicas`; idempotent add; remove + `NodeNotFoundError` carrying the name; lookup determinism / membership; `get_nodes` distinct / cap / empty / non-positive; balanced distribution; the consistent-hashing guarantee on **both** add and remove; stats; virtual-point math; clear; 10-thread concurrency).
+- ✅ 73D: `tests/test_hash_ring_web.py` — 13 FastAPI TestClient tests (no-ring errors on all four routes; stats keys; add + node_count; missing → 422; empty-ring lookup → null; member lookup; determinism; remove; unknown → 404).
+- ✅ 73E: `scripts/prove.py` — 163 test modules registered (running total; Phase 73 appends `test_hash_ring.py` + `test_hash_ring_web.py`).
+- ✅ 73F: README Phase Map updated; Phase 74 planned.
+
+**Phase 74 — Planned.** Sovereign Cardinality Estimator — a HyperLogLog sketch for approximate distinct-count over high-volume streams in fixed memory; `HyperLogLog` with `add(item)` / `estimate()` / `merge(other)` / `clear()`, exposed at `/api/v1/cardinality`; stdlib only; thread-safe via `threading.Lock`. (Namespace verified free on `origin/main`.)
 
 ---
 

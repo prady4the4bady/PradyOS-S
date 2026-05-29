@@ -56,6 +56,7 @@ from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
 from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 70
 from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phase 71
 from pradyos.core.bloom_filter import BloomFilter  # Phase 72
+from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -172,6 +173,7 @@ def create_app(
     dependency_graph: Any | None = None,
     anomaly_watch: Any | None = None,
     bloom_filter: Any | None = None,
+    hash_ring: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2782,6 +2784,40 @@ def create_app(
             return JSONResponse({"error": "no bloom filter configured"})
         bloom_filter.clear()
         return JSONResponse({"cleared": True})
+
+
+    @app.get("/api/v1/hashring")
+    async def api_hashring_stats() -> JSONResponse:
+        if hash_ring is None:
+            return JSONResponse({"error": "no hash ring configured"})
+        return JSONResponse(hash_ring.stats())
+
+    @app.post("/api/v1/hashring/nodes")
+    async def api_hashring_add(request: Request) -> JSONResponse:
+        if hash_ring is None:
+            return JSONResponse({"error": "no hash ring configured"})
+        body = await request.json()
+        node = body.get("node")
+        if not node or not isinstance(node, str):
+            return JSONResponse({"error": "node is required"}, status_code=422)
+        hash_ring.add_node(node)
+        return JSONResponse({"node": node, "added": True, "nodes": hash_ring.nodes()})
+
+    @app.get("/api/v1/hashring/node/{key}")
+    async def api_hashring_get(key: str) -> JSONResponse:
+        if hash_ring is None:
+            return JSONResponse({"error": "no hash ring configured"})
+        return JSONResponse({"key": key, "node": hash_ring.get_node(key)})
+
+    @app.delete("/api/v1/hashring/nodes/{node}")
+    async def api_hashring_remove(node: str) -> JSONResponse:
+        if hash_ring is None:
+            return JSONResponse({"error": "no hash ring configured"})
+        try:
+            hash_ring.remove_node(node)
+        except NodeNotFoundError:
+            return JSONResponse({"error": f"no such node: {node}"}, status_code=404)
+        return JSONResponse({"node": node, "removed": True})
 
     return app
 

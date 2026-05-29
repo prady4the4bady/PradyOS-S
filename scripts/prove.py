@@ -269,6 +269,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 72
     "tests/test_bloom_filter.py",
     "tests/test_bloom_filter_web.py",
+    # Phase 73
+    "tests/test_hash_ring.py",
+    "tests/test_hash_ring_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
