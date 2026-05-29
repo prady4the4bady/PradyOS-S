@@ -163,6 +163,7 @@ def create_app(
     query_bus: Any | None = None,
     saga_orchestrator: Any | None = None,
     process_manager: Any | None = None,
+    job_scheduler: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2505,6 +2506,101 @@ def create_app(
         limit = max(0, min(500, limit))
         instances = process_manager.list_processes(state=state, limit=limit)
         return JSONResponse({"processes": [i.to_dict() for i in instances]})
+
+    # ── Phase 68: Sovereign Scheduler ────────────────────────────────────────
+    # Distinct from Phase 15 (/api/v1/scheduler/jobs) and Phase 38
+    # (/api/v1/scheduler/tasks + /tick). This is the time-based job queue
+    # with one-shot and repeating interval semantics.
+
+    @app.post("/api/v1/jobs")
+    async def api_jobs_schedule(request: Request) -> JSONResponse:
+        if job_scheduler is None:
+            return JSONResponse({"error": "no scheduler configured"})
+        body = await request.json()
+        if "name" not in body:
+            return JSONResponse(
+                {"error": "missing required key: name"},
+                status_code=400,
+            )
+        if "run_at" not in body:
+            return JSONResponse(
+                {"error": "missing required key: run_at"},
+                status_code=400,
+            )
+        payload = body.get("payload") or {}
+        if not isinstance(payload, dict):
+            payload = {}
+        interval = body.get("interval_seconds")
+        if interval is not None:
+            try:
+                interval = float(interval)
+            except (TypeError, ValueError):
+                interval = None
+        try:
+            run_at = float(body["run_at"])
+        except (TypeError, ValueError):
+            return JSONResponse(
+                {"error": "run_at must be numeric"},
+                status_code=400,
+            )
+        job = job_scheduler.schedule(
+            name=str(body["name"]),
+            run_at=run_at,
+            payload=payload,
+            interval_seconds=interval,
+        )
+        return JSONResponse(job.to_dict())
+
+    @app.post("/api/v1/jobs/tick")
+    async def api_jobs_tick(request: Request) -> JSONResponse:
+        if job_scheduler is None:
+            return JSONResponse({"executed": []})
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        now_v = body.get("now") if isinstance(body, dict) else None
+        if now_v is not None:
+            try:
+                now_v = float(now_v)
+            except (TypeError, ValueError):
+                now_v = None
+        executed = job_scheduler.tick(now=now_v)
+        return JSONResponse({"executed": [j.to_dict() for j in executed]})
+
+    @app.get("/api/v1/jobs")
+    async def api_jobs_list(request: Request) -> JSONResponse:
+        if job_scheduler is None:
+            return JSONResponse({"jobs": []})
+        status = request.query_params.get("status")
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except (TypeError, ValueError):
+            limit = 50
+        limit = max(0, min(1000, limit))
+        jobs = job_scheduler.list_jobs(status=status, limit=limit)
+        return JSONResponse({"jobs": [j.to_dict() for j in jobs]})
+
+    @app.get("/api/v1/jobs/{job_id}")
+    async def api_jobs_get(job_id: str) -> JSONResponse:
+        if job_scheduler is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        job = job_scheduler.get(job_id)
+        if job is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(job.to_dict())
+
+    @app.delete("/api/v1/jobs/{job_id}")
+    async def api_jobs_cancel(job_id: str) -> JSONResponse:
+        if job_scheduler is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        ok = job_scheduler.cancel(job_id)
+        if not ok:
+            return JSONResponse(
+                {"error": "not found or not pending"},
+                status_code=404,
+            )
+        return JSONResponse({"cancelled": True})
 
     return app
 
