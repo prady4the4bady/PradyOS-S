@@ -712,7 +712,16 @@ inter-process bus live across Docker and systemd planes:
 - ✅ 73E: `scripts/prove.py` — 163 test modules registered (running total; Phase 73 appends `test_hash_ring.py` + `test_hash_ring_web.py`).
 - ✅ 73F: README Phase Map updated; Phase 74 planned.
 
-**Phase 74 — Planned.** Sovereign Cardinality Estimator — a HyperLogLog sketch for approximate distinct-count over high-volume streams in fixed memory; `HyperLogLog` with `add(item)` / `estimate()` / `merge(other)` / `clear()`, exposed at `/api/v1/cardinality`; stdlib only; thread-safe via `threading.Lock`. (Namespace verified free on `origin/main`.)
+**Phase 74 — Complete.** All 165 test modules green. Sovereign Cardinality Estimator — a HyperLogLog sketch that counts *distinct* items in a stream using fixed memory (m = 2^precision one-byte registers), independent of stream size. Each item is hashed (SHA-1 → 64 bits); the top `precision` bits pick a register, which keeps the largest leading-zero rank seen. The estimate uses the bias-corrected harmonic-mean formula with linear-counting in the small range, for ≈1.04/√m relative error (~0.8% at precision 14). Pure stdlib (`hashlib` + `math`); thread-safe via a single `threading.Lock`:
+
+- ✅ 74A: `pradyos/core/hyperloglog.py` — `HyperLogLog(precision=14)` with `add(item)` / `add_many(items)`, `estimate()` (rounded distinct count) / `__len__`, `merge(other)` (register-wise max union; raises `ValueError` on precision mismatch or non-HLL), `clear()`, `fill_ratio()`, `stats()` (JSON snapshot), and `precision` / `registers` properties. Any key type is accepted (strings hashed directly, others via `repr`). Invalid `precision` (outside 4–16) raises `ValueError`.
+- ✅ 74B: `pradyos/sovereign_web.py` patched additively via `scripts/patch_web_phase74.py` (never rewritten; the DASHBOARD_HTML line is asserted byte-length-unchanged; an `ast.parse` gate refuses to write broken code) — added a `hyperloglog: Any | None = None` param and 4 endpoints: `GET /api/v1/cardinality` (stats), `POST /api/v1/cardinality/add` (body `{item}` or `{items: [...]}`; 422 on missing/non-string), `GET /api/v1/cardinality/estimate`, and `DELETE /api/v1/cardinality` (clear); all return `{"error": ...}` when no estimator is configured. The `/api/v1/cardinality` prefix was verified free against every existing route.
+- ✅ 74C: `tests/test_hyperloglog.py` — 27 unit tests (precision/register sizing + invalid-arg `ValueError`; empty/single/duplicate counts; `__len__`; accuracy within 3% at 1k/10k/50k; determinism; low-precision survival; merge as union / disjoint / identical / commutative + mismatch & non-HLL guards; clear; fill-ratio; stats; non-string + unicode keys; 10-thread concurrency).
+- ✅ 74D: `tests/test_hyperloglog_web.py` — 13 FastAPI TestClient tests (no-estimator errors on all four routes; stats keys; add single/list; missing / non-string → 422; estimate reflects adds; ≤5% accuracy over HTTP; clear resets).
+- ✅ 74E: `scripts/prove.py` — 165 test modules registered (running total; Phase 74 appends `test_hyperloglog.py` + `test_hyperloglog_web.py`).
+- ✅ 74F: README Phase Map updated; Phase 75 planned.
+
+**Phase 75 — Planned.** Sovereign Vector Clock — tracks causal ordering across distributed actors so concurrent vs. happened-before relationships can be told apart; `VectorClock` with `tick(actor)` / `merge(other)` / `compare(other)` → `before | after | concurrent | equal`, exposed at `/api/v1/clocks`; stdlib only; thread-safe via `threading.Lock`. (Namespace verified free on `origin/main`.)
 
 ---
 

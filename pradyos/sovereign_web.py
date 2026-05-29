@@ -57,6 +57,7 @@ from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 7
 from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phase 71
 from pradyos.core.bloom_filter import BloomFilter  # Phase 72
 from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
+from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -174,6 +175,7 @@ def create_app(
     anomaly_watch: Any | None = None,
     bloom_filter: Any | None = None,
     hash_ring: Any | None = None,
+    hyperloglog: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2818,6 +2820,45 @@ def create_app(
         except NodeNotFoundError:
             return JSONResponse({"error": f"no such node: {node}"}, status_code=404)
         return JSONResponse({"node": node, "removed": True})
+
+
+    @app.get("/api/v1/cardinality")
+    async def api_cardinality_stats() -> JSONResponse:
+        if hyperloglog is None:
+            return JSONResponse({"error": "no cardinality estimator configured"})
+        return JSONResponse(hyperloglog.stats())
+
+    @app.post("/api/v1/cardinality/add")
+    async def api_cardinality_add(request: Request) -> JSONResponse:
+        if hyperloglog is None:
+            return JSONResponse({"error": "no cardinality estimator configured"})
+        body = await request.json()
+        if "items" in body:
+            items = body.get("items")
+            if not isinstance(items, list) or not all(isinstance(x, str) for x in items):
+                return JSONResponse({"error": "items must be a list of strings"}, status_code=422)
+        elif "item" in body:
+            item = body.get("item")
+            if not isinstance(item, str):
+                return JSONResponse({"error": "item must be a string"}, status_code=422)
+            items = [item]
+        else:
+            return JSONResponse({"error": "item or items is required"}, status_code=422)
+        hyperloglog.add_many(items)
+        return JSONResponse({"added": len(items), "estimate": hyperloglog.estimate()})
+
+    @app.get("/api/v1/cardinality/estimate")
+    async def api_cardinality_estimate() -> JSONResponse:
+        if hyperloglog is None:
+            return JSONResponse({"error": "no cardinality estimator configured"})
+        return JSONResponse({"estimate": hyperloglog.estimate()})
+
+    @app.delete("/api/v1/cardinality")
+    async def api_cardinality_clear() -> JSONResponse:
+        if hyperloglog is None:
+            return JSONResponse({"error": "no cardinality estimator configured"})
+        hyperloglog.clear()
+        return JSONResponse({"cleared": True})
 
     return app
 
