@@ -260,6 +260,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 69
     "tests/test_anomaly_detector.py",
     "tests/test_anomaly_web.py",
+    # Phase 70
+    "tests/test_dependency_graph.py",
+    "tests/test_dependency_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

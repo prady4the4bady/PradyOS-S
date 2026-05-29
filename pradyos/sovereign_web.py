@@ -53,6 +53,7 @@ from pradyos.core.tag_index import TagIndex  # Phase 61
 from pradyos.core.event_router import RouterRegistry  # Phase 62
 from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
 from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
+from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 70
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -166,6 +167,7 @@ def create_app(
     process_manager: Any | None = None,
     job_scheduler: Any | None = None,
     anomaly_detector: Any | None = None,
+    dependency_graph: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2655,6 +2657,48 @@ def create_app(
         d = result.to_dict()
         d["cached"] = False
         return JSONResponse(d)
+
+
+    @app.get("/api/v1/deps/{node}")
+    async def api_deps_get(node: str) -> JSONResponse:
+        if dependency_graph is None:
+            return JSONResponse({"error": "no dependency graph configured"})
+        return JSONResponse(dependency_graph.describe(node))
+
+    @app.post("/api/v1/deps")
+    async def api_deps_post(request: Request) -> JSONResponse:
+        if dependency_graph is None:
+            return JSONResponse({"error": "no dependency graph configured"})
+        body = await request.json()
+        frm = body.get("from")
+        to = body.get("to")
+        if not frm or not to:
+            return JSONResponse({"error": "both 'from' and 'to' are required"}, status_code=422)
+        dependency_graph.add_dependency(frm, to)
+        return JSONResponse({"from": frm, "to": to, "added": True})
+
+    @app.delete("/api/v1/deps/{frm}/{to}")
+    async def api_deps_delete(frm: str, to: str) -> JSONResponse:
+        if dependency_graph is None:
+            return JSONResponse({"error": "no dependency graph configured"})
+        removed = dependency_graph.remove_dependency(frm, to)
+        return JSONResponse({"from": frm, "to": to, "removed": removed})
+
+    @app.get("/api/v1/deps/{node}/sort")
+    async def api_deps_sort(node: str) -> JSONResponse:
+        if dependency_graph is None:
+            return JSONResponse({"error": "no dependency graph configured"})
+        try:
+            order = dependency_graph.topological_sort(node)
+        except CycleError as exc:
+            return JSONResponse({"error": "cycle detected", "cycle": exc.cycle}, status_code=409)
+        return JSONResponse({"node": node, "order": order})
+
+    @app.get("/api/v1/deps/{node}/impact")
+    async def api_deps_impact(node: str) -> JSONResponse:
+        if dependency_graph is None:
+            return JSONResponse({"error": "no dependency graph configured"})
+        return JSONResponse({"node": node, "impact_score": dependency_graph.impact_score(node)})
 
     return app
 
