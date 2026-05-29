@@ -54,6 +54,7 @@ from pradyos.core.event_router import RouterRegistry  # Phase 62
 from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
 from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
 from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 70
+from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phase 71
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -168,6 +169,7 @@ def create_app(
     job_scheduler: Any | None = None,
     anomaly_detector: Any | None = None,
     dependency_graph: Any | None = None,
+    anomaly_watch: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2699,6 +2701,46 @@ def create_app(
         if dependency_graph is None:
             return JSONResponse({"error": "no dependency graph configured"})
         return JSONResponse({"node": node, "impact_score": dependency_graph.impact_score(node)})
+
+
+    @app.get("/api/v1/anomaly/sources")
+    async def api_anomaly_sources_list() -> JSONResponse:
+        if anomaly_watch is None:
+            return JSONResponse({"error": "no anomaly watch configured"})
+        return JSONResponse({"sources": anomaly_watch.sources()})
+
+    @app.post("/api/v1/anomaly/sources")
+    async def api_anomaly_sources_register(request: Request) -> JSONResponse:
+        if anomaly_watch is None:
+            return JSONResponse({"error": "no anomaly watch configured"})
+        body = await request.json()
+        name = body.get("name")
+        if not name:
+            return JSONResponse({"error": "name is required"}, status_code=422)
+        raw = body.get("baseline", [])
+        try:
+            baseline = [float(v) for v in raw]
+        except (TypeError, ValueError):
+            return JSONResponse({"error": "baseline must be a list of numbers"}, status_code=422)
+        last = baseline[-1] if baseline else 0.0
+        anomaly_watch.register_source(name, lambda last=last: last, baseline=baseline)
+        return JSONResponse({"name": name, "registered": True, "samples": len(baseline)})
+
+    @app.get("/api/v1/anomaly/status")
+    async def api_anomaly_status() -> JSONResponse:
+        if anomaly_watch is None:
+            return JSONResponse({"error": "no anomaly watch configured"})
+        return JSONResponse({"results": anomaly_watch.tick()})
+
+    @app.delete("/api/v1/anomaly/sources/{name}")
+    async def api_anomaly_sources_delete(name: str) -> JSONResponse:
+        if anomaly_watch is None:
+            return JSONResponse({"error": "no anomaly watch configured"})
+        try:
+            anomaly_watch.deregister(name)
+        except SourceNotFoundError:
+            return JSONResponse({"error": f"no such source: {name}"}, status_code=404)
+        return JSONResponse({"name": name, "removed": True})
 
     return app
 
