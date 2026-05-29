@@ -275,6 +275,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 74
     "tests/test_hyperloglog.py",
     "tests/test_hyperloglog_web.py",
+    # Phase 75
+    "tests/test_vectorclock.py",
+    "tests/test_vectorclock_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

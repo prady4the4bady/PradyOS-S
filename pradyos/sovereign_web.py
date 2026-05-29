@@ -58,6 +58,7 @@ from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phas
 from pradyos.core.bloom_filter import BloomFilter  # Phase 72
 from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
 from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
+from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -176,6 +177,7 @@ def create_app(
     bloom_filter: Any | None = None,
     hash_ring: Any | None = None,
     hyperloglog: Any | None = None,
+    vectorclock: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2859,6 +2861,52 @@ def create_app(
             return JSONResponse({"error": "no cardinality estimator configured"})
         hyperloglog.clear()
         return JSONResponse({"cleared": True})
+
+
+    @app.get("/api/v1/clocks")
+    async def api_clocks_state() -> JSONResponse:
+        if vectorclock is None:
+            return JSONResponse({"error": "no vector clock configured"})
+        return JSONResponse(vectorclock.stats())
+
+    @app.post("/api/v1/clocks/tick")
+    async def api_clocks_tick(request: Request) -> JSONResponse:
+        if vectorclock is None:
+            return JSONResponse({"error": "no vector clock configured"})
+        body = await request.json()
+        actor = body.get("actor")
+        if not actor or not isinstance(actor, str):
+            return JSONResponse({"error": "actor is required"}, status_code=422)
+        value = vectorclock.tick(actor)
+        return JSONResponse({"actor": actor, "value": value, "clock": vectorclock.to_dict()})
+
+    @app.post("/api/v1/clocks/merge")
+    async def api_clocks_merge(request: Request) -> JSONResponse:
+        if vectorclock is None:
+            return JSONResponse({"error": "no vector clock configured"})
+        body = await request.json()
+        incoming = body.get("clock")
+        if not isinstance(incoming, dict):
+            return JSONResponse({"error": "clock object is required"}, status_code=422)
+        try:
+            vectorclock.merge(VectorClock(incoming))
+        except (ValueError, TypeError):
+            return JSONResponse({"error": "clock must map actors to non-negative integers"}, status_code=422)
+        return JSONResponse({"clock": vectorclock.to_dict()})
+
+    @app.post("/api/v1/clocks/compare")
+    async def api_clocks_compare(request: Request) -> JSONResponse:
+        if vectorclock is None:
+            return JSONResponse({"error": "no vector clock configured"})
+        body = await request.json()
+        incoming = body.get("clock")
+        if not isinstance(incoming, dict):
+            return JSONResponse({"error": "clock object is required"}, status_code=422)
+        try:
+            relation = vectorclock.compare(VectorClock(incoming))
+        except (ValueError, TypeError):
+            return JSONResponse({"error": "clock must map actors to non-negative integers"}, status_code=422)
+        return JSONResponse({"relation": relation})
 
     return app
 
