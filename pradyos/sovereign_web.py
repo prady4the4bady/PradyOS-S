@@ -60,6 +60,7 @@ from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
 from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
 from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.core.countminsketch import CountMinSketch  # Phase 76
+from pradyos.core.merkle_tree import MerkleTree  # Phase 77
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -180,6 +181,7 @@ def create_app(
     hyperloglog: Any | None = None,
     vectorclock: Any | None = None,
     countminsketch: Any | None = None,
+    merkle_tree: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2958,6 +2960,48 @@ def create_app(
         if isinstance(query, str) and query:
             result["estimate"] = merged.estimate(query)
         return JSONResponse(result)
+
+
+    @app.get("/api/v1/merkle")
+    async def api_merkle_stats() -> JSONResponse:
+        if merkle_tree is None:
+            return JSONResponse({"error": "no merkle tree configured"})
+        return JSONResponse(merkle_tree.stats())
+
+    @app.post("/api/v1/merkle/add")
+    async def api_merkle_add(request: Request) -> JSONResponse:
+        if merkle_tree is None:
+            return JSONResponse({"error": "no merkle tree configured"})
+        body = await request.json()
+        item = body.get("item")
+        if not isinstance(item, str) or not item:
+            return JSONResponse({"error": "item is required"}, status_code=422)
+        merkle_tree.add(item)
+        return JSONResponse({"item": item, "leaves": len(merkle_tree), "root": merkle_tree.root})
+
+    @app.post("/api/v1/merkle/verify")
+    async def api_merkle_verify(request: Request) -> JSONResponse:
+        if merkle_tree is None:
+            return JSONResponse({"error": "no merkle tree configured"})
+        body = await request.json()
+        item = body.get("item")
+        if not isinstance(item, str) or not item:
+            return JSONResponse({"error": "item is required"}, status_code=422)
+        return JSONResponse({"item": item, "verified": merkle_tree.verify(item)})
+
+    @app.post("/api/v1/merkle/proof")
+    async def api_merkle_proof(request: Request) -> JSONResponse:
+        if merkle_tree is None:
+            return JSONResponse({"error": "no merkle tree configured"})
+        body = await request.json()
+        item = body.get("item")
+        if not isinstance(item, str) or not item:
+            return JSONResponse({"error": "item is required"}, status_code=422)
+        try:
+            path = merkle_tree.proof(item)
+        except ValueError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=404)
+        return JSONResponse({"item": item, "proof": path, "root": merkle_tree.root})
 
     return app
 

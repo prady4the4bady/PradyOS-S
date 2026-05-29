@@ -281,6 +281,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 76
     "tests/test_countminsketch.py",
     "tests/test_countminsketch_web.py",
+    # Phase 77
+    "tests/test_merkle_tree.py",
+    "tests/test_merkle_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
