@@ -64,6 +64,7 @@ from pradyos.core.merkle_tree import MerkleTree  # Phase 77
 from pradyos.core.skiplist import SkipList  # Phase 78
 from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.core.fenwick import FenwickTree  # Phase 80
+from pradyos.core.segtree import SegmentTree  # Phase 81
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -188,6 +189,7 @@ def create_app(
     skiplist: Any | None = None,
     tdigest: Any | None = None,
     fenwick: Any | None = None,
+    segtree: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3141,6 +3143,46 @@ def create_app(
         body = await request.json()
         try:
             value = fenwick.point_query(body.get("index"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"index": body.get("index"), "value": value})
+
+
+    @app.get("/api/v1/segtree")
+    async def api_segtree_stats() -> JSONResponse:
+        if segtree is None:
+            return JSONResponse({"error": "no segment tree configured"})
+        return JSONResponse(segtree.stats())
+
+    @app.post("/api/v1/segtree/update")
+    async def api_segtree_update(request: Request) -> JSONResponse:
+        if segtree is None:
+            return JSONResponse({"error": "no segment tree configured"})
+        body = await request.json()
+        try:
+            segtree.update(body.get("index"), body.get("value"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"index": body.get("index"), "value": body.get("value"), "aggregate": segtree.stats()["aggregate"]})
+
+    @app.post("/api/v1/segtree/query")
+    async def api_segtree_query(request: Request) -> JSONResponse:
+        if segtree is None:
+            return JSONResponse({"error": "no segment tree configured"})
+        body = await request.json()
+        try:
+            result = segtree.query(body.get("lo"), body.get("hi"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"lo": body.get("lo"), "hi": body.get("hi"), "mode": segtree.mode, "result": result})
+
+    @app.post("/api/v1/segtree/point")
+    async def api_segtree_point(request: Request) -> JSONResponse:
+        if segtree is None:
+            return JSONResponse({"error": "no segment tree configured"})
+        body = await request.json()
+        try:
+            value = segtree.point_query(body.get("index"))
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"index": body.get("index"), "value": value})

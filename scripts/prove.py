@@ -293,6 +293,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 80
     "tests/test_fenwick.py",
     "tests/test_fenwick_web.py",
+    # Phase 81
+    "tests/test_segtree.py",
+    "tests/test_segtree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
