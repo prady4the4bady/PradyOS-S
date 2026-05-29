@@ -290,6 +290,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 79
     "tests/test_tdigest.py",
     "tests/test_tdigest_web.py",
+    # Phase 80
+    "tests/test_fenwick.py",
+    "tests/test_fenwick_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

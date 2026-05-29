@@ -63,6 +63,7 @@ from pradyos.core.countminsketch import CountMinSketch  # Phase 76
 from pradyos.core.merkle_tree import MerkleTree  # Phase 77
 from pradyos.core.skiplist import SkipList  # Phase 78
 from pradyos.core.tdigest import TDigest  # Phase 79
+from pradyos.core.fenwick import FenwickTree  # Phase 80
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -186,6 +187,7 @@ def create_app(
     merkle_tree: Any | None = None,
     skiplist: Any | None = None,
     tdigest: Any | None = None,
+    fenwick: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3102,6 +3104,46 @@ def create_app(
         if isinstance(q, (int, float)) and not isinstance(q, bool) and 0.0 <= q <= 100.0 and merged.count > 0:
             result["percentile"] = merged.percentile(q)
         return JSONResponse(result)
+
+
+    @app.get("/api/v1/fenwick")
+    async def api_fenwick_stats() -> JSONResponse:
+        if fenwick is None:
+            return JSONResponse({"error": "no fenwick tree configured"})
+        return JSONResponse(fenwick.stats())
+
+    @app.post("/api/v1/fenwick/update")
+    async def api_fenwick_update(request: Request) -> JSONResponse:
+        if fenwick is None:
+            return JSONResponse({"error": "no fenwick tree configured"})
+        body = await request.json()
+        try:
+            fenwick.update(body.get("index"), body.get("delta"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"index": body.get("index"), "delta": body.get("delta"), "total": fenwick.stats()["total"]})
+
+    @app.post("/api/v1/fenwick/query")
+    async def api_fenwick_query(request: Request) -> JSONResponse:
+        if fenwick is None:
+            return JSONResponse({"error": "no fenwick tree configured"})
+        body = await request.json()
+        try:
+            total = fenwick.range_sum(body.get("lo"), body.get("hi"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"lo": body.get("lo"), "hi": body.get("hi"), "sum": total})
+
+    @app.post("/api/v1/fenwick/point")
+    async def api_fenwick_point(request: Request) -> JSONResponse:
+        if fenwick is None:
+            return JSONResponse({"error": "no fenwick tree configured"})
+        body = await request.json()
+        try:
+            value = fenwick.point_query(body.get("index"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"index": body.get("index"), "value": value})
 
     return app
 
