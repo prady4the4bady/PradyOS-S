@@ -52,6 +52,7 @@ from pradyos.core.pipeline_chain import PipelineRegistry, PipelineChain, Step, S
 from pradyos.core.tag_index import TagIndex  # Phase 61
 from pradyos.core.event_router import RouterRegistry  # Phase 62
 from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
+from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -164,6 +165,7 @@ def create_app(
     saga_orchestrator: Any | None = None,
     process_manager: Any | None = None,
     job_scheduler: Any | None = None,
+    anomaly_detector: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -2601,6 +2603,58 @@ def create_app(
                 status_code=404,
             )
         return JSONResponse({"cancelled": True})
+
+
+    @app.get("/api/v1/anomaly")
+    async def api_anomaly_get(request: Request) -> JSONResponse:
+        if anomaly_detector is None:
+            return JSONResponse({"error": "no anomaly detector configured"})
+        signal = request.query_params.get("signal")
+        if not signal:
+            return JSONResponse({"error": "signal is required"})
+        try:
+            window = float(request.query_params.get("window", 3600))
+        except (ValueError, TypeError):
+            window = 3600.0
+        use_cache = request.query_params.get("use_cache", "").lower() in ("1", "true", "yes")
+        if use_cache:
+            cached = anomaly_detector.get_cached(signal, window)
+            if cached is not None:
+                d = cached.to_dict()
+                d["cached"] = True
+                return JSONResponse(d)
+        result = anomaly_detector.detect(signal, window=window)
+        if use_cache:
+            anomaly_detector.cache_result(result)
+        d = result.to_dict()
+        d["cached"] = False
+        return JSONResponse(d)
+
+    @app.post("/api/v1/anomaly")
+    async def api_anomaly_post(request: Request) -> JSONResponse:
+        if anomaly_detector is None:
+            return JSONResponse({"error": "no anomaly detector configured"})
+        body = await request.json()
+        signal = body.get("signal")
+        if not signal:
+            return JSONResponse({"error": "signal is required"})
+        try:
+            window = float(body.get("window", 3600))
+        except (ValueError, TypeError):
+            window = 3600.0
+        use_cache = bool(body.get("use_cache", False))
+        if use_cache:
+            cached = anomaly_detector.get_cached(signal, window)
+            if cached is not None:
+                d = cached.to_dict()
+                d["cached"] = True
+                return JSONResponse(d)
+        result = anomaly_detector.detect(signal, window=window)
+        if use_cache:
+            anomaly_detector.cache_result(result)
+        d = result.to_dict()
+        d["cached"] = False
+        return JSONResponse(d)
 
     return app
 
