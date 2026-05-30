@@ -65,6 +65,7 @@ from pradyos.core.skiplist import SkipList  # Phase 78
 from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.core.fenwick import FenwickTree  # Phase 80
 from pradyos.core.segtree import SegmentTree  # Phase 81
+from pradyos.core.unionfind import UnionFind  # Phase 82
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -190,6 +191,7 @@ def create_app(
     tdigest: Any | None = None,
     fenwick: Any | None = None,
     segtree: Any | None = None,
+    unionfind: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3186,6 +3188,47 @@ def create_app(
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"index": body.get("index"), "value": value})
+
+
+    @app.get("/api/v1/unionfind")
+    async def api_unionfind_stats() -> JSONResponse:
+        if unionfind is None:
+            return JSONResponse({"error": "no union-find configured"})
+        return JSONResponse(unionfind.stats())
+
+    @app.post("/api/v1/unionfind/union")
+    async def api_unionfind_union(request: Request) -> JSONResponse:
+        if unionfind is None:
+            return JSONResponse({"error": "no union-find configured"})
+        body = await request.json()
+        try:
+            united = unionfind.union(body.get("a"), body.get("b"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"a": body.get("a"), "b": body.get("b"), "united": united, "components": unionfind.component_count()})
+
+    @app.post("/api/v1/unionfind/find")
+    async def api_unionfind_find(request: Request) -> JSONResponse:
+        if unionfind is None:
+            return JSONResponse({"error": "no union-find configured"})
+        body = await request.json()
+        try:
+            root = unionfind.find(body.get("a"))
+            csize = unionfind.component_size(body.get("a"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"a": body.get("a"), "root": root, "component_size": csize})
+
+    @app.post("/api/v1/unionfind/connected")
+    async def api_unionfind_connected(request: Request) -> JSONResponse:
+        if unionfind is None:
+            return JSONResponse({"error": "no union-find configured"})
+        body = await request.json()
+        try:
+            result = unionfind.connected(body.get("a"), body.get("b"))
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        return JSONResponse({"a": body.get("a"), "b": body.get("b"), "connected": result})
 
     return app
 

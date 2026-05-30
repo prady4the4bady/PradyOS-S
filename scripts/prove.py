@@ -296,6 +296,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 81
     "tests/test_segtree.py",
     "tests/test_segtree_web.py",
+    # Phase 82
+    "tests/test_unionfind.py",
+    "tests/test_unionfind_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
