@@ -320,6 +320,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 89
     "tests/test_simhash.py",
     "tests/test_simhash_web.py",
+    # Phase 90
+    "tests/test_quotient.py",
+    "tests/test_quotient_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

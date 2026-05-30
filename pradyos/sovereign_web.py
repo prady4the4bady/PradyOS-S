@@ -73,6 +73,7 @@ from pradyos.web.cuckoo_web import register_cuckoo_routes  # Phase 86
 from pradyos.web.topk_web import register_topk_routes  # Phase 87
 from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
 from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
+from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -206,6 +207,7 @@ def create_app(
     space_saving: Any | None = None,
     minhash: Any | None = None,
     simhash: Any | None = None,
+    quotient: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3257,6 +3259,8 @@ def create_app(
     register_minhash_routes(app, minhash)
 
     register_simhash_routes(app, simhash)
+
+    register_quotient_routes(app, quotient)
 
     return app
 
