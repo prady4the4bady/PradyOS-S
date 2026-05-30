@@ -308,6 +308,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 85
     "tests/test_reservoir.py",
     "tests/test_reservoir_web.py",
+    # Phase 86
+    "tests/test_cuckoo.py",
+    "tests/test_cuckoo_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
