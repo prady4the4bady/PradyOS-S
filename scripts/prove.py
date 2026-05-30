@@ -314,6 +314,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 87
     "tests/test_space_saving.py",
     "tests/test_topk_web.py",
+    # Phase 88
+    "tests/test_minhash.py",
+    "tests/test_minhash_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
