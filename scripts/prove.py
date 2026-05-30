@@ -302,6 +302,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 83
     "tests/test_trie.py",
     "tests/test_trie_web.py",
+    # Phase 84
+    "tests/test_lru_cache.py",
+    "tests/test_lru_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
