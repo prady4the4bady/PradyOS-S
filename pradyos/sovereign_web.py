@@ -70,6 +70,7 @@ from pradyos.web.trie_web import register_trie_routes  # Phase 83
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
 from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
 from pradyos.web.cuckoo_web import register_cuckoo_routes  # Phase 86
+from pradyos.web.topk_web import register_topk_routes  # Phase 87
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -200,6 +201,7 @@ def create_app(
     lru_cache: Any | None = None,
     reservoir: Any | None = None,
     cuckoo: Any | None = None,
+    space_saving: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3245,6 +3247,8 @@ def create_app(
     register_reservoir_routes(app, reservoir)
 
     register_cuckoo_routes(app, cuckoo)
+
+    register_topk_routes(app, space_saving)
 
     return app
 

@@ -311,6 +311,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 86
     "tests/test_cuckoo.py",
     "tests/test_cuckoo_web.py",
+    # Phase 87
+    "tests/test_space_saving.py",
+    "tests/test_topk_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
