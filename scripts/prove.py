@@ -305,6 +305,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 84
     "tests/test_lru_cache.py",
     "tests/test_lru_web.py",
+    # Phase 85
+    "tests/test_reservoir.py",
+    "tests/test_reservoir_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
