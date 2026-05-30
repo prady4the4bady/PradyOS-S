@@ -66,6 +66,7 @@ from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.core.fenwick import FenwickTree  # Phase 80
 from pradyos.core.segtree import SegmentTree  # Phase 81
 from pradyos.core.unionfind import UnionFind  # Phase 82
+from pradyos.web.trie_web import register_trie_routes  # Phase 83
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -192,6 +193,7 @@ def create_app(
     fenwick: Any | None = None,
     segtree: Any | None = None,
     unionfind: Any | None = None,
+    trie: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3229,6 +3231,8 @@ def create_app(
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"a": body.get("a"), "b": body.get("b"), "connected": result})
+
+    register_trie_routes(app, trie)
 
     return app
 
