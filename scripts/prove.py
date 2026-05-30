@@ -317,6 +317,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 88
     "tests/test_minhash.py",
     "tests/test_minhash_web.py",
+    # Phase 89
+    "tests/test_simhash.py",
+    "tests/test_simhash_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
