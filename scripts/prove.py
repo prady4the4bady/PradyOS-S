@@ -326,6 +326,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 91
     "tests/test_gk_quantile.py",
     "tests/test_gk_quantile_web.py",
+    # Phase 92
+    "tests/test_kll_sketch.py",
+    "tests/test_kll_sketch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
