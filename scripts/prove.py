@@ -353,6 +353,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 100
     "tests/test_xor_filter.py",
     "tests/test_xor_filter_web.py",
+    # Phase 101
+    "tests/test_ribbon.py",
+    "tests/test_ribbon_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

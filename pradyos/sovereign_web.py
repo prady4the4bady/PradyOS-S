@@ -84,6 +84,7 @@ from pradyos.web.exponential_histogram_web import register_exponential_histogram
 from pradyos.web.weighted_reservoir_web import register_weighted_reservoir_routes  # Phase 98
 from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.xor_filter_web import register_xor_filter_routes  # Phase 100
+from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -228,6 +229,7 @@ def create_app(
     weighted_reservoir: Any | None = None,
     misra_gries: Any | None = None,
     xor_filter: Any | None = None,
+    ribbon_filter: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3301,6 +3303,8 @@ def create_app(
     register_misra_gries_routes(app, misra_gries)
 
     register_xor_filter_routes(app, xor_filter)
+
+    register_ribbon_routes(app, ribbon_filter)
 
     return app
 
