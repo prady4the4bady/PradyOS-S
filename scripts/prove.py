@@ -350,6 +350,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 99
     "tests/test_misra_gries.py",
     "tests/test_misra_gries_web.py",
+    # Phase 100
+    "tests/test_xor_filter.py",
+    "tests/test_xor_filter_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
