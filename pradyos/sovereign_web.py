@@ -86,6 +86,7 @@ from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.xor_filter_web import register_xor_filter_routes  # Phase 100
 from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
+from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -232,6 +233,7 @@ def create_app(
     xor_filter: Any | None = None,
     ribbon_filter: Any | None = None,
     heavykeeper: Any | None = None,
+    spectral_bloom: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3309,6 +3311,8 @@ def create_app(
     register_ribbon_routes(app, ribbon_filter)
 
     register_heavykeeper_routes(app, heavykeeper)
+
+    register_spectralbloom_routes(app, spectral_bloom)
 
     return app
 
