@@ -78,6 +78,7 @@ from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
 from pradyos.web.kll_sketch_web import register_kll_sketch_routes  # Phase 92
 from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 93
 from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
+from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -216,6 +217,7 @@ def create_app(
     kll: Any | None = None,
     theta: Any | None = None,
     count_sketch: Any | None = None,
+    lossy: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3277,6 +3279,8 @@ def create_app(
     register_theta_sketch_routes(app, theta)
 
     register_count_sketch_routes(app, count_sketch)
+
+    register_lossy_count_routes(app, lossy)
 
     return app
 
