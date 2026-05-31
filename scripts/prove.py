@@ -347,6 +347,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 98
     "tests/test_weighted_reservoir.py",
     "tests/test_weighted_reservoir_web.py",
+    # Phase 99
+    "tests/test_misra_gries.py",
+    "tests/test_misra_gries_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
