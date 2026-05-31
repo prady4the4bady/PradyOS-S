@@ -80,6 +80,7 @@ from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 9
 from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.ddsketch_web import register_ddsketch_routes  # Phase 96
+from pradyos.web.exponential_histogram_web import register_exponential_histogram_routes  # Phase 97
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -220,6 +221,7 @@ def create_app(
     count_sketch: Any | None = None,
     lossy: Any | None = None,
     ddsketch: Any | None = None,
+    exp_histogram: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3285,6 +3287,8 @@ def create_app(
     register_lossy_count_routes(app, lossy)
 
     register_ddsketch_routes(app, ddsketch)
+
+    register_exponential_histogram_routes(app, exp_histogram)
 
     return app
 

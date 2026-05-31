@@ -341,6 +341,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 96
     "tests/test_ddsketch.py",
     "tests/test_ddsketch_web.py",
+    # Phase 97
+    "tests/test_exponential_histogram.py",
+    "tests/test_exponential_histogram_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
