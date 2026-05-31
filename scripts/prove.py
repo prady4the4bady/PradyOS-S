@@ -365,6 +365,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 104
     "tests/test_augmented_sketch.py",
     "tests/test_augmentedsketch_web.py",
+    # Phase 105
+    "tests/test_q_digest.py",
+    "tests/test_qdigest_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

@@ -88,6 +88,7 @@ from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
 from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
 from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
+from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -236,6 +237,7 @@ def create_app(
     heavykeeper: Any | None = None,
     spectral_bloom: Any | None = None,
     augmented_sketch: Any | None = None,
+    qdigest: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3317,6 +3319,8 @@ def create_app(
     register_spectralbloom_routes(app, spectral_bloom)
 
     register_augmentedsketch_routes(app, augmented_sketch)
+
+    register_qdigest_routes(app, qdigest)
 
     return app
 
