@@ -338,6 +338,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 95
     "tests/test_lossy_count.py",
     "tests/test_lossy_count_web.py",
+    # Phase 96
+    "tests/test_ddsketch.py",
+    "tests/test_ddsketch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
