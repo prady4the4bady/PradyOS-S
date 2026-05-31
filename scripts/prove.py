@@ -362,6 +362,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 103
     "tests/test_spectral_bloom.py",
     "tests/test_spectralbloom_web.py",
+    # Phase 104
+    "tests/test_augmented_sketch.py",
+    "tests/test_augmentedsketch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
