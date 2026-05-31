@@ -344,6 +344,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 97
     "tests/test_exponential_histogram.py",
     "tests/test_exponential_histogram_web.py",
+    # Phase 98
+    "tests/test_weighted_reservoir.py",
+    "tests/test_weighted_reservoir_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
