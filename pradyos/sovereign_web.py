@@ -91,6 +91,7 @@ from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # P
 from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
 from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
+from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -242,6 +243,7 @@ def create_app(
     qdigest: Any | None = None,
     moment_sketch: Any | None = None,
     counting_bloom: Any | None = None,
+    binary_fuse: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3329,6 +3331,8 @@ def create_app(
     register_momentsketch_routes(app, moment_sketch)
 
     register_countingbloom_routes(app, counting_bloom)
+
+    register_binaryfuse_routes(app, binary_fuse)
 
     return app
 
