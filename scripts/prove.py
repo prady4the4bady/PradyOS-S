@@ -377,6 +377,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 108
     "tests/test_binary_fuse.py",
     "tests/test_binaryfuse_web.py",
+    # Phase 109
+    "tests/test_vacuum_filter.py",
+    "tests/test_vacuum_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
