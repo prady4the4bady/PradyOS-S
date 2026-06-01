@@ -290,7 +290,7 @@ def test_cron_every_5_minutes():
     # Because next_run_after advances to the NEXT minute if on an exact boundary,
     # use base - 1 so we start just before :00
     nxt = next_run_after("*/5 * * * *", base - 1)
-    dt = datetime.datetime.utcfromtimestamp(nxt)
+    dt = datetime.datetime.fromtimestamp(nxt, datetime.timezone.utc).replace(tzinfo=None)
     assert dt.minute % 5 == 0
 
     # Verify the gap to the one after that is exactly 5 minutes
@@ -306,7 +306,7 @@ def test_cron_top_of_hour():
     # 2024-01-01 00:30:00 UTC
     base = 1704069000.0
     nxt = next_run_after("0 * * * *", base)
-    dt = datetime.datetime.utcfromtimestamp(nxt)
+    dt = datetime.datetime.fromtimestamp(nxt, datetime.timezone.utc).replace(tzinfo=None)
     assert dt.minute == 0
 
 
@@ -318,7 +318,7 @@ def test_cron_daily_at_0930():
     # 2024-01-01 08:00:00 UTC
     base = 1704067200.0 + 8 * 3600  # 08:00 UTC
     nxt = next_run_after("30 9 * * *", base)
-    dt = datetime.datetime.utcfromtimestamp(nxt)
+    dt = datetime.datetime.fromtimestamp(nxt, datetime.timezone.utc).replace(tzinfo=None)
     assert dt.hour == 9
     assert dt.minute == 30
 

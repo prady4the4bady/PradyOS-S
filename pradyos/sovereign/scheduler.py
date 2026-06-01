@@ -76,7 +76,7 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:
     """
     fields = _parse_cron(cron_expr)
     # Start from the next whole minute >= after_ts
-    dt = datetime.datetime.utcfromtimestamp(after_ts)
+    dt = datetime.datetime.fromtimestamp(after_ts, datetime.timezone.utc).replace(tzinfo=None)
     # Advance to next minute boundary (ceil to next minute if not already on one)
     if dt.second > 0 or dt.microsecond > 0:
         dt = dt.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
@@ -116,7 +116,7 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:  # noqa: F811 — 
     Scans minute-by-minute; raises RuntimeError if no match in 1 year.
     """
     fields = _parse_cron(cron_expr)
-    dt = datetime.datetime.utcfromtimestamp(after_ts)
+    dt = datetime.datetime.fromtimestamp(after_ts, datetime.timezone.utc).replace(tzinfo=None)
     # Advance to next whole minute
     if dt.second > 0 or dt.microsecond > 0:
         dt = dt.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
