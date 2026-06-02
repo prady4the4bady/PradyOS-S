@@ -94,6 +94,7 @@ from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phas
 from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
 from pradyos.web.vacuum_web import register_vacuum_routes  # Phase 109
 from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 110
+from pradyos.web.morris_web import register_morris_routes  # Phase 111
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -248,6 +249,7 @@ def create_app(
     binary_fuse: Any | None = None,
     vacuum_filter: Any | None = None,
     stable_bloom: Any | None = None,
+    morris_counter: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3341,6 +3343,8 @@ def create_app(
     register_vacuum_routes(app, vacuum_filter)
 
     register_stablebloom_routes(app, stable_bloom)
+
+    register_morris_routes(app, morris_counter)
 
     return app
 

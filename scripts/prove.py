@@ -383,6 +383,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 110
     "tests/test_stable_bloom.py",
     "tests/test_stablebloom_web.py",
+    # Phase 111
+    "tests/test_morris_counter.py",
+    "tests/test_morris_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
