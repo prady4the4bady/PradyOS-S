@@ -100,6 +100,7 @@ from pradyos.web.treap_web import register_treap_routes  # Phase 113
 from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
 from pradyos.web.minhash_lsh_web import register_minhashlsh_routes  # Phase 115
 from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
+from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -260,6 +261,7 @@ def create_app(
     bloomier: Any | None = None,
     minhash_lsh: Any | None = None,
     tiny_lfu: Any | None = None,
+    hyper_minhash: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3365,6 +3367,8 @@ def create_app(
     register_minhashlsh_routes(app, minhash_lsh)
 
     register_tinylfu_routes(app, tiny_lfu)
+
+    register_hyperminhash_routes(app, hyper_minhash)
 
     return app
 
