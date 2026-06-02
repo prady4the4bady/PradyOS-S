@@ -425,6 +425,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 124
     "tests/test_jump_hash.py",
     "tests/test_jump_web.py",
+    # Phase 125
+    "tests/test_frugal.py",
+    "tests/test_frugal_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
