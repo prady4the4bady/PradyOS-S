@@ -419,6 +419,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 122
     "tests/test_bbit_minhash.py",
     "tests/test_bbitminhash_web.py",
+    # Phase 123
+    "tests/test_cu_sketch.py",
+    "tests/test_cusketch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

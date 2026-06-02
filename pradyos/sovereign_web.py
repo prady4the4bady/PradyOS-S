@@ -106,6 +106,7 @@ from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
 from pradyos.web.maglev_web import register_maglev_routes  # Phase 120
 from pradyos.web.iblt_web import register_iblt_routes  # Phase 121
 from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 122
+from pradyos.web.cu_sketch_web import register_cusketch_routes  # Phase 123
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -272,6 +273,7 @@ def create_app(
     maglev: Any | None = None,
     iblt: Any | None = None,
     bbit_minhash: Any | None = None,
+    cu_sketch: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3389,6 +3391,8 @@ def create_app(
     register_iblt_routes(app, iblt)
 
     register_bbitminhash_routes(app, bbit_minhash)
+
+    register_cusketch_routes(app, cu_sketch)
 
     return app
 
