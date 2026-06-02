@@ -407,6 +407,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 118
     "tests/test_scalable_bloom.py",
     "tests/test_scalablebloom_web.py",
+    # Phase 119
+    "tests/test_rendezvous_hash.py",
+    "tests/test_rendezvous_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
