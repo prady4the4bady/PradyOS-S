@@ -103,6 +103,7 @@ from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
 from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
 from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
 from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
+from pradyos.web.maglev_web import register_maglev_routes  # Phase 120
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -266,6 +267,7 @@ def create_app(
     hyper_minhash: Any | None = None,
     scalable_bloom: Any | None = None,
     rendezvous: Any | None = None,
+    maglev: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3377,6 +3379,8 @@ def create_app(
     register_scalablebloom_routes(app, scalable_bloom)
 
     register_rendezvous_routes(app, rendezvous)
+
+    register_maglev_routes(app, maglev)
 
     return app
 

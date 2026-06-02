@@ -410,6 +410,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 119
     "tests/test_rendezvous_hash.py",
     "tests/test_rendezvous_web.py",
+    # Phase 120
+    "tests/test_maglev.py",
+    "tests/test_maglev_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
