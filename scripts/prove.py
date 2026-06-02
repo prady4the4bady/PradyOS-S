@@ -413,6 +413,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 120
     "tests/test_maglev.py",
     "tests/test_maglev_web.py",
+    # Phase 121
+    "tests/test_iblt.py",
+    "tests/test_iblt_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
