@@ -404,6 +404,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 117
     "tests/test_hyper_minhash.py",
     "tests/test_hyperminhash_web.py",
+    # Phase 118
+    "tests/test_scalable_bloom.py",
+    "tests/test_scalablebloom_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
