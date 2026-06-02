@@ -109,6 +109,7 @@ from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 12
 from pradyos.web.cu_sketch_web import register_cusketch_routes  # Phase 123
 from pradyos.web.jump_web import register_jump_routes  # Phase 124
 from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
+from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -278,6 +279,7 @@ def create_app(
     cu_sketch: Any | None = None,
     jump_hash: Any | None = None,
     frugal: Any | None = None,
+    simhash_lsh: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3401,6 +3403,8 @@ def create_app(
     register_jump_routes(app, jump_hash)
 
     register_frugal_routes(app, frugal)
+
+    register_simhashlsh_routes(app, simhash_lsh)
 
     return app
 

@@ -428,6 +428,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 125
     "tests/test_frugal.py",
     "tests/test_frugal_web.py",
+    # Phase 126
+    "tests/test_simhash_lsh.py",
+    "tests/test_simhashlsh_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
