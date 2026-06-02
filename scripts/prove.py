@@ -392,6 +392,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 113
     "tests/test_treap.py",
     "tests/test_treap_web.py",
+    # Phase 114
+    "tests/test_bloomier.py",
+    "tests/test_bloomier_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
