@@ -398,6 +398,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 115
     "tests/test_minhash_lsh.py",
     "tests/test_minhashlsh_web.py",
+    # Phase 116
+    "tests/test_tiny_lfu.py",
+    "tests/test_tinylfu_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
