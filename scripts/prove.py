@@ -395,6 +395,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 114
     "tests/test_bloomier.py",
     "tests/test_bloomier_web.py",
+    # Phase 115
+    "tests/test_minhash_lsh.py",
+    "tests/test_minhashlsh_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
