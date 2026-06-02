@@ -434,6 +434,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 127
     "tests/test_random_projection.py",
     "tests/test_randomprojection_web.py",
+    # Phase 128
+    "tests/test_golomb_coded_set.py",
+    "tests/test_gcs_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
