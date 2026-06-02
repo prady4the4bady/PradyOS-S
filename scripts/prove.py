@@ -380,6 +380,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 109
     "tests/test_vacuum_filter.py",
     "tests/test_vacuum_web.py",
+    # Phase 110
+    "tests/test_stable_bloom.py",
+    "tests/test_stablebloom_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
