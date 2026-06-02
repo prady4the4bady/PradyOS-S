@@ -431,6 +431,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 126
     "tests/test_simhash_lsh.py",
     "tests/test_simhashlsh_web.py",
+    # Phase 127
+    "tests/test_random_projection.py",
+    "tests/test_randomprojection_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
