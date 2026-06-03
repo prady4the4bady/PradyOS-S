@@ -470,6 +470,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 139
     "tests/test_kd_tree.py",
     "tests/test_kdtree_web.py",
+    # Phase 140
+    "tests/test_radix_tree.py",
+    "tests/test_radix_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
