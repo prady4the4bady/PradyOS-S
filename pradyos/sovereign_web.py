@@ -112,6 +112,7 @@ from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
 from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
 from pradyos.web.random_projection_web import register_randomprojection_routes  # Phase 127
 from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
+from pradyos.web.fmsketch_web import register_fmsketch_routes  # Phase 129
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -284,6 +285,7 @@ def create_app(
     simhash_lsh: Any | None = None,
     random_projection: Any | None = None,
     gcs: Any | None = None,
+    fm_sketch: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3413,6 +3415,8 @@ def create_app(
     register_randomprojection_routes(app, random_projection)
 
     register_gcs_routes(app, gcs)
+
+    register_fmsketch_routes(app, fm_sketch)
 
     return app
 
