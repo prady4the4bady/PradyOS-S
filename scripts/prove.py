@@ -491,6 +491,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 146
     "tests/test_fenwick_2d.py",
     "tests/test_fenwick2d_web.py",
+    # Phase 147
+    "tests/test_sqrt_decomposition.py",
+    "tests/test_sqrt_decomposition_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

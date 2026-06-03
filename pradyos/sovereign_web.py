@@ -130,6 +130,7 @@ from pradyos.web.xor_trie_web import register_xortrie_routes  # Phase 143
 from pradyos.web.min_max_heap_web import register_minmaxheap_routes  # Phase 144
 from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
 from pradyos.web.fenwick2d_web import register_fenwick2d_routes  # Phase 146
+from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -320,6 +321,7 @@ def create_app(
     min_max_heap: Any | None = None,
     cartesian_tree: Any | None = None,
     fenwick2d: Any | None = None,
+    sqrt_decomposition: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3485,6 +3487,8 @@ def create_app(
     register_cartesiantree_routes(app, cartesian_tree)
 
     register_fenwick2d_routes(app, fenwick2d)
+
+    register_sqrtdecomp_routes(app, sqrt_decomposition)
 
     return app
 
