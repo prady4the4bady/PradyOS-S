@@ -467,6 +467,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 138
     "tests/test_sparse_table.py",
     "tests/test_sparsetable_web.py",
+    # Phase 139
+    "tests/test_kd_tree.py",
+    "tests/test_kdtree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

@@ -122,6 +122,7 @@ from pradyos.web.wavelet_tree_web import register_wavelet_routes  # Phase 135
 from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
 from pradyos.web.interval_tree_web import register_intervaltree_routes  # Phase 137
 from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
+from pradyos.web.kd_tree_web import register_kdtree_routes  # Phase 139
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -304,6 +305,7 @@ def create_app(
     skew_heap: Any | None = None,
     interval_tree: Any | None = None,
     sparse_table: Any | None = None,
+    kd_tree: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3453,6 +3455,8 @@ def create_app(
     register_intervaltree_routes(app, interval_tree)
 
     register_sparsetable_routes(app, sparse_table)
+
+    register_kdtree_routes(app, kd_tree)
 
     return app
 
