@@ -455,6 +455,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 134
     "tests/test_rank_select.py",
     "tests/test_rankselect_web.py",
+    # Phase 135
+    "tests/test_wavelet_tree.py",
+    "tests/test_wavelet_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
