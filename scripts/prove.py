@@ -500,6 +500,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 149
     "tests/test_persistent_segment_tree.py",
     "tests/test_persistent_segment_tree_web.py",
+    # Phase 150
+    "tests/test_pairing_heap.py",
+    "tests/test_pairing_heap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
