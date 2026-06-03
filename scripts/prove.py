@@ -503,6 +503,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 150
     "tests/test_pairing_heap.py",
     "tests/test_pairing_heap_web.py",
+    # Phase 151
+    "tests/test_suffix_automaton.py",
+    "tests/test_suffix_automaton_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
