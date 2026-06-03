@@ -449,6 +449,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 132
     "tests/test_cuckoo_hashtable.py",
     "tests/test_cuckoohash_web.py",
+    # Phase 133
+    "tests/test_splay_tree.py",
+    "tests/test_splaytree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
