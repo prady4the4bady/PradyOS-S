@@ -485,6 +485,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 144
     "tests/test_min_max_heap.py",
     "tests/test_min_max_heap_web.py",
+    # Phase 145
+    "tests/test_cartesian_tree.py",
+    "tests/test_cartesian_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

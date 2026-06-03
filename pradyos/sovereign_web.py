@@ -128,6 +128,7 @@ from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 14
 from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
 from pradyos.web.xor_trie_web import register_xortrie_routes  # Phase 143
 from pradyos.web.min_max_heap_web import register_minmaxheap_routes  # Phase 144
+from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -316,6 +317,7 @@ def create_app(
     aho_corasick: Any | None = None,
     xor_trie: Any | None = None,
     min_max_heap: Any | None = None,
+    cartesian_tree: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3477,6 +3479,8 @@ def create_app(
     register_xortrie_routes(app, xor_trie)
 
     register_minmaxheap_routes(app, min_max_heap)
+
+    register_cartesiantree_routes(app, cartesian_tree)
 
     return app
 
