@@ -488,6 +488,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 145
     "tests/test_cartesian_tree.py",
     "tests/test_cartesian_tree_web.py",
+    # Phase 146
+    "tests/test_fenwick_2d.py",
+    "tests/test_fenwick2d_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
