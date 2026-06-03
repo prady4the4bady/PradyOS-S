@@ -479,6 +479,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 142
     "tests/test_aho_corasick.py",
     "tests/test_aho_corasick_web.py",
+    # Phase 143
+    "tests/test_xor_trie.py",
+    "tests/test_xor_trie_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
