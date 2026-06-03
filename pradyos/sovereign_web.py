@@ -115,6 +115,7 @@ from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
 from pradyos.web.fmsketch_web import register_fmsketch_routes  # Phase 129
 from pradyos.web.ams_web import register_ams_routes  # Phase 130
 from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
+from pradyos.web.cuckoohash_web import register_cuckoohash_routes  # Phase 132
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -290,6 +291,7 @@ def create_app(
     fm_sketch: Any | None = None,
     ams: Any | None = None,
     priority_sample: Any | None = None,
+    cuckoo_hashtable: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3425,6 +3427,8 @@ def create_app(
     register_ams_routes(app, ams)
 
     register_prioritysample_routes(app, priority_sample)
+
+    register_cuckoohash_routes(app, cuckoo_hashtable)
 
     return app
 
