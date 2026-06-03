@@ -494,6 +494,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 147
     "tests/test_sqrt_decomposition.py",
     "tests/test_sqrt_decomposition_web.py",
+    # Phase 148
+    "tests/test_li_chao_tree.py",
+    "tests/test_li_chao_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
