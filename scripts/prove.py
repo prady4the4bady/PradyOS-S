@@ -461,6 +461,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 136
     "tests/test_skew_heap.py",
     "tests/test_skewheap_web.py",
+    # Phase 137
+    "tests/test_interval_tree.py",
+    "tests/test_intervaltree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
