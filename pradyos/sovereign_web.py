@@ -125,6 +125,7 @@ from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 13
 from pradyos.web.kd_tree_web import register_kdtree_routes  # Phase 139
 from pradyos.web.radix_tree_web import register_radixtree_routes  # Phase 140
 from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
+from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -310,6 +311,7 @@ def create_app(
     kd_tree: Any | None = None,
     radix_tree: Any | None = None,
     suffix_array: Any | None = None,
+    aho_corasick: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3465,6 +3467,8 @@ def create_app(
     register_radixtree_routes(app, radix_tree)
 
     register_suffixarray_routes(app, suffix_array)
+
+    register_ahocorasick_routes(app, aho_corasick)
 
     return app
 

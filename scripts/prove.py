@@ -476,6 +476,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 141
     "tests/test_suffix_array.py",
     "tests/test_suffix_array_web.py",
+    # Phase 142
+    "tests/test_aho_corasick.py",
+    "tests/test_aho_corasick_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
