@@ -464,6 +464,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 137
     "tests/test_interval_tree.py",
     "tests/test_intervaltree_web.py",
+    # Phase 138
+    "tests/test_sparse_table.py",
+    "tests/test_sparsetable_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
