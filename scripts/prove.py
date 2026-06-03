@@ -473,6 +473,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 140
     "tests/test_radix_tree.py",
     "tests/test_radix_tree_web.py",
+    # Phase 141
+    "tests/test_suffix_array.py",
+    "tests/test_suffix_array_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
