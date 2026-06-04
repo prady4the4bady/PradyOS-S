@@ -146,6 +146,7 @@ from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 15
 from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
 from pradyos.web.binary_lifting_web import register_binarylifting_routes  # Phase 161
 from pradyos.web.implicit_treap_web import register_implicittreap_routes  # Phase 162
+from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 163
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -352,6 +353,7 @@ def create_app(
     binomial_heap: Any | None = None,
     binary_lifting: Any | None = None,
     implicit_treap: Any | None = None,
+    lazy_segment_tree: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3549,6 +3551,8 @@ def create_app(
     register_binarylifting_routes(app, binary_lifting)
 
     register_implicittreap_routes(app, implicit_treap)
+
+    register_lazyseg_routes(app, lazy_segment_tree)
 
     return app
 

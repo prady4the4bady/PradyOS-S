@@ -539,6 +539,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 162
     "tests/test_implicit_treap.py",
     "tests/test_implicit_treap_web.py",
+    # Phase 163
+    "tests/test_lazy_segment_tree.py",
+    "tests/test_lazy_segment_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
