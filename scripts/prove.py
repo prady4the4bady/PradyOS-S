@@ -554,6 +554,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 167
     "tests/test_convex_hull.py",
     "tests/test_convex_hull_web.py",
+    # Phase 168
+    "tests/test_polygon.py",
+    "tests/test_polygon_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
