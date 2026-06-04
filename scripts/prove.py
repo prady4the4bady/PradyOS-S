@@ -518,6 +518,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 155
     "tests/test_avl_tree.py",
     "tests/test_avl_tree_web.py",
+    # Phase 156
+    "tests/test_b_tree.py",
+    "tests/test_b_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
