@@ -542,6 +542,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 163
     "tests/test_lazy_segment_tree.py",
     "tests/test_lazy_segment_tree_web.py",
+    # Phase 164
+    "tests/test_ternary_search_tree.py",
+    "tests/test_ternary_search_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
