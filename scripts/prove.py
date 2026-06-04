@@ -527,6 +527,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 158
     "tests/test_leftist_heap.py",
     "tests/test_leftist_heap_web.py",
+    # Phase 159
+    "tests/test_scapegoat_tree.py",
+    "tests/test_scapegoat_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
