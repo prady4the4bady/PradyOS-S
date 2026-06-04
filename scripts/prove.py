@@ -545,6 +545,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 164
     "tests/test_ternary_search_tree.py",
     "tests/test_ternary_search_tree_web.py",
+    # Phase 165
+    "tests/test_heavy_light.py",
+    "tests/test_heavy_light_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
