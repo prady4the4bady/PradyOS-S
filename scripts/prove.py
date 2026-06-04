@@ -530,6 +530,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 159
     "tests/test_scapegoat_tree.py",
     "tests/test_scapegoat_tree_web.py",
+    # Phase 160
+    "tests/test_binomial_heap.py",
+    "tests/test_binomial_heap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

@@ -143,6 +143,7 @@ from pradyos.web.b_tree_web import register_btree_routes  # Phase 156
 from pradyos.web.range_tree_web import register_rangetree_routes  # Phase 157
 from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
 from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
+from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -346,6 +347,7 @@ def create_app(
     range_tree: Any | None = None,
     leftist_heap: Any | None = None,
     scapegoat_tree: Any | None = None,
+    binomial_heap: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3537,6 +3539,8 @@ def create_app(
     register_leftist_routes(app, leftist_heap)
 
     register_scapegoat_routes(app, scapegoat_tree)
+
+    register_binomial_routes(app, binomial_heap)
 
     return app
 
