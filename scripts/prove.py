@@ -536,6 +536,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 161
     "tests/test_binary_lifting.py",
     "tests/test_binary_lifting_web.py",
+    # Phase 162
+    "tests/test_implicit_treap.py",
+    "tests/test_implicit_treap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
