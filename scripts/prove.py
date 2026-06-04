@@ -533,6 +533,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 160
     "tests/test_binomial_heap.py",
     "tests/test_binomial_heap_web.py",
+    # Phase 161
+    "tests/test_binary_lifting.py",
+    "tests/test_binary_lifting_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
