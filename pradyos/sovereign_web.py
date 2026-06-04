@@ -137,6 +137,7 @@ from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 15
 from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
 from pradyos.web.van_emde_boas_web import register_veb_routes  # Phase 152
 from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
+from pradyos.web.fibonacci_heap_web import register_fibonacci_routes  # Phase 154
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -334,6 +335,7 @@ def create_app(
     suffix_automaton: Any | None = None,
     van_emde_boas: Any | None = None,
     pr_quadtree: Any | None = None,
+    fibonacci_heap: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3513,6 +3515,8 @@ def create_app(
     register_veb_routes(app, van_emde_boas)
 
     register_pr_quadtree_routes(app, pr_quadtree)
+
+    register_fibonacci_routes(app, fibonacci_heap)
 
     return app
 

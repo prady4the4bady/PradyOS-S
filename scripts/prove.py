@@ -512,6 +512,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 153
     "tests/test_pr_quadtree.py",
     "tests/test_pr_quadtree_web.py",
+    # Phase 154
+    "tests/test_fibonacci_heap.py",
+    "tests/test_fibonacci_heap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
