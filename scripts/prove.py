@@ -506,6 +506,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 151
     "tests/test_suffix_automaton.py",
     "tests/test_suffix_automaton_web.py",
+    # Phase 152
+    "tests/test_van_emde_boas.py",
+    "tests/test_van_emde_boas_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
