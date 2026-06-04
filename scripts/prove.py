@@ -548,6 +548,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 165
     "tests/test_heavy_light.py",
     "tests/test_heavy_light_web.py",
+    # Phase 166
+    "tests/test_sparse_segment_tree.py",
+    "tests/test_sparse_segment_tree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
