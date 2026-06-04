@@ -509,6 +509,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 152
     "tests/test_van_emde_boas.py",
     "tests/test_van_emde_boas_web.py",
+    # Phase 153
+    "tests/test_pr_quadtree.py",
+    "tests/test_pr_quadtree_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
