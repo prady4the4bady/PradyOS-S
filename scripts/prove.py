@@ -551,6 +551,9 @@ DEFAULT_MODULES: list[str] = [
     # Phase 166
     "tests/test_sparse_segment_tree.py",
     "tests/test_sparse_segment_tree_web.py",
+    # Phase 167
+    "tests/test_convex_hull.py",
+    "tests/test_convex_hull_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

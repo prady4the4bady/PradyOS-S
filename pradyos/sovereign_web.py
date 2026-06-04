@@ -150,6 +150,7 @@ from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 1
 from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
 from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
 from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
+from pradyos.web.convex_hull_web import register_convexhull_routes  # Phase 167
 from pradyos.sovereign.audit_ui import build_audit_html
 
 log = logging.getLogger("pradyos.sovereign_web")
@@ -360,6 +361,7 @@ def create_app(
     ternary_search_tree: Any | None = None,
     heavy_light: Any | None = None,
     sparse_segment_tree: Any | None = None,
+    convex_hull: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
     @asynccontextmanager
@@ -3565,6 +3567,8 @@ def create_app(
     register_hld_routes(app, heavy_light)
 
     register_sparseseg_routes(app, sparse_segment_tree)
+
+    register_convexhull_routes(app, convex_hull)
 
     return app
 
