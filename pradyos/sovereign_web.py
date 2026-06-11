@@ -35,6 +35,7 @@ from pradyos.web.ams_web import register_ams_routes  # Phase 130
 from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
 from pradyos.web.avl_tree_web import register_avl_routes  # Phase 155
 from pradyos.web.b_tree_web import register_btree_routes  # Phase 156
+from pradyos.web.bastion_web import register_bastion_routes  # Plane 7 — BASTION
 from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 122
 from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
 from pradyos.web.binary_lifting_web import register_binarylifting_routes  # Phase 161
@@ -331,6 +332,7 @@ def create_app(
     polygon: Any | None = None,
     quasar: Any | None = None,
     starmap: Any | None = None,
+    bastion: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3648,6 +3650,8 @@ def create_app(
     register_quasar_routes(app, quasar)  # Plane 8 — QUASAR GATE inference router
 
     register_starmap_routes(app, starmap)  # Plane 6 — STARMAP knowledge graph
+
+    register_bastion_routes(app, bastion)  # Plane 7 — BASTION security shield
 
     return app
 

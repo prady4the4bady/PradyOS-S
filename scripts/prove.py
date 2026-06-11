@@ -562,6 +562,9 @@ DEFAULT_MODULES: list[str] = [
     # Plane 6 — STARMAP (knowledge graph)
     "tests/test_starmap.py",
     "tests/test_starmap_web.py",
+    # Plane 7 — BASTION (security shield)
+    "tests/test_bastion.py",
+    "tests/test_bastion_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
