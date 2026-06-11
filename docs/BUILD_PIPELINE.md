@@ -63,7 +63,7 @@ Tunables (env): `PRADYOS_BUILD_DIR`, `PRADYOS_SUITE`, `PRADYOS_MIRROR`,
 - Enabled units: `redis-server`, `pradyos-titan` (root, group `pradyos` — the daemon chmods its control socket 0660), `pradyos-warden`, `pradyos-imperium`, `pradyos-oracle`, `pradyos-admission`, `pradyos-web` (uvicorn `:8000`), `pradyos-selftest`. `pradyos-throne` ships disabled (interactive TUI).
 - All daemon units are `Type=exec` — the daemons do not implement sd_notify, and `Type=notify` units stall the boot transaction forever waiting for `READY=1`.
 - ORACLE / Admission / Web units omit `MemoryDenyWriteExecute=` and `SystemCallFilter=` — the numpy / scikit-learn / onnxruntime stack maps W+X pages and dies under those at import time.
-- Login: `root` / `pradyos`, autologin on tty1 and ttyS0 (**lab image — harden before any non-lab use**).
+- Login: **hardened by default** — root is locked, no console autologin. Build with `PRADYOS_LAB_IMAGE=1` (e.g. `PRADYOS_LAB_IMAGE=1 make iso`) for a lab image with a known `root` / `pradyos` password and root autologin on tty1/ttyS0. The boot selftest passes either way (it runs as a systemd unit; `verify_boot.sh`'s serial-login check is warn-only).
 
 ---
 

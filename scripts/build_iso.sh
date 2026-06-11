@@ -140,8 +140,8 @@ if mount --bind "$CACHE/pip" "$CHROOT/root/.cache" 2>/dev/null; then
     PIP_CACHE_MOUNTED=1
 fi
 
-# PRADYOS_LAB_IMAGE (default 1) is passed through to the chroot script.
-chroot "$CHROOT" /usr/bin/env "PRADYOS_LAB_IMAGE=${PRADYOS_LAB_IMAGE:-1}" \
+# PRADYOS_LAB_IMAGE (default 0 = hardened; 1 = lab login) → chroot script.
+chroot "$CHROOT" /usr/bin/env "PRADYOS_LAB_IMAGE=${PRADYOS_LAB_IMAGE:-0}" \
     /bin/bash /tmp/pradyos-iso/iso_chroot_setup.sh
 
 if [ "$PIP_CACHE_MOUNTED" -eq 1 ]; then

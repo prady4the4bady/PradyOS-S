@@ -6,11 +6,12 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# Lab image (default): set a known root password and autologin the console so a
-# developer can poke at the VM. Build with PRADYOS_LAB_IMAGE=0 for a hardened
-# image (root locked, no autologin) — the boot selftest is unaffected either way
-# (it runs as a systemd unit and probes 127.0.0.1, needing neither).
-LAB_IMAGE="${PRADYOS_LAB_IMAGE:-1}"
+# Hardened by default (safe-by-default): root is locked and there is no console
+# autologin. Build with PRADYOS_LAB_IMAGE=1 for a lab image (known root password
+# 'pradyos' + root autologin on tty1/ttyS0) so a developer can poke at the VM.
+# The boot selftest is unaffected either way — it runs as a systemd unit and
+# probes 127.0.0.1, and verify_boot's serial-login check is warn-only.
+LAB_IMAGE="${PRADYOS_LAB_IMAGE:-0}"
 
 # Stash the working resolver that build_iso.sh placed here: installing
 # systemd-resolved (below) replaces /etc/resolv.conf with a symlink to a stub
