@@ -21,7 +21,10 @@ def register_starmap_routes(app: Any, starmap: Any | None = None) -> Any:
 
     @app.post("/api/v1/starmap/node")
     async def api_starmap_add_node(request: Request) -> JSONResponse:
-        body = await request.json()
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "invalid JSON body"}, status_code=422)
         if not isinstance(body, dict) or "id" not in body or "type" not in body:
             return JSONResponse({"error": "id and type are required"}, status_code=422)
         attrs = body.get("attrs") or {}
@@ -35,18 +38,24 @@ def register_starmap_routes(app: Any, starmap: Any | None = None) -> Any:
 
     @app.post("/api/v1/starmap/edge")
     async def api_starmap_add_edge(request: Request) -> JSONResponse:
-        body = await request.json()
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "invalid JSON body"}, status_code=422)
         if not isinstance(body, dict) or not all(k in body for k in ("src", "rel", "dst")):
             return JSONResponse({"error": "src, rel, dst are required"}, status_code=422)
         attrs = body.get("attrs") or {}
         if not isinstance(attrs, dict):
             return JSONResponse({"error": "attrs must be an object"}, status_code=422)
+        create_missing = body.get("create_missing", False)
+        if not isinstance(create_missing, bool):
+            return JSONResponse({"error": "create_missing must be a boolean"}, status_code=422)
         try:
             edge = graph.add_edge(
                 body["src"],
                 body["rel"],
                 body["dst"],
-                create_missing=bool(body.get("create_missing", False)),
+                create_missing=create_missing,
                 **attrs,
             )
         except UnknownNodeError as exc:

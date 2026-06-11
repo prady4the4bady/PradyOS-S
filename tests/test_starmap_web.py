@@ -62,6 +62,15 @@ def test_add_edge_create_missing(client):
     assert resp.status_code == 200
 
 
+def test_add_edge_create_missing_must_be_bool(client):
+    client.post("/api/v1/starmap/node", json={"id": "a", "type": "agent"})
+    resp = client.post(
+        "/api/v1/starmap/edge",
+        json={"src": "a", "rel": "r", "dst": "ghost", "create_missing": "false"},
+    )
+    assert resp.status_code == 422
+
+
 # ── queries ───────────────────────────────────────────────────────────────────
 
 

@@ -233,3 +233,21 @@ def test_concurrent_writes_consistent():
     assert not errors
     assert g.stats()["nodes"] == 1 + 6 * 100
     assert g.degree("hub")["out"] == 6 * 100
+
+
+# ── contract guards (regression) ──────────────────────────────────────────────
+
+
+def test_returned_node_attrs_are_immutable():
+    g = KnowledgeGraph()
+    g.add_node("a", "agent", role="scout")
+    n = g.get_node("a")
+    with pytest.raises(TypeError):
+        n.attrs["role"] = "mutated"  # MappingProxyType is read-only
+    assert g.get_node("a").attrs["role"] == "scout"
+
+
+def test_causal_chain_rejects_invalid_max_hops():
+    g = _g()
+    with pytest.raises(StarmapError):
+        g.causal_chain("projectX", "resulted_in", max_hops=0)

@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import threading
 from collections import deque
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Any
 
 
@@ -35,7 +37,13 @@ class Node:
 
     id: str
     type: str
-    attrs: dict[str, Any] = field(default_factory=dict)
+    attrs: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # Freeze attrs: a Node handed back to a caller must not be able to mutate
+        # graph state out-of-band (the dataclass is frozen, the mapping wasn't).
+        if not isinstance(self.attrs, MappingProxyType):
+            object.__setattr__(self, "attrs", MappingProxyType(dict(self.attrs)))
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "type": self.type, "attrs": dict(self.attrs)}
@@ -48,7 +56,11 @@ class Edge:
     src: str
     rel: str
     dst: str
-    attrs: dict[str, Any] = field(default_factory=dict)
+    attrs: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.attrs, MappingProxyType):
+            object.__setattr__(self, "attrs", MappingProxyType(dict(self.attrs)))
 
     def to_dict(self) -> dict[str, Any]:
         return {"src": self.src, "rel": self.rel, "dst": self.dst, "attrs": dict(self.attrs)}
@@ -242,6 +254,8 @@ class KnowledgeGraph:
         """Follow a single relation type forward from ``src`` as far as it goes
         (deterministically taking the first such edge at each step), e.g. a
         ``resulted_in`` chain. Returns the ordered node ids including ``src``."""
+        if max_hops < 1:
+            raise StarmapError("max_hops must be >= 1")
         with self._lock:
             self._require(src)
             chain = [src]
