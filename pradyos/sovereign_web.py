@@ -103,6 +103,7 @@ from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase
 from pradyos.web.splay_tree_web import register_splaytree_routes  # Phase 133
 from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
 from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 110
+from pradyos.web.starmap_web import register_starmap_routes  # Plane 6 — STARMAP
 from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
 from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
 from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
@@ -329,6 +330,7 @@ def create_app(
     convex_hull: Any | None = None,
     polygon: Any | None = None,
     quasar: Any | None = None,
+    starmap: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3644,6 +3646,8 @@ def create_app(
     register_polygon_routes(app, polygon)
 
     register_quasar_routes(app, quasar)  # Plane 8 — QUASAR GATE inference router
+
+    register_starmap_routes(app, starmap)  # Plane 6 — STARMAP knowledge graph
 
     return app
 
