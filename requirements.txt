@@ -1,0 +1,8 @@
+psutil>=5.9
+rich>=13.7
+textual>=0.58
+aiohttp>=3.9
+pydantic>=2.5
+orjson>=3.9
+anyio>=4.2
+click>=8.1
