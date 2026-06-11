@@ -1,0 +1,80 @@
+# PRADY OS — Sovereign Edition OS-image pipeline.
+# Builds the bootable ISO and boot-verifies it in QEMU (in-guest selftest +
+# host-side API probes). Separate from ci.yml so the fast lint/test/prove
+# gates stay fast; this runs when the image inputs change, weekly, or on demand.
+
+name: PRADY OS Image
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"   # weekly canary (Mon 04:00 UTC)
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_iso.sh"
+      - "scripts/iso_chroot_setup.sh"
+      - "scripts/vm_selftest.sh"
+      - "scripts/verify_boot.sh"
+      - "deploy/systemd/**"
+      - ".github/workflows/os-image.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-boot:
+    name: Build ISO + boot verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # This job never pushes; don't leave the token in .git/config.
+          persist-credentials: false
+
+      - name: Install image toolchain + QEMU
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            debootstrap squashfs-tools grub-common grub-pc-bin \
+            grub-efi-amd64-bin xorriso mtools dosfstools rsync \
+            qemu-system-x86
+
+      - name: Enable KVM for the runner user
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+          ls -l /dev/kvm || echo "no /dev/kvm — QEMU will fall back to TCG"
+
+      - name: Build the ISO
+        run: sudo bash scripts/build_iso.sh
+
+      - name: Boot verification (in-guest selftest + host API probes)
+        run: |
+          sudo chown -R "$USER" dist
+          mkdir -p /tmp/pradyos-verify
+          PRADYOS_VERIFY_DIR=/tmp/pradyos-verify bash scripts/verify_boot.sh
+
+      - name: Upload ISO artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pradyos-sovereign-iso
+          path: |
+            dist/pradyos-sovereign.iso
+            dist/pradyos-sovereign.iso.sha256
+          retention-days: 7
+
+      - name: Upload serial log (always — primary debugging artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-serial-log
+          path: /tmp/pradyos-verify/serial.log
+          if-no-files-found: ignore
+          retention-days: 7

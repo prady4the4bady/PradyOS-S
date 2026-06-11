@@ -9,9 +9,21 @@ No Docker daemon or systemd required -- all assertions are pure file/text checks
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
+
+
+def _directive(content: str, key: str) -> str | None:
+    """Return the value of a systemd ``Key=value`` directive (first match).
+
+    Line-anchored so it reads the real directive, not the same word inside a
+    ``# comment`` (e.g. the comment explaining why Type=notify is avoided).
+    """
+    m = re.search(rf"^{re.escape(key)}=(.*)$", content, re.MULTILINE)
+    return m.group(1).strip() if m else None
+
 
 REPO_ROOT = Path(__file__).parent.parent
 SYSTEMD_DIR = REPO_ROOT / "deploy" / "systemd"
@@ -208,7 +220,18 @@ def test_oracle_service_restart_on_failure():
 
 def test_oracle_service_watchdog():
     content = (SYSTEMD_DIR / "pradyos-oracle.service").read_text(encoding="utf-8")
-    assert "WatchdogSec=" in content, "oracle.service must set WatchdogSec"
+    # Readiness model: the ORACLE daemon does not implement sd_notify, so the
+    # unit is Type=exec and intentionally carries NO WatchdogSec (a notify
+    # watchdog that never receives READY=1 stalls the boot transaction). The
+    # invariant is conditional on the real Type= directive (not the word
+    # "Type=notify" inside the explanatory comment).
+    service_type = _directive(content, "Type")
+    has_watchdog = _directive(content, "WatchdogSec") is not None
+    if service_type == "notify":
+        assert has_watchdog, "Type=notify oracle.service must set WatchdogSec"
+    else:
+        assert not has_watchdog, \
+            "non-notify oracle.service must not set WatchdogSec (would never be pinged)"
 
 
 def test_oracle_service_after_imperium():
@@ -232,9 +255,13 @@ def test_oracle_service_private_tmp():
     assert "PrivateTmp=true" in content
 
 
-def test_oracle_service_type_notify():
+def test_oracle_service_type():
     content = (SYSTEMD_DIR / "pradyos-oracle.service").read_text(encoding="utf-8")
-    assert "Type=notify" in content or "Type=simple" in content
+    # exec is the current model (daemon has no sd_notify); notify/simple remain
+    # acceptable should readiness signalling be added later. Read the real Type=
+    # directive, not the word inside the comment.
+    assert _directive(content, "Type") in ("exec", "notify", "simple"), \
+        "oracle.service must declare an explicit, valid Type="
 
 
 def test_oracle_service_non_root_user():

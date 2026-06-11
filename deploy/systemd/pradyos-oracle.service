@@ -7,10 +7,9 @@ Wants=network-online.target
 BindsTo=pradyos-imperium.service
 
 [Service]
-Type=notify
-NotifyAccess=main
-# Allow up to 120 s between watchdog pings — the proposal loop sleeps 60 s.
-WatchdogSec=120
+# The daemon does not implement sd_notify readiness signalling; Type=notify
+# stalls the boot transaction waiting for a READY=1 that never comes.
+Type=exec
 ExecStart=/opt/pradyos/.venv/bin/pradyos-oracle
 Restart=on-failure
 RestartSec=5
@@ -33,13 +32,13 @@ Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 EnvironmentFile=-/etc/pradyos/oracle.env
 
 # ---------- Persistent directories ----------
-RuntimeDirectory=pradyos
 StateDirectory=pradyos
 LogsDirectory=pradyos
 
-# ---------- Hardening ----------
-# ORACLE reads audit state; it does not need any write path beyond /var/log/pradyos
-# and /var/lib/pradyos (whitelisted via ReadWritePaths).
+# ---------- Hardening (Python-ML-safe) ----------
+# ORACLE imports numpy / scikit-learn / onnxruntime, whose JITs map W+X
+# pages — MemoryDenyWriteExecute= and SystemCallFilter=@system-service kill
+# them at import time, so those two directives are deliberately absent.
 ProtectSystem=strict
 ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
 ProtectHome=true
@@ -51,6 +50,7 @@ ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true
 LockPersonality=true
-MemoryDenyWriteExecute=true
 RestrictRealtime=true
-System
+
+[Install]
+WantedBy=multi-user.target
