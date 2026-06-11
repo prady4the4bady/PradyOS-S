@@ -1,0 +1,44 @@
+[Unit]
+Description=PRADY OS — WARDEN GRID (health telemetry + recovery, Plane 1/9)
+Documentation=file:///opt/pradyos/docs/api/warden_grid.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# The daemon does not implement sd_notify readiness signalling; Type=notify
+# stalls the boot transaction waiting for a READY=1 that never comes.
+Type=exec
+ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.warden_grid.monitor
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=10
+
+# WARDEN GRID reads host telemetry — needs broad read but no write
+User=pradyos
+Group=pradyos
+SupplementaryGroups=adm systemd-journal
+
+Environment=PRADYOS_WARDEN_HOST=127.0.0.1
+Environment=PRADYOS_WARDEN_PORT=9701
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
+
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos
+
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target

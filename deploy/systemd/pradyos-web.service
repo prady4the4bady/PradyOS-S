@@ -1,0 +1,44 @@
+[Unit]
+Description=PRADY OS — Sovereign Web (dashboard + /api + /api/v1 structure plane)
+Documentation=file:///opt/pradyos/docs/api/sovereign_web.md
+After=network-online.target redis-server.service pradyos-imperium.service
+Wants=network-online.target redis-server.service
+
+[Service]
+# pradyos-web = uvicorn serving pradyos.sovereign_web:create_app on 0.0.0.0:8000.
+Type=exec
+ExecStart=/opt/pradyos/.venv/bin/pradyos-web
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=10
+
+User=pradyos
+Group=pradyos
+
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
+EnvironmentFile=-/etc/pradyos/web.env
+
+StateDirectory=pradyos
+LogsDirectory=pradyos
+
+# ---------- Hardening (Python-ML-safe) ----------
+# The web app imports the full structure plane including scikit-learn, so
+# MemoryDenyWriteExecute= and SystemCallFilter= are deliberately absent.
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

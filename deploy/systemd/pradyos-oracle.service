@@ -1,0 +1,56 @@
+[Unit]
+Description=PRADY OS — ORACLE AI Reasoning Daemon (autonomous proposal loop, Plane 4)
+Documentation=file:///opt/pradyos/docs/api/oracle.md
+After=network-online.target pradyos-imperium.service
+Wants=network-online.target
+# ORACLE registers handlers with IMPERIUM; bind so both restart together.
+BindsTo=pradyos-imperium.service
+
+[Service]
+# The daemon does not implement sd_notify readiness signalling; Type=notify
+# stalls the boot transaction waiting for a READY=1 that never comes.
+Type=exec
+ExecStart=/opt/pradyos/.venv/bin/pradyos-oracle
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+User=pradyos
+Group=pradyos
+
+# ---------- Runtime configuration ----------
+Environment=PRADYOS_OLLAMA_URL=http://localhost:11434
+Environment=PRADYOS_ORACLE_MODEL=qwen2.5-coder:1.5b-base
+Environment=PRADYOS_ORACLE_PORT=11435
+Environment=PRADYOS_PROPOSAL_INTERVAL=60
+Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
+Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
+Environment=PRADYOS_BUS_BACKEND=redis
+Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
+# Override via /etc/pradyos/oracle.env (EnvironmentFile, optional)
+EnvironmentFile=-/etc/pradyos/oracle.env
+
+# ---------- Persistent directories ----------
+StateDirectory=pradyos
+LogsDirectory=pradyos
+
+# ---------- Hardening (Python-ML-safe) ----------
+# ORACLE imports numpy / scikit-learn / onnxruntime, whose JITs map W+X
+# pages — MemoryDenyWriteExecute= and SystemCallFilter=@system-service kill
+# them at import time, so those two directives are deliberately absent.
+ProtectSystem=strict
+ReadWritePaths=/var/log/pradyos /var/lib/pradyos /run/pradyos
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target
