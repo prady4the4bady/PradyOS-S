@@ -28,7 +28,6 @@ import sys
 import time
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -557,22 +556,26 @@ DEFAULT_MODULES: list[str] = [
     # Phase 168
     "tests/test_polygon.py",
     "tests/test_polygon_web.py",
+    # Plane 8 — QUASAR GATE (inference router)
+    "tests/test_quasar_gate.py",
+    "tests/test_quasar_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
 _ANSI = sys.platform != "win32" or os.environ.get("TERM") or os.environ.get("ANSICON")
-GREEN  = "\033[92m" if _ANSI else ""
-RED    = "\033[91m" if _ANSI else ""
+GREEN = "\033[92m" if _ANSI else ""
+RED = "\033[91m" if _ANSI else ""
 YELLOW = "\033[93m" if _ANSI else ""
-CYAN   = "\033[96m" if _ANSI else ""
-DIM    = "\033[2m"  if _ANSI else ""
-BOLD   = "\033[1m"  if _ANSI else ""
-RESET  = "\033[0m"  if _ANSI else ""
+CYAN = "\033[96m" if _ANSI else ""
+DIM = "\033[2m" if _ANSI else ""
+BOLD = "\033[1m" if _ANSI else ""
+RESET = "\033[0m" if _ANSI else ""
 
 
 # ---------------------------------------------------------------------------
 # Python / pytest detection
 # ---------------------------------------------------------------------------
+
 
 def _is_runnable(path: Path) -> bool:
     """Return True if path exists AND can actually run on this platform.
@@ -635,6 +638,7 @@ def find_pytest(python: str) -> list[str]:
 # Pre-flight Windows checks
 # ---------------------------------------------------------------------------
 
+
 def preflight_checks() -> list[str]:
     """Return a list of warning strings (empty = all clear)."""
     warnings: list[str] = []
@@ -643,6 +647,7 @@ def preflight_checks() -> list[str]:
         # Long path support check
         try:
             import winreg  # noqa: PLC0415
+
             with winreg.OpenKey(
                 winreg.HKEY_LOCAL_MACHINE,
                 r"SYSTEM\CurrentControlSet\Control\FileSystem",
@@ -665,7 +670,9 @@ def preflight_checks() -> list[str]:
         python = find_python()
         result = subprocess.run(
             [python, "-c", "import pytest; print(pytest.__version__)"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode != 0:
             warnings.append(
@@ -685,6 +692,7 @@ def preflight_checks() -> list[str]:
 # ---------------------------------------------------------------------------
 # Module runner
 # ---------------------------------------------------------------------------
+
 
 def run_module(
     pytest_cmd: list[str],
@@ -736,6 +744,7 @@ def run_module(
 # Reporter
 # ---------------------------------------------------------------------------
 
+
 def _module_label(path: str) -> str:
     return Path(path).stem
 
@@ -776,11 +785,15 @@ def print_summary(results: list[tuple[str, bool, float]]) -> None:
     print(f"{'─' * 60}")
 
     if failed == 0:
-        print(f"{GREEN}{BOLD}ALL {total} MODULE(S) PASSED{RESET}  "
-              f"{DIM}({total_time:.1f}s total){RESET}")
+        print(
+            f"{GREEN}{BOLD}ALL {total} MODULE(S) PASSED{RESET}  "
+            f"{DIM}({total_time:.1f}s total){RESET}"
+        )
     else:
-        print(f"{RED}{BOLD}{failed}/{total} MODULE(S) FAILED{RESET}  "
-              f"{DIM}({total_time:.1f}s total){RESET}")
+        print(
+            f"{RED}{BOLD}{failed}/{total} MODULE(S) FAILED{RESET}  "
+            f"{DIM}({total_time:.1f}s total){RESET}"
+        )
     print()
 
 
@@ -788,23 +801,32 @@ def print_summary(results: list[tuple[str, bool, float]]) -> None:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="prove",
         description="PRADY OS Proving Ground — local test validation runner",
     )
     parser.add_argument(
-        "--module", "-m", action="append", dest="modules",
+        "--module",
+        "-m",
+        action="append",
+        dest="modules",
         help="test module path to run (default: all); repeatable",
     )
-    parser.add_argument("--fast", "-f", action="store_true",
-                        help="stop on first test failure within each module")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                        help="always print full pytest output (not just on failure)")
-    parser.add_argument("--no-color", action="store_true",
-                        help="disable ANSI color codes")
-    parser.add_argument("--skip-preflight", action="store_true",
-                        help="skip Windows pre-flight environment checks")
+    parser.add_argument(
+        "--fast", "-f", action="store_true", help="stop on first test failure within each module"
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="always print full pytest output (not just on failure)",
+    )
+    parser.add_argument("--no-color", action="store_true", help="disable ANSI color codes")
+    parser.add_argument(
+        "--skip-preflight", action="store_true", help="skip Windows pre-flight environment checks"
+    )
     args = parser.parse_args(argv)
 
     if args.no_color:

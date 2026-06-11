@@ -83,6 +83,7 @@ from pradyos.web.polygon_web import register_polygon_routes  # Phase 168
 from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
 from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
 from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
+from pradyos.web.quasar_web import register_quasar_routes  # Plane 8 — QUASAR GATE
 from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
 from pradyos.web.radix_tree_web import register_radixtree_routes  # Phase 140
 from pradyos.web.random_projection_web import register_randomprojection_routes  # Phase 127
@@ -327,6 +328,7 @@ def create_app(
     sparse_segment_tree: Any | None = None,
     convex_hull: Any | None = None,
     polygon: Any | None = None,
+    quasar: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3640,6 +3642,8 @@ def create_app(
     register_convexhull_routes(app, convex_hull)
 
     register_polygon_routes(app, polygon)
+
+    register_quasar_routes(app, quasar)  # Plane 8 — QUASAR GATE inference router
 
     return app
 
