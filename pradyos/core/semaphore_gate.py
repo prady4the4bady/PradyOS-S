@@ -36,9 +36,14 @@ class SemaphoreNotFoundError(KeyError):
 
 class _Entry:
     """Internal bundle: the semaphore object + its tracking counters."""
+
     __slots__ = (
-        "name", "capacity", "semaphore",
-        "acquired_total", "released_total", "timeout_total",
+        "name",
+        "capacity",
+        "semaphore",
+        "acquired_total",
+        "released_total",
+        "timeout_total",
     )
 
     def __init__(self, name: str, capacity: int) -> None:

@@ -12,9 +12,7 @@ from __future__ import annotations
 
 import cmd
 import shlex
-import sys
 import types
-from typing import Any
 
 from rich.console import Console
 
@@ -44,14 +42,28 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
     def _print_markup(self, markup: str) -> None:
         _console.print(markup)
 
-    def _cli_args(self, argv: list[str]) -> "types.SimpleNamespace":
+    def _cli_args(self, argv: list[str]) -> types.SimpleNamespace:
         """Build a minimal argparse.Namespace from a list of argv strings."""
         import argparse
-        ns = argparse.Namespace(**{k: None for k in [
-            "task_id", "reason", "approver", "campaign_id",
-            "status", "schedule_cmd", "name", "cron", "intent",
-            "tasks", "schedule_id",
-        ]})
+
+        ns = argparse.Namespace(
+            **{
+                k: None
+                for k in [
+                    "task_id",
+                    "reason",
+                    "approver",
+                    "campaign_id",
+                    "status",
+                    "schedule_cmd",
+                    "name",
+                    "cron",
+                    "intent",
+                    "tasks",
+                    "schedule_id",
+                ]
+            }
+        )
         return ns
 
     # ------------------------------------------------------------------
@@ -70,8 +82,10 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
     def do_status(self, _arg: str) -> None:
         """Show live PRADY OS system state."""
         try:
-            from pradyos.sovereign.cli import cmd_status
             import argparse
+
+            from pradyos.sovereign.cli import cmd_status
+
             cmd_status(argparse.Namespace())
         except Exception as exc:  # noqa: BLE001
             _console.print(f"[red]status error: {exc}[/red]")
@@ -87,8 +101,10 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
         Usage: campaigns [status_filter]
         """
         try:
-            from pradyos.sovereign.cli import cmd_list_campaigns
             import argparse
+
+            from pradyos.sovereign.cli import cmd_list_campaigns
+
             ns = argparse.Namespace(status=arg.strip() or None)
             cmd_list_campaigns(ns)
         except Exception as exc:  # noqa: BLE001
@@ -109,8 +125,10 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
             _console.print("[yellow]Usage: approve <task_id>[/yellow]")
             return
         try:
-            from pradyos.sovereign.cli import cmd_approve
             import argparse
+
+            from pradyos.sovereign.cli import cmd_approve
+
             ns = argparse.Namespace(task_id=task_id, approver="sovereign")
             cmd_approve(ns)
         except Exception as exc:  # noqa: BLE001
@@ -133,8 +151,10 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
         task_id = parts[0]
         reason = parts[1] if len(parts) > 1 else ""
         try:
-            from pradyos.sovereign.cli import cmd_reject
             import argparse
+
+            from pradyos.sovereign.cli import cmd_reject
+
             ns = argparse.Namespace(task_id=task_id, reason=reason, approver="sovereign")
             cmd_reject(ns)
         except Exception as exc:  # noqa: BLE001
@@ -157,7 +177,9 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
 
         parts = shlex.split(arg) if arg.strip() else []
         if not parts:
-            _console.print("[yellow]Usage: schedule list | add <cron> <intent> | remove <id>[/yellow]")
+            _console.print(
+                "[yellow]Usage: schedule list | add <cron> <intent> | remove <id>[/yellow]"
+            )
             return
 
         sub = parts[0]
@@ -220,10 +242,11 @@ class SovereignRepl(ReplExtMixin, cmd.Cmd):
         except ValueError:
             n = 5
         try:
-            from pradyos.oracle.advisor import SovereignAdvisor
+            from rich.table import Table
+
             from pradyos.core.audit import get_audit_log
             from pradyos.core.metrics import get_registry
-            from rich.table import Table
+            from pradyos.oracle.advisor import SovereignAdvisor
 
             advisor = SovereignAdvisor(
                 audit_log=get_audit_log(),

@@ -68,8 +68,9 @@ def _is_int(x: Any) -> bool:
 class QDigest:
     """Compressed binary-tree quantile sketch over the universe ``[0, value_range)``."""
 
-    def __init__(self, compression_factor: int = 100, value_range: int = 65536,
-                 seed: int = 0) -> None:
+    def __init__(
+        self, compression_factor: int = 100, value_range: int = 65536, seed: int = 0
+    ) -> None:
         self._validate(compression_factor, value_range, seed)
         self._k = compression_factor
         self._value_range = value_range
@@ -129,9 +130,9 @@ class QDigest:
                     continue
                 parent = nid >> 1
                 sibling = nid ^ 1
-                triple = (self._tree.get(nid, 0)
-                          + self._tree.get(sibling, 0)
-                          + self._tree.get(parent, 0))
+                triple = (
+                    self._tree.get(nid, 0) + self._tree.get(sibling, 0) + self._tree.get(parent, 0)
+                )
                 if triple < threshold:
                     merged = self._tree.pop(nid, 0) + self._tree.pop(sibling, 0)
                     if merged:
@@ -153,7 +154,7 @@ class QDigest:
 
     def quantile(self, q: float) -> int:
         """Return value ``v`` such that ``≈ q·n`` elements are ``≤ v`` (``q`` strictly in (0, 1))."""
-        if isinstance(q, bool) or not isinstance(q, (int, float)):
+        if isinstance(q, bool) or not isinstance(q, int | float):
             raise QDigestError(q)
         if not (0.0 < q < 1.0):
             raise QDigestError(q)
@@ -161,9 +162,10 @@ class QDigest:
             if self._total == 0:
                 raise QDigestError("empty")
             target = q * self._total
-            nodes = sorted(self._tree.items(),
-                           key=lambda kv: (self._node_range(kv[0])[1],
-                                           self._node_range(kv[0])[0]))
+            nodes = sorted(
+                self._tree.items(),
+                key=lambda kv: (self._node_range(kv[0])[1], self._node_range(kv[0])[0]),
+            )
             cum = 0
             upper = self._value_range
             for nid, cnt in nodes:
@@ -184,7 +186,7 @@ class QDigest:
                     total += cnt
             return total
 
-    def merge(self, other: "QDigest") -> "QDigest":
+    def merge(self, other: QDigest) -> QDigest:
         """Merge ``other`` (same universe) into this digest: node-wise add, then recompress."""
         if not isinstance(other, QDigest):
             raise QDigestError(other)
@@ -200,8 +202,12 @@ class QDigest:
             self._compress()
         return self
 
-    def reset(self, compression_factor: int | None = None, value_range: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self,
+        compression_factor: int | None = None,
+        value_range: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear the tree; optionally reconfigure ``compression_factor`` / ``value_range`` / ``seed``."""
         with self._lock:
             nk = self._k if compression_factor is None else compression_factor

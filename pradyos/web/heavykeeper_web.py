@@ -62,8 +62,13 @@ def register_heavykeeper_routes(app: Any, heavykeeper: Any | None = None) -> Any
         if not isinstance(body, dict):
             body = {}
         try:
-            heavykeeper.reset(body.get("k"), body.get("width"), body.get("depth"),
-                              body.get("decay"), body.get("seed"))
+            heavykeeper.reset(
+                body.get("k"),
+                body.get("width"),
+                body.get("depth"),
+                body.get("decay"),
+                body.get("seed"),
+            )
         except HeavyKeeperError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse(heavykeeper.stats())

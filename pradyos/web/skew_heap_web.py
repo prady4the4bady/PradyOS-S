@@ -44,8 +44,9 @@ def register_skewheap_routes(app: Any, skew_heap: Any | None = None) -> Any:
             skew_heap.insert(body["value"])
         except SkewHeapError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"value": body["value"], "size": len(skew_heap),
-                             "min": skew_heap.peek_min()})
+        return JSONResponse(
+            {"value": body["value"], "size": len(skew_heap), "min": skew_heap.peek_min()}
+        )
 
     @app.post("/api/v1/skewheap/extract_min")
     async def api_sh_extract() -> JSONResponse:

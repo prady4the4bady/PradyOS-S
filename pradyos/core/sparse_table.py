@@ -21,7 +21,8 @@ single ``threading.Lock``; deterministic (static — built once from the array).
 from __future__ import annotations
 
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 _OPS = {"min": min, "max": max}
 
@@ -35,7 +36,7 @@ class SparseTableError(Exception):
 
 
 def _num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _is_int(x: Any) -> bool:
@@ -96,7 +97,7 @@ class SparseTable:
         with self._lock:
             if not (0 <= lo < hi <= self._n):
                 raise SparseTableError(f"need 0 <= lo < hi <= {self._n}")
-            k = (hi - lo).bit_length() - 1            # floor(log2(hi - lo)), hi-lo >= 1
+            k = (hi - lo).bit_length() - 1  # floor(log2(hi - lo)), hi-lo >= 1
             block = 1 << k
             row = self._table[k]
             return self._agg(row[lo], row[hi - block])

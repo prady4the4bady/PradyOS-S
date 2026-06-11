@@ -10,6 +10,7 @@ Thread-safety
 ``threading.Lock`` before mutating the deque so the ledger is safe to call
 from multiple threads (e.g. web handlers + background workers) concurrently.
 """
+
 from __future__ import annotations
 
 import collections
@@ -18,13 +19,12 @@ import json
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Optional
-
+from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
 # LedgerEntry
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class LedgerEntry:
@@ -67,20 +67,14 @@ def _compute_hash(
     ts: float,
 ) -> str:
     """Return the SHA-256 hex digest for a ledger entry."""
-    raw = (
-        entry_id
-        + prev_hash
-        + service
-        + event
-        + json.dumps(payload, sort_keys=True)
-        + str(ts)
-    )
+    raw = entry_id + prev_hash + service + event + json.dumps(payload, sort_keys=True) + str(ts)
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
 # ---------------------------------------------------------------------------
 # EventLedger
 # ---------------------------------------------------------------------------
+
 
 class EventLedger:
     """Thread-safe append-only hash-chain ledger.
@@ -92,16 +86,14 @@ class EventLedger:
     """
 
     def __init__(self, maxlen: int = 1000) -> None:
-        self._entries: collections.deque[LedgerEntry] = collections.deque(
-            maxlen=maxlen
-        )
+        self._entries: collections.deque[LedgerEntry] = collections.deque(maxlen=maxlen)
         self._lock = threading.Lock()
 
     def append(
         self,
         service: str,
         event: str,
-        payload: Optional[dict] = None,
+        payload: dict | None = None,
     ) -> LedgerEntry:
         """Append a new event record and return it."""
         if payload is None:
@@ -111,11 +103,7 @@ class EventLedger:
         entry_id = uuid.uuid4().hex
 
         with self._lock:
-            prev_hash = (
-                self._entries[-1].entry_hash
-                if self._entries
-                else _GENESIS_PREV_HASH
-            )
+            prev_hash = self._entries[-1].entry_hash if self._entries else _GENESIS_PREV_HASH
             entry_hash = _compute_hash(entry_id, prev_hash, service, event, payload, ts)
             entry = LedgerEntry(
                 entry_id=entry_id,
@@ -162,8 +150,8 @@ class EventLedger:
     def get_entries(
         self,
         limit: int = 100,
-        service: Optional[str] = None,
-        event: Optional[str] = None,
+        service: str | None = None,
+        event: str | None = None,
     ) -> list[LedgerEntry]:
         """Return entries most-recent first, with optional filters."""
         with self._lock:

@@ -21,8 +21,7 @@ from __future__ import annotations
 import bisect
 import hashlib
 import threading
-from typing import Iterable
-
+from collections.abc import Iterable
 
 DEFAULT_REPLICAS = 100  # virtual points per physical node
 
@@ -41,12 +40,14 @@ class NodeNotFoundError(Exception):
 class HashRing:
     """A consistent hash ring with virtual nodes (stdlib only)."""
 
-    def __init__(self, nodes: Iterable[str] | None = None, *, replicas: int = DEFAULT_REPLICAS) -> None:
+    def __init__(
+        self, nodes: Iterable[str] | None = None, *, replicas: int = DEFAULT_REPLICAS
+    ) -> None:
         if replicas <= 0:
             raise ValueError("replicas must be a positive integer")
         self._replicas = int(replicas)
-        self._ring: dict[int, str] = {}     # hash point -> node
-        self._sorted: list[int] = []        # sorted hash points for bisect
+        self._ring: dict[int, str] = {}  # hash point -> node
+        self._sorted: list[int] = []  # sorted hash points for bisect
         self._nodes: set[str] = set()
         self._lock = threading.Lock()
         if nodes:

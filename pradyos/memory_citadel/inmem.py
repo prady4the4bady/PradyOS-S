@@ -24,7 +24,7 @@ class InMemoryCitadel:
     # Sync API (matches CitadelStore contract)
     # ------------------------------------------------------------------
 
-    def store(self, agent_id: str, record: "MemoryRecord | dict[str, Any]") -> str | None:
+    def store(self, agent_id: str, record: MemoryRecord | dict[str, Any]) -> str | None:
         if isinstance(record, MemoryRecord):
             entry = {
                 "record_id": record.record_id,
@@ -82,9 +82,7 @@ class InMemoryCitadel:
     # Async API
     # ------------------------------------------------------------------
 
-    async def store_async(
-        self, agent_id: str, record: "MemoryRecord | dict[str, Any]"
-    ) -> str | None:
+    async def store_async(self, agent_id: str, record: MemoryRecord | dict[str, Any]) -> str | None:
         return self.store(agent_id, record)
 
     async def query_async(

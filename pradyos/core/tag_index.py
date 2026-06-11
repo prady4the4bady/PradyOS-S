@@ -50,9 +50,7 @@ class TagIndex:
 
     def tags(self, item_id: str) -> list[str]:
         with self._lock:
-            return sorted(
-                t for t, bucket in self._tags.items() if item_id in bucket
-            )
+            return sorted(t for t, bucket in self._tags.items() if item_id in bucket)
 
     def search(self, *tags: str, mode: str = "all") -> list[str]:
         if not tags:
@@ -74,10 +72,7 @@ class TagIndex:
 
     def list_tags(self) -> list[dict]:
         with self._lock:
-            entries = [
-                {"tag": t, "count": len(bucket)}
-                for t, bucket in self._tags.items()
-            ]
+            entries = [{"tag": t, "count": len(bucket)} for t, bucket in self._tags.items()]
         return sorted(entries, key=lambda e: e["tag"])
 
     def count(self, tag: str | None = None) -> int:

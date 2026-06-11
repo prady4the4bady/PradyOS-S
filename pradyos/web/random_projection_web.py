@@ -48,8 +48,11 @@ def register_randomprojection_routes(app: Any, random_projection: Any | None = N
     @app.post("/api/v1/randomprojection/distance")
     async def api_rp_distance(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or not isinstance(body.get("a"), list) \
-                or not isinstance(body.get("b"), list):
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("a"), list)
+            or not isinstance(body.get("b"), list)
+        ):
             return JSONResponse({"error": "a and b vector lists are required"}, status_code=422)
         try:
             d = random_projection.distance(body["a"], body["b"])
@@ -60,8 +63,11 @@ def register_randomprojection_routes(app: Any, random_projection: Any | None = N
     @app.post("/api/v1/randomprojection/dot")
     async def api_rp_dot(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or not isinstance(body.get("a"), list) \
-                or not isinstance(body.get("b"), list):
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("a"), list)
+            or not isinstance(body.get("b"), list)
+        ):
             return JSONResponse({"error": "a and b vector lists are required"}, status_code=422)
         try:
             d = random_projection.dot(body["a"], body["b"])

@@ -43,14 +43,14 @@ class _Node:
     def __init__(self, key: Any, value: Any) -> None:
         self.key = key
         self.value = value
-        self.left: "_Node | None" = None
-        self.right: "_Node | None" = None
+        self.left: _Node | None = None
+        self.right: _Node | None = None
 
 
 def _key_kind(key: Any) -> str:
     if isinstance(key, bool):
         raise SplayTreeError("key must be int, float or str (not bool)")
-    if isinstance(key, (int, float)):
+    if isinstance(key, int | float):
         return "num"
     if isinstance(key, str):
         return "str"
@@ -63,42 +63,42 @@ class SplayTree:
     def __init__(self) -> None:
         self._root: _Node | None = None
         self._size = 0
-        self._kind: str | None = None          # 'num' or 'str' — keys must be mutually orderable
+        self._kind: str | None = None  # 'num' or 'str' — keys must be mutually orderable
         self._lock = threading.Lock()
 
     # ── splay (top-down Sleator–Tarjan) ──────────────────────────────────────────────
     @staticmethod
     def _splay(root: _Node, key: Any) -> _Node:
         """Re-root the subtree at the node closest to ``key`` and return the new root."""
-        header = _Node(None, None)             # header.right → left tree, header.left → right tree
-        left_max = header                      # current attach point of the left tree (its max)
-        right_min = header                     # current attach point of the right tree (its min)
+        header = _Node(None, None)  # header.right → left tree, header.left → right tree
+        left_max = header  # current attach point of the left tree (its max)
+        right_min = header  # current attach point of the right tree (its min)
         t = root
         while True:
             if key < t.key:
                 if t.left is None:
                     break
-                if key < t.left.key:           # zig-zig → rotate right
+                if key < t.left.key:  # zig-zig → rotate right
                     y = t.left
                     t.left = y.right
                     y.right = t
                     t = y
                     if t.left is None:
                         break
-                right_min.left = t             # link right
+                right_min.left = t  # link right
                 right_min = t
                 t = t.left
             elif key > t.key:
                 if t.right is None:
                     break
-                if key > t.right.key:          # zig-zig → rotate left
+                if key > t.right.key:  # zig-zig → rotate left
                     y = t.right
                     t.right = y.left
                     y.left = t
                     t = y
                     if t.right is None:
                         break
-                left_max.right = t             # link left
+                left_max.right = t  # link left
                 left_max = t
                 t = t.right
             else:
@@ -124,7 +124,7 @@ class SplayTree:
                 raise SplayTreeError(f"key kind {kind!r} does not match tree kind {self._kind!r}")
             self._root = self._splay(self._root, key)
             if self._root.key == key:
-                self._root.value = value       # update — no size change
+                self._root.value = value  # update — no size change
                 return
             node = _Node(key, value)
             if key < self._root.key:
@@ -140,7 +140,7 @@ class SplayTree:
 
     def delete(self, key: Any) -> bool:
         """Remove ``key``; returns whether it was present. Splays around the removal site."""
-        kind = _key_kind(key)                  # validates type (raises); no shared state
+        kind = _key_kind(key)  # validates type (raises); no shared state
         with self._lock:
             if self._root is None or kind != self._kind:
                 return False
@@ -160,7 +160,7 @@ class SplayTree:
     # ── lookup (each splays) ──────────────────────────────────────────────────────────
     def find(self, key: Any, default: Any = None) -> Any:
         """Return the value for ``key`` (splaying it to the root), or ``default`` if absent."""
-        kind = _key_kind(key)                  # validates type (raises); no shared state
+        kind = _key_kind(key)  # validates type (raises); no shared state
         with self._lock:
             if self._root is None or kind != self._kind:
                 return default
@@ -199,7 +199,7 @@ class SplayTree:
 
     def predecessor(self, key: Any) -> Any:
         """Largest key strictly less than ``key`` (splayed up), or ``None``."""
-        kind = _key_kind(key)                  # validates type (raises); no shared state
+        kind = _key_kind(key)  # validates type (raises); no shared state
         with self._lock:
             if self._root is None or kind != self._kind:
                 return None
@@ -216,7 +216,7 @@ class SplayTree:
 
     def successor(self, key: Any) -> Any:
         """Smallest key strictly greater than ``key`` (splayed up), or ``None``."""
-        kind = _key_kind(key)                  # validates type (raises); no shared state
+        kind = _key_kind(key)  # validates type (raises); no shared state
         with self._lock:
             if self._root is None or kind != self._kind:
                 return None

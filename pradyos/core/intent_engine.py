@@ -3,6 +3,7 @@
 Rule-based planner that evaluates system context against a configurable rule
 set and produces ranked IntentSuggestion objects.
 """
+
 from __future__ import annotations
 
 import threading
@@ -11,10 +12,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # IntentSuggestion
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class IntentSuggestion:
@@ -42,12 +43,14 @@ class IntentSuggestion:
 # IntentEngine
 # ---------------------------------------------------------------------------
 
-_SUPPORTED_CONDITIONS = frozenset({
-    "graph_nodes_gt",
-    "error_span_rate_gt",
-    "active_campaigns_lt",
-    "ledger_events_gt",
-})
+_SUPPORTED_CONDITIONS = frozenset(
+    {
+        "graph_nodes_gt",
+        "error_span_rate_gt",
+        "active_campaigns_lt",
+        "ledger_events_gt",
+    }
+)
 
 
 class IntentEngine:
@@ -125,6 +128,7 @@ class IntentEngine:
 # ---------------------------------------------------------------------------
 # Condition evaluation helpers
 # ---------------------------------------------------------------------------
+
 
 def _evaluate_condition(
     condition: str,

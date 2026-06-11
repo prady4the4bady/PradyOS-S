@@ -70,8 +70,13 @@ def register_radixtree_routes(app: Any, radix_tree: Any | None = None) -> Any:
             results = radix_tree.prefix_search(body["prefix"])
         except RadixTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"prefix": body["prefix"],
-                             "results": [list(kv) for kv in results], "count": len(results)})
+        return JSONResponse(
+            {
+                "prefix": body["prefix"],
+                "results": [list(kv) for kv in results],
+                "count": len(results),
+            }
+        )
 
     @app.delete("/api/v1/radixtree/delete")
     async def api_rx_delete(request: Request) -> JSONResponse:

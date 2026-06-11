@@ -47,7 +47,9 @@ def register_cartesiantree_routes(app: Any, cartesian_tree: Any | None = None) -
         return JSONResponse(cartesian_tree.stats())
 
     @app.get("/api/v1/cartesiantree/range_min")
-    async def api_ct_range_min(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_ct_range_min(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             mn = cartesian_tree.range_min(lo, hi)
             am = cartesian_tree.range_argmin(lo, hi)

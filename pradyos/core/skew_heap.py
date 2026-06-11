@@ -39,14 +39,14 @@ class _Node:
 
     def __init__(self, key: Any) -> None:
         self.key = key
-        self.left: "_Node | None" = None
-        self.right: "_Node | None" = None
+        self.left: _Node | None = None
+        self.right: _Node | None = None
 
 
 def _kind(value: Any) -> str:
     if isinstance(value, bool):
         raise SkewHeapError("value must be int, float or str (not bool)")
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return "num"
     if isinstance(value, str):
         return "str"
@@ -59,12 +59,12 @@ class SkewHeap:
     def __init__(self) -> None:
         self._root: _Node | None = None
         self._size = 0
-        self._kind: str | None = None        # 'num' or 'str' — values must be mutually orderable
+        self._kind: str | None = None  # 'num' or 'str' — values must be mutually orderable
         self._lock = threading.Lock()
 
     # ── meld (iterative; heap-order preserving) ───────────────────────────────────────
     @staticmethod
-    def _meld(a: "_Node | None", b: "_Node | None") -> "_Node | None":
+    def _meld(a: _Node | None, b: _Node | None) -> _Node | None:
         if a is None:
             return b
         if b is None:
@@ -114,7 +114,7 @@ class SkewHeap:
                 self._kind = None
             return root.key
 
-    def meld(self, other: "SkewHeap") -> None:
+    def meld(self, other: SkewHeap) -> None:
         """Union ``other`` into this heap; ``other`` is emptied (its nodes move here)."""
         if not isinstance(other, SkewHeap):
             raise SkewHeapError("can only meld another SkewHeap")
@@ -127,7 +127,8 @@ class SkewHeap:
             with second._lock:
                 if self._root is not None and other._root is not None and self._kind != other._kind:
                     raise SkewHeapError(
-                        f"cannot meld heaps of kinds {self._kind!r} and {other._kind!r}")
+                        f"cannot meld heaps of kinds {self._kind!r} and {other._kind!r}"
+                    )
                 self._root = self._meld(self._root, other._root)
                 self._size += other._size
                 if self._kind is None:

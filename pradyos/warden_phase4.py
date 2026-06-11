@@ -223,6 +223,7 @@ class WardenCampaignGuard:
             rollback_fn = self._engine.rollback_campaign
             # Try async first
             import inspect
+
             if inspect.iscoroutinefunction(rollback_fn):
                 loop = asyncio.new_event_loop()
                 try:

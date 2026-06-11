@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 class StepError(Exception):
@@ -16,6 +17,7 @@ class StepError(Exception):
 
 
 # ── built-in transforms (dict → dict, never mutate input) ────────────────────
+
 
 def set_field(event: dict, *, key: str, value: Any) -> dict:
     out = dict(event)
@@ -41,7 +43,8 @@ def uppercase_field(event: dict, *, key: str) -> dict:
     val = event[key]
     if not isinstance(val, str):
         raise StepError(
-            "uppercase_field", event,
+            "uppercase_field",
+            event,
             f"value at {key!r} is not str (got {type(val).__name__})",
         )
     out = dict(event)
@@ -55,7 +58,8 @@ def lowercase_field(event: dict, *, key: str) -> dict:
     val = event[key]
     if not isinstance(val, str):
         raise StepError(
-            "lowercase_field", event,
+            "lowercase_field",
+            event,
             f"value at {key!r} is not str (got {type(val).__name__})",
         )
     out = dict(event)
@@ -73,6 +77,7 @@ _TRANSFORMS: dict[str, Callable[..., dict]] = {
 
 
 # ── Step / Chain / Registry ──────────────────────────────────────────────────
+
 
 @dataclass
 class Step:
@@ -92,7 +97,8 @@ class PipelineChain:
             fn = _TRANSFORMS.get(step.transform_type)
             if fn is None:
                 raise StepError(
-                    step.name, event,
+                    step.name,
+                    event,
                     f"unknown transform_type: {step.transform_type!r}",
                 )
             try:

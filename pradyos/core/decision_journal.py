@@ -1,4 +1,5 @@
 """Phase 28A: Sovereign Decision Journal — append-only JSONL with cryptographic chaining."""
+
 from __future__ import annotations
 
 import hashlib
@@ -21,8 +22,8 @@ class DecisionEntry:
     rationale: str
     outcome: str
     timestamp: float
-    prev_hash: str      # SHA-256 of previous entry's content_hash; "0"*64 for genesis
-    content_hash: str   # SHA-256 of canonical JSON of this entry (excluding content_hash)
+    prev_hash: str  # SHA-256 of previous entry's content_hash; "0"*64 for genesis
+    content_hash: str  # SHA-256 of canonical JSON of this entry (excluding content_hash)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -47,7 +48,7 @@ class DecisionEntry:
         return hashlib.sha256(canonical).hexdigest()
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "DecisionEntry":
+    def from_dict(cls, d: dict[str, Any]) -> DecisionEntry:
         return cls(
             entry_id=d["entry_id"],
             agent_id=d["agent_id"],
@@ -70,7 +71,7 @@ class DecisionJournal:
     Operates in memory-only mode if *path* is None; otherwise persists to JSONL.
     """
 
-    def __init__(self, path: "str | Path | None" = None) -> None:
+    def __init__(self, path: str | Path | None = None) -> None:
         self._lock = threading.Lock()
         self._entries: list[DecisionEntry] = []
         self._path: Path | None = Path(path) if path is not None else None
@@ -108,16 +109,14 @@ class DecisionJournal:
         decision_type: str,
         rationale: str,
         outcome: str,
-        timestamp: "float | None" = None,
+        timestamp: float | None = None,
     ) -> DecisionEntry:
         """Create and store a new decision entry; returns the entry."""
         with self._lock:
             ts = timestamp if timestamp is not None else time.time()
             entry_id = uuid.uuid4().hex
 
-            prev_hash = (
-                self._entries[-1].content_hash if self._entries else _GENESIS_HASH
-            )
+            prev_hash = self._entries[-1].content_hash if self._entries else _GENESIS_HASH
 
             # Build dict without content_hash to compute the hash
             partial: dict[str, Any] = {
@@ -150,10 +149,10 @@ class DecisionJournal:
 
     def get_entries(
         self,
-        limit: "int | None" = None,
+        limit: int | None = None,
         offset: int = 0,
-        agent_id: "str | None" = None,
-        decision_type: "str | None" = None,
+        agent_id: str | None = None,
+        decision_type: str | None = None,
     ) -> list[DecisionEntry]:
         """Return entries oldest-first with optional filters and pagination."""
         with self._lock:

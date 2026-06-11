@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.rendezvous_hash import RendezvousHash, RendezvousError
+from pradyos.core.rendezvous_hash import RendezvousError, RendezvousHash
 
 
 def register_rendezvous_routes(app: Any, rendezvous: Any | None = None) -> Any:
@@ -46,7 +46,9 @@ def register_rendezvous_routes(app: Any, rendezvous: Any | None = None) -> Any:
             rendezvous.add_node(str(body["node"]), weight)
         except RendezvousError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"node": str(body["node"]), "weight": weight, "num_nodes": len(rendezvous)})
+        return JSONResponse(
+            {"node": str(body["node"]), "weight": weight, "num_nodes": len(rendezvous)}
+        )
 
     @app.delete("/api/v1/rendezvous/nodes")
     async def api_rdv_remove(request: Request) -> JSONResponse:
@@ -54,7 +56,9 @@ def register_rendezvous_routes(app: Any, rendezvous: Any | None = None) -> Any:
         if not isinstance(body, dict) or "node" not in body:
             return JSONResponse({"error": "node is required"}, status_code=422)
         removed = rendezvous.remove_node(str(body["node"]))
-        return JSONResponse({"node": str(body["node"]), "removed": removed, "num_nodes": len(rendezvous)})
+        return JSONResponse(
+            {"node": str(body["node"]), "removed": removed, "num_nodes": len(rendezvous)}
+        )
 
     @app.get("/api/v1/rendezvous/assign")
     async def api_rdv_assign(key: str) -> JSONResponse:

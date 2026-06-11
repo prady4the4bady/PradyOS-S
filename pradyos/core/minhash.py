@@ -32,9 +32,10 @@ from __future__ import annotations
 import hashlib
 import random
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
-_MERSENNE = (1 << 61) - 1   # 2**61 - 1, a Mersenne prime — the hash modulus p
+_MERSENNE = (1 << 61) - 1  # 2**61 - 1, a Mersenne prime — the hash modulus p
 
 
 class MinHashError(Exception):
@@ -70,7 +71,7 @@ class MinHash:
         self._k = num_hashes
         self._seed = seed
         self._coeffs = self._make_coeffs(num_hashes, seed)
-        self._sets: dict[str, list[int]] = {}     # set name -> signature (length k)
+        self._sets: dict[str, list[int]] = {}  # set name -> signature (length k)
         self._total = 0
         self._lock = threading.Lock()
 
@@ -88,11 +89,11 @@ class MinHash:
         h = self._hashes(element)
         sig = self._sets.get(name)
         if sig is None:
-            self._sets[name] = h            # first member initialises the signature
+            self._sets[name] = h  # first member initialises the signature
         else:
             for i in range(self._k):
                 if h[i] < sig[i]:
-                    sig[i] = h[i]           # element-wise running minimum
+                    sig[i] = h[i]  # element-wise running minimum
         self._total += 1
 
     # ── mutation ─────────────────────────────────────────────────────────────────

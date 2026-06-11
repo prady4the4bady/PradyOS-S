@@ -31,7 +31,8 @@ from __future__ import annotations
 import hashlib
 import statistics
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 _MAX_COUNTERS = 65536
 
@@ -96,8 +97,10 @@ class AMSSketch:
         raw = bytearray()
         block = 0
         while len(raw) < self._nbytes:
-            raw += hashlib.blake2b(self._seed_bytes + block.to_bytes(4, "big") + kb,
-                                   digest_size=min(64, self._nbytes - len(raw))).digest()
+            raw += hashlib.blake2b(
+                self._seed_bytes + block.to_bytes(4, "big") + kb,
+                digest_size=min(64, self._nbytes - len(raw)),
+            ).digest()
             block += 1
         return [1 if (raw[k >> 3] >> (k & 7)) & 1 else -1 for k in range(self._n)]
 
@@ -114,7 +117,7 @@ class AMSSketch:
 
     def update_many(self, keys: Iterable[Any]) -> int:
         """Apply ``+1`` for each key in ``keys``; returns the number consumed."""
-        sign_vectors = [self._signs(k) for k in keys]      # hash outside the lock
+        sign_vectors = [self._signs(k) for k in keys]  # hash outside the lock
         with self._lock:
             c = self._counters
             for signs in sign_vectors:
@@ -125,7 +128,7 @@ class AMSSketch:
     # ── estimation ──────────────────────────────────────────────────────────────────
     def _row_means(self, products) -> list[float]:
         w = self._width
-        return [sum(products[r * w:(r + 1) * w]) / w for r in range(self._depth)]
+        return [sum(products[r * w : (r + 1) * w]) / w for r in range(self._depth)]
 
     def _f2_locked(self) -> float:
         squares = [x * x for x in self._counters]
@@ -143,7 +146,7 @@ class AMSSketch:
         """Estimated Euclidean norm ``√F₂`` of the frequency vector."""
         return self.f2() ** 0.5
 
-    def inner_product(self, other: "AMSSketch") -> float:
+    def inner_product(self, other: AMSSketch) -> float:
         """Estimated inner product ``Σ f_i·g_i`` (join size) with ``other`` (configs must match)."""
         if not isinstance(other, AMSSketch):
             raise AMSError("can only take the inner product with another AMSSketch")
@@ -156,7 +159,7 @@ class AMSSketch:
             return statistics.median(self._row_means(products))
 
     # ── merge ─────────────────────────────────────────────────────────────────────────
-    def merge(self, other: "AMSSketch") -> None:
+    def merge(self, other: AMSSketch) -> None:
         """Fold ``other`` in by counter-wise addition (linearity; configs must match)."""
         if not isinstance(other, AMSSketch):
             raise AMSError("can only merge another AMSSketch")
@@ -167,8 +170,9 @@ class AMSSketch:
             for k in range(self._n):
                 self._counters[k] += snapshot[k]
 
-    def reset(self, width: int | None = None, depth: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, width: int | None = None, depth: int | None = None, seed: int | None = None
+    ) -> None:
         """Zero all counters; optionally reconfigure ``width`` / ``depth`` / ``seed``."""
         with self._lock:
             nw = self._width if width is None else width
@@ -211,7 +215,7 @@ class AMSSketch:
             "width": self._width,
             "depth": self._depth,
             "f2": round(f2, 4),
-            "l2_norm": round(f2 ** 0.5, 4),
+            "l2_norm": round(f2**0.5, 4),
             "standard_error": round((2.0 / self._width) ** 0.5, 6),
             "seed": self._seed,
         }

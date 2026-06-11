@@ -74,7 +74,9 @@ def register_binarylifting_routes(app: Any, binary_lifting: Any | None = None) -
         return JSONResponse({"v": v, "depth": d})
 
     @app.get("/api/v1/binarylifting/is_ancestor")
-    async def api_bl_is_ancestor(u: int = Query(..., ge=0), v: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_bl_is_ancestor(
+        u: int = Query(..., ge=0), v: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             ans = bl.is_ancestor(u, v)
         except BinaryLiftingError as exc:

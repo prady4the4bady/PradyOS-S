@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass
@@ -65,38 +67,42 @@ class TimeoutGuard:
             except FuturesTimeoutError:
                 elapsed = time.time() - start
                 future.cancel()
-                self._append(GuardRecord(
-                    name=name,
-                    timeout=effective,
-                    elapsed=elapsed,
-                    outcome="timeout",
-                    error=None,
-                    ts=start,
-                ))
-                raise TimeoutExpiredError(
-                    f"{name!r} timed out after {effective}s"
+                self._append(
+                    GuardRecord(
+                        name=name,
+                        timeout=effective,
+                        elapsed=elapsed,
+                        outcome="timeout",
+                        error=None,
+                        ts=start,
+                    )
                 )
+                raise TimeoutExpiredError(f"{name!r} timed out after {effective}s") from None
             except BaseException as exc:
                 elapsed = time.time() - start
-                self._append(GuardRecord(
-                    name=name,
-                    timeout=effective,
-                    elapsed=elapsed,
-                    outcome="error",
-                    error=str(exc),
-                    ts=start,
-                ))
+                self._append(
+                    GuardRecord(
+                        name=name,
+                        timeout=effective,
+                        elapsed=elapsed,
+                        outcome="error",
+                        error=str(exc),
+                        ts=start,
+                    )
+                )
                 raise
 
             elapsed = time.time() - start
-            self._append(GuardRecord(
-                name=name,
-                timeout=effective,
-                elapsed=elapsed,
-                outcome="success",
-                error=None,
-                ts=start,
-            ))
+            self._append(
+                GuardRecord(
+                    name=name,
+                    timeout=effective,
+                    elapsed=elapsed,
+                    outcome="success",
+                    error=None,
+                    ts=start,
+                )
+            )
             return result
         finally:
             # Don't wait for stragglers — a timed-out task may still be running.

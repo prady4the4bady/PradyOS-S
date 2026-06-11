@@ -12,13 +12,11 @@ from __future__ import annotations
 import json
 import os
 import threading
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from pradyos.core.types import TaskState
 from pradyos.imperium.task import ImperiumTask, TaskRecord
-
 
 _DEFAULT_STATE_DIR = Path(
     os.environ.get(
@@ -104,7 +102,7 @@ class CheckpointStore:
             )
             rec = TaskRecord(
                 spec=spec,
-                state=TaskState.QUEUED,   # resume from queued; runtime decides next move
+                state=TaskState.QUEUED,  # resume from queued; runtime decides next move
                 attempts=int(line.get("attempts", 0)),
                 queued_at=float(line.get("queued_at") or 0.0),
                 started_at=None,

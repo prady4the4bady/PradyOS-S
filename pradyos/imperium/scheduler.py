@@ -14,14 +14,13 @@ Responsibilities:
 from __future__ import annotations
 
 import threading
-import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
-from pradyos.core.types import Priority, TaskState
-from pradyos.imperium.dag import CycleDetected, DependencyGraph, is_satisfied_factory
+from pradyos.core.types import TaskState
+from pradyos.imperium.dag import DependencyGraph, is_satisfied_factory
 from pradyos.imperium.queue import TaskQueue
 from pradyos.imperium.task import ImperiumTask, TaskRecord
-
 
 SatisfactionPredicate = Callable[[str], bool]
 
@@ -86,8 +85,7 @@ class SchedulerCore:
 
     def pending_approvals(self) -> list[TaskRecord]:
         with self._lock:
-            return [r for r in self._queue.all_records()
-                    if r.state is TaskState.ESCALATED]
+            return [r for r in self._queue.all_records() if r.state is TaskState.ESCALATED]
 
     def stats(self) -> dict[str, Any]:
         with self._lock:

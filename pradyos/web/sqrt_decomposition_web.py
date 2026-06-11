@@ -40,16 +40,25 @@ def register_sqrtdecomp_routes(app: Any, sqrt_decomposition: Any | None = None) 
     @app.post("/api/v1/sqrtdecomp/range_add")
     async def api_sd_range_add(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or "lo" not in body or "hi" not in body or "delta" not in body:
+        if (
+            not isinstance(body, dict)
+            or "lo" not in body
+            or "hi" not in body
+            or "delta" not in body
+        ):
             return JSONResponse({"error": "lo, hi and delta are required"}, status_code=422)
         try:
             sqrt_decomposition.range_add(body["lo"], body["hi"], body["delta"])
         except SqrtDecompositionError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"lo": body["lo"], "hi": body["hi"], "total": sqrt_decomposition.total()})
+        return JSONResponse(
+            {"lo": body["lo"], "hi": body["hi"], "total": sqrt_decomposition.total()}
+        )
 
     @app.get("/api/v1/sqrtdecomp/range_sum")
-    async def api_sd_range_sum(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_sd_range_sum(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             s = sqrt_decomposition.range_sum(lo, hi)
         except SqrtDecompositionError as exc:
@@ -73,7 +82,9 @@ def register_sqrtdecomp_routes(app: Any, sqrt_decomposition: Any | None = None) 
             sqrt_decomposition.update(body["i"], body["value"])
         except SqrtDecompositionError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"i": body["i"], "value": body["value"], "total": sqrt_decomposition.total()})
+        return JSONResponse(
+            {"i": body["i"], "value": body["value"], "total": sqrt_decomposition.total()}
+        )
 
     @app.get("/api/v1/sqrtdecomp/stats")
     async def api_sd_stats() -> JSONResponse:

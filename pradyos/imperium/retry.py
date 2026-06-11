@@ -17,8 +17,9 @@ import math
 import os
 import random
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 log = logging.getLogger("pradyos.imperium.retry")
 
@@ -31,11 +32,11 @@ log = logging.getLogger("pradyos.imperium.retry")
 class RetryPolicy:
     """Configuration for the retry behaviour of a callable."""
 
-    max_attempts:    int   = 3
-    base_delay_s:    float = 1.0
-    max_delay_s:     float = 60.0
+    max_attempts: int = 3
+    base_delay_s: float = 1.0
+    max_delay_s: float = 60.0
     exponential_base: float = 2.0
-    jitter:          bool  = True
+    jitter: bool = True
 
     def effective_max_attempts(self) -> int:
         """Return max_attempts, allowing SOVEREIGN_RETRY_MAX env override."""
@@ -92,14 +93,18 @@ def retryable(
 
     def decorator(fn: Callable) -> Callable:
         if asyncio.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return await _run_async(fn, args, kwargs, _policy, audit_log)
+
             return async_wrapper
         else:
+
             @functools.wraps(fn)
             def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return _run_sync(fn, args, kwargs, _policy, audit_log)
+
             return sync_wrapper
 
     return decorator
@@ -122,6 +127,7 @@ def _emit_retry_event(
         return
     try:
         from pradyos.core.audit import AuditCategory, AuditEvent  # lazy import
+
         event = AuditEvent(
             category=AuditCategory.SYSTEM,
             actor="retry_engine",
@@ -158,7 +164,10 @@ def _run_sync(
             last_exc = exc
             log.debug(
                 "Retry attempt %d/%d for %s failed: %s",
-                attempt + 1, max_attempts, fn.__name__, exc,
+                attempt + 1,
+                max_attempts,
+                fn.__name__,
+                exc,
             )
             if attempt < max_attempts - 1:
                 _emit_retry_event(audit_log, fn.__name__, attempt + 1, max_attempts, exc)
@@ -186,7 +195,10 @@ async def _run_async(
             last_exc = exc
             log.debug(
                 "Async retry attempt %d/%d for %s failed: %s",
-                attempt + 1, max_attempts, fn.__name__, exc,
+                attempt + 1,
+                max_attempts,
+                fn.__name__,
+                exc,
             )
             if attempt < max_attempts - 1:
                 _emit_retry_event(audit_log, fn.__name__, attempt + 1, max_attempts, exc)

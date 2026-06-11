@@ -32,7 +32,7 @@ from pradyos.core.treap import Treap, TreapError
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def register_treap_routes(app: Any, treap: Any | None = None) -> Any:
@@ -62,8 +62,9 @@ def register_treap_routes(app: Any, treap: Any | None = None) -> Any:
     @app.get("/api/v1/treap/search")
     async def api_treap_search(key: float) -> JSONResponse:
         found = treap.contains(key)
-        return JSONResponse({"key": key, "found": found,
-                            "value": treap.get(key) if found else None})
+        return JSONResponse(
+            {"key": key, "found": found, "value": treap.get(key) if found else None}
+        )
 
     @app.get("/api/v1/treap/rank")
     async def api_treap_rank(key: float) -> JSONResponse:

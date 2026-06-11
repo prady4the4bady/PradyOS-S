@@ -27,7 +27,7 @@ class CampaignAnalytics:
         A :class:`~pradyos.campaign.registry.CampaignRegistry` instance.
     """
 
-    def __init__(self, registry: "CampaignRegistry") -> None:
+    def __init__(self, registry: CampaignRegistry) -> None:
         self.registry = registry
 
     # ------------------------------------------------------------------

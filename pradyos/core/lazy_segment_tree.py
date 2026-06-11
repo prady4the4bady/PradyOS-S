@@ -17,9 +17,8 @@ Pure stdlib; thread-safe via a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class LazySegmentTreeError(Exception):
@@ -35,7 +34,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class LazySegmentTree:
@@ -53,7 +52,7 @@ class LazySegmentTree:
         self._min: list = []
         self._max: list = []
         self._add: list = []
-        self._assign: list = []        # None = no pending assign
+        self._assign: list = []  # None = no pending assign
 
     # ── build ────────────────────────────────────────────────────────────────────────────
     def build(self, values: Any) -> None:
@@ -132,8 +131,9 @@ class LazySegmentTree:
         if not (0 <= lo <= hi < self._n):
             raise LazySegmentTreeError(f"need 0 <= lo <= hi < {self._n}")
 
-    def _update(self, node: int, l: int, r: int, lo: int, hi: int,
-                delta: Optional[float], assign: Optional[float]) -> None:
+    def _update(
+        self, node: int, l: int, r: int, lo: int, hi: int, delta: float | None, assign: float | None
+    ) -> None:
         if hi < l or r < lo:
             return
         if lo <= l and r <= hi:
@@ -231,5 +231,9 @@ class LazySegmentTree:
         with self._lock:
             if self._n == 0:
                 return {"size": 0, "total": 0, "min": None, "max": None}
-            return {"size": self._n, "total": self._sum[1],
-                    "min": self._min[1], "max": self._max[1]}
+            return {
+                "size": self._n,
+                "total": self._sum[1],
+                "min": self._min[1],
+                "max": self._max[1],
+            }

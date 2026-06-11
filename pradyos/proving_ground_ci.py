@@ -66,7 +66,10 @@ _BLOCKED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bdd\s+if=.*of=/dev/(s|h|v|xv)d[a-z]"), "dd to raw device"),
     (re.compile(r"\bmkfs\b"), "filesystem format command"),
     (re.compile(r"\bformat\s+[a-zA-Z]:\\"), "Windows format command"),
-    (re.compile(r"\b(shutdown|reboot|halt|poweroff)\b.*(-[fFhHrRpP]|\s|$)"), "system shutdown/reboot"),
+    (
+        re.compile(r"\b(shutdown|reboot|halt|poweroff)\b.*(-[fFhHrRpP]|\s|$)"),
+        "system shutdown/reboot",
+    ),
     (re.compile(r">\s*/dev/s[a-z]+"), "redirect to raw block device"),
     (re.compile(r"\bdel\s+/[sS]\s+/[qQ]?\s+[a-zA-Z]:\\"), "Windows recursive delete"),
     (re.compile(r"\brdisk\b"), "raw disk access"),

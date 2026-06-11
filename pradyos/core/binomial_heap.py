@@ -21,11 +21,10 @@ structurally bounded — there is no recursion. Pure stdlib; thread-safe via a s
 from __future__ import annotations
 
 import itertools
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
-_HANDLES = itertools.count()      # process-wide unique handle ids (next() is atomic under the GIL)
+_HANDLES = itertools.count()  # process-wide unique handle ids (next() is atomic under the GIL)
 
 
 class BinomialHeapError(Exception):
@@ -37,7 +36,7 @@ class BinomialHeapError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _is_int(x: Any) -> bool:
@@ -50,9 +49,9 @@ class _BinNode:
     def __init__(self, key: float, handle: int) -> None:
         self.key = key
         self.handle = handle
-        self.parent: Optional[_BinNode] = None
-        self.child: Optional[_BinNode] = None
-        self.sibling: Optional[_BinNode] = None
+        self.parent: _BinNode | None = None
+        self.child: _BinNode | None = None
+        self.sibling: _BinNode | None = None
         self.degree = 0
 
 
@@ -61,28 +60,32 @@ class BinomialHeap:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._head: Optional[_BinNode] = None
+        self._head: _BinNode | None = None
         self._size = 0
         self._handles: dict[int, _BinNode] = {}
 
     # ── structural helpers ───────────────────────────────────────────────────────────────
     @staticmethod
-    def _merge_roots(a: Optional[_BinNode], b: Optional[_BinNode]) -> Optional[_BinNode]:
+    def _merge_roots(a: _BinNode | None, b: _BinNode | None) -> _BinNode | None:
         """Merge two root lists into one sorted by increasing degree (no linking yet)."""
         if a is None:
             return b
         if b is None:
             return a
         if a.degree <= b.degree:
-            head = a; a = a.sibling
+            head = a
+            a = a.sibling
         else:
-            head = b; b = b.sibling
+            head = b
+            b = b.sibling
         tail = head
         while a is not None and b is not None:
             if a.degree <= b.degree:
-                tail.sibling = a; a = a.sibling
+                tail.sibling = a
+                a = a.sibling
             else:
-                tail.sibling = b; b = b.sibling
+                tail.sibling = b
+                b = b.sibling
             tail = tail.sibling
         tail.sibling = a if a is not None else b
         return head
@@ -95,15 +98,17 @@ class BinomialHeap:
         z.child = y
         z.degree += 1
 
-    def _union(self, a: Optional[_BinNode], b: Optional[_BinNode]) -> Optional[_BinNode]:
+    def _union(self, a: _BinNode | None, b: _BinNode | None) -> _BinNode | None:
         head = self._merge_roots(a, b)
         if head is None:
             return None
-        prev: Optional[_BinNode] = None
+        prev: _BinNode | None = None
         curr: _BinNode = head
         nxt = curr.sibling
         while nxt is not None:
-            if curr.degree != nxt.degree or (nxt.sibling is not None and nxt.sibling.degree == curr.degree):
+            if curr.degree != nxt.degree or (
+                nxt.sibling is not None and nxt.sibling.degree == curr.degree
+            ):
                 prev = curr
                 curr = nxt
             elif curr.key <= nxt.key:
@@ -163,8 +168,8 @@ class BinomialHeap:
                 raise BinomialHeapError("heap is empty")
             # locate the min root and its predecessor in the root list
             minr = self._head
-            minprev: Optional[_BinNode] = None
-            prev: Optional[_BinNode] = None
+            minprev: _BinNode | None = None
+            prev: _BinNode | None = None
             node = self._head
             while node is not None:
                 if node.key < minr.key:
@@ -179,7 +184,7 @@ class BinomialHeap:
                 minprev.sibling = minr.sibling
             # reverse minr's children into their own root list
             child = minr.child
-            newh: Optional[_BinNode] = None
+            newh: _BinNode | None = None
             while child is not None:
                 nxt = child.sibling
                 child.sibling = newh
@@ -217,7 +222,7 @@ class BinomialHeap:
                 parent = cur.parent
 
     # ── merge two instances (id()-ordered locking) ───────────────────────────────────────
-    def merge(self, other: "BinomialHeap") -> None:
+    def merge(self, other: BinomialHeap) -> None:
         """Meld all elements of ``other`` into this heap; ``other`` is left empty."""
         if not isinstance(other, BinomialHeap):
             raise BinomialHeapError("can only merge with another BinomialHeap")
@@ -227,7 +232,7 @@ class BinomialHeap:
         with first._lock:
             with second._lock:
                 self._head = self._union(self._head, other._head)
-                self._handles.update(other._handles)      # handles are process-unique → no clash
+                self._handles.update(other._handles)  # handles are process-unique → no clash
                 self._size += other._size
                 other._head = None
                 other._handles = {}
@@ -260,5 +265,8 @@ class BinomialHeap:
             while node is not None:
                 num_trees += 1
                 node = node.sibling
-            return {"size": self._size, "num_trees": num_trees,
-                    "min": None if self._head is None else self._min_root().key}
+            return {
+                "size": self._size,
+                "num_trees": num_trees,
+                "min": None if self._head is None else self._min_root().key,
+            }

@@ -56,8 +56,9 @@ def register_momentsketch_routes(app: Any, sketch: Any | None = None) -> Any:
     async def api_ms_merge(request: Request) -> JSONResponse:
         body = await request.json()
         if not isinstance(body, dict) or not isinstance(body.get("moments"), list):
-            return JSONResponse({"error": "serialized state with 'moments' list is required"},
-                                status_code=422)
+            return JSONResponse(
+                {"error": "serialized state with 'moments' list is required"}, status_code=422
+            )
         try:
             sketch.merge_state(body)
         except MomentSketchError as exc:

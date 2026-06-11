@@ -29,12 +29,13 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 #: At num_bits=64, two fingerprints within this Hamming distance are near-duplicates.
 NEAR_DUPLICATE_HAMMING = 3
 
-_MAX_BITS = 512   # BLAKE2b yields at most 64 bytes (512 bits) per digest
+_MAX_BITS = 512  # BLAKE2b yields at most 64 bytes (512 bits) per digest
 
 
 class SimHashError(Exception):
@@ -64,7 +65,7 @@ class SimHash:
         self._num_bits = num_bits
         self._seed = seed
         self._nbytes = (num_bits + 7) // 8
-        self._docs: dict[str, int] = {}     # document name -> fingerprint (num_bits int)
+        self._docs: dict[str, int] = {}  # document name -> fingerprint (num_bits int)
         self._total = 0
         self._lock = threading.Lock()
 
@@ -85,8 +86,8 @@ class SimHash:
                     votes[i] -= 1
         fp = 0
         for i in range(self._num_bits):
-            if votes[i] > 0:                # threshold at zero (ties → 0 bit)
-                fp |= (1 << i)
+            if votes[i] > 0:  # threshold at zero (ties → 0 bit)
+                fp |= 1 << i
         return fp
 
     def _hamming_locked(self, a: str, b: str) -> int | None:
@@ -137,8 +138,9 @@ class SimHash:
             dist = self._hamming_locked(str(doc_a), str(doc_b))
             return None if dist is None else 1 - dist / self._num_bits
 
-    def near_duplicate(self, doc_a: Any, doc_b: Any,
-                       threshold: int = NEAR_DUPLICATE_HAMMING) -> bool | None:
+    def near_duplicate(
+        self, doc_a: Any, doc_b: Any, threshold: int = NEAR_DUPLICATE_HAMMING
+    ) -> bool | None:
         """Whether two documents are within ``threshold`` Hamming bits (``None`` if unknown)."""
         with self._lock:
             dist = self._hamming_locked(str(doc_a), str(doc_b))

@@ -65,8 +65,9 @@ def register_tinylfu_routes(app: Any, tiny_lfu: Any | None = None) -> Any:
         if not isinstance(body, dict):
             body = {}
         try:
-            tiny_lfu.reset(body.get("sample_size"), body.get("width"),
-                           body.get("depth"), body.get("seed"))
+            tiny_lfu.reset(
+                body.get("sample_size"), body.get("width"), body.get("depth"), body.get("seed")
+            )
         except TinyLFUError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
         return JSONResponse(tiny_lfu.stats())

@@ -41,7 +41,12 @@ def register_pr_quadtree_routes(app: Any, pr_quadtree: Any | None = None) -> Any
     @app.post("/api/v1/prquadtree/insert")
     async def api_qt_insert(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or "point_id" not in body or "x" not in body or "y" not in body:
+        if (
+            not isinstance(body, dict)
+            or "point_id" not in body
+            or "x" not in body
+            or "y" not in body
+        ):
             return JSONResponse({"error": "point_id, x and y are required"}, status_code=422)
         try:
             qt.insert(body["point_id"], body["x"], body["y"])
@@ -55,8 +60,9 @@ def register_pr_quadtree_routes(app: Any, pr_quadtree: Any | None = None) -> Any
         if not isinstance(body, dict) or "point_id" not in body:
             return JSONResponse({"error": "point_id is required"}, status_code=422)
         deleted = qt.delete(body["point_id"])
-        return JSONResponse({"point_id": body["point_id"], "deleted": deleted,
-                             "num_points": qt.num_points})
+        return JSONResponse(
+            {"point_id": body["point_id"], "deleted": deleted, "num_points": qt.num_points}
+        )
 
     @app.get("/api/v1/prquadtree/search")
     async def api_qt_search(x: float = Query(...), y: float = Query(...)) -> JSONResponse:
@@ -67,8 +73,12 @@ def register_pr_quadtree_routes(app: Any, pr_quadtree: Any | None = None) -> Any
         return JSONResponse({"x": x, "y": y, "point_id": pid})
 
     @app.get("/api/v1/prquadtree/range_query")
-    async def api_qt_range(x_min: float = Query(...), y_min: float = Query(...),
-                           x_max: float = Query(...), y_max: float = Query(...)) -> JSONResponse:
+    async def api_qt_range(
+        x_min: float = Query(...),
+        y_min: float = Query(...),
+        x_max: float = Query(...),
+        y_max: float = Query(...),
+    ) -> JSONResponse:
         try:
             ids = qt.range_query(x_min, y_min, x_max, y_max)
         except PRQuadtreeError as exc:

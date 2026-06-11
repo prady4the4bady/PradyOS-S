@@ -36,7 +36,7 @@ class SystemSnapshot:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "SystemSnapshot":
+    def from_dict(cls, d: dict[str, Any]) -> SystemSnapshot:
         return cls(
             ts=float(d.get("ts", time.time())),
             campaigns_active=int(d.get("campaigns_active", 0)),
@@ -116,7 +116,9 @@ class SnapshotStore:
             return 0
         with self._lock:
             try:
-                lines = [l for l in self._path.read_text(encoding="utf-8").splitlines() if l.strip()]
+                lines = [
+                    l for l in self._path.read_text(encoding="utf-8").splitlines() if l.strip()
+                ]
             except OSError:
                 return 0
 

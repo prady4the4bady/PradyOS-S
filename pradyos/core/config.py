@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +65,7 @@ def _read_toml_section(toml_path: Path, section: str) -> dict[str, Any]:
         return {}
     try:
         import tomllib  # Python 3.11+
+
         with toml_path.open("rb") as f:
             data = tomllib.load(f)
         return dict(data.get(section, {}))
@@ -72,6 +73,7 @@ def _read_toml_section(toml_path: Path, section: str) -> dict[str, Any]:
         # Python < 3.11 — try tomli (optional dep)
         try:
             import tomli  # type: ignore[import]
+
             with toml_path.open("rb") as f:
                 data = tomli.load(f)
             return dict(data.get(section, {}))
@@ -94,19 +96,19 @@ def _coerce(value: str, target_type: type) -> Any:
 
 
 _ENV_MAP: dict[str, str] = {
-    "PRADYOS_ORACLE_URL":            "oracle_url",
-    "PRADYOS_TITAN_HOST":            "titan_host",
-    "PRADYOS_TITAN_PORT":            "titan_port",
-    "PRADYOS_STATE_PATH":            "state_dir",
-    "PRADYOS_LOG_LEVEL":             "log_level",
-    "PRADYOS_MAX_CAMPAIGN_WORKERS":  "max_campaign_workers",
-    "PRADYOS_RETRY_MAX_ATTEMPTS":    "retry_max_attempts",
+    "PRADYOS_ORACLE_URL": "oracle_url",
+    "PRADYOS_TITAN_HOST": "titan_host",
+    "PRADYOS_TITAN_PORT": "titan_port",
+    "PRADYOS_STATE_PATH": "state_dir",
+    "PRADYOS_LOG_LEVEL": "log_level",
+    "PRADYOS_MAX_CAMPAIGN_WORKERS": "max_campaign_workers",
+    "PRADYOS_RETRY_MAX_ATTEMPTS": "retry_max_attempts",
     # Also honour SOVEREIGN_RETRY_MAX (Phase 6 spec)
-    "SOVEREIGN_RETRY_MAX":           "retry_max_attempts",
+    "SOVEREIGN_RETRY_MAX": "retry_max_attempts",
 }
 
 
-def load_config(toml_path: Path | None = None) -> "SovereignConfig":
+def load_config(toml_path: Path | None = None) -> SovereignConfig:
     """Build a SovereignConfig from env → TOML → defaults (in priority order).
 
     Also resets and returns the global singleton.
@@ -118,7 +120,7 @@ def load_config(toml_path: Path | None = None) -> "SovereignConfig":
 
     # Layer 1: TOML overrides
     toml_data = _read_toml_section(toml_path, "sovereign")
-    field_types = {f.name: f.type for f in cfg.__dataclass_fields__.values()}  # type: ignore[union-attr]
+    field_types = {f.name: f.type for f in cfg.__dataclass_fields__.values()}  # type: ignore[union-attr]  # noqa: F841
 
     for key, raw_val in toml_data.items():
         if hasattr(cfg, key):
@@ -174,7 +176,6 @@ def _build_config_unlocked(toml_path: Path | None = None) -> SovereignConfig:
             except (ValueError, TypeError):
                 pass
     return cfg
-
 
 
 def get_config() -> SovereignConfig:

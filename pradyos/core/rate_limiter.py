@@ -3,12 +3,13 @@
 Phase 23A: Thread-safe, per-(client_id, endpoint) sliding window counter.
 No external dependencies — stdlib only.
 """
+
 from __future__ import annotations
 
 import threading
 import time as _time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass
@@ -20,7 +21,7 @@ class RateLimitResult:
     endpoint: str
     limit: int
     window_secs: float
-    current: int           # requests recorded in current window
+    current: int  # requests recorded in current window
     retry_after: float | None  # seconds until oldest expires; None if allowed
 
     def to_dict(self) -> dict:

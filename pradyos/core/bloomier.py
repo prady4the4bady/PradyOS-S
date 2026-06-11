@@ -127,7 +127,7 @@ class BloomierFilter:
         order = sorted(range(n), key=lambda i: u64s[i])
         sorted_u64 = [u64s[i] for i in order]
         value_table = [values[i] for i in order]
-        value_bits = (n - 1).bit_length()          # bits to index 0..n-1 (0 when n == 1)
+        value_bits = (n - 1).bit_length()  # bits to index 0..n-1 (0 when n == 1)
 
         m = math.ceil(1.23 * n / 3)
         segment = max(1, m) + 4
@@ -149,14 +149,15 @@ class BloomierFilter:
             seed = (seed + 1) & _MASK64
         raise BloomierError("build failed: cycle detected")
 
-    def _try_build(self, u64s: list[int], seed: int, segment: int, total: int,
-                   value_bits: int) -> list[int] | None:
+    def _try_build(
+        self, u64s: list[int], seed: int, segment: int, total: int, value_bits: int
+    ) -> list[int] | None:
         """One peeling + back-substitution attempt; return the array or ``None`` on stall."""
         n = len(u64s)
         slots = []
         for j, u in enumerate(u64s):
             h0, h1, h2, f = self._slots(u, seed, segment)
-            payload = (f << value_bits) | j           # encode fingerprint + value index
+            payload = (f << value_bits) | j  # encode fingerprint + value index
             slots.append((h0, h1 + segment, h2 + 2 * segment, payload))
 
         count = [0] * total

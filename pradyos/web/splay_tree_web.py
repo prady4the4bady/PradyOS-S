@@ -45,8 +45,9 @@ def register_splaytree_routes(app: Any, splay_tree: Any | None = None) -> Any:
             splay_tree.insert(body["key"], body.get("value"))
         except SplayTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"key": body["key"], "size": len(splay_tree),
-                             "root_key": splay_tree.root_key})
+        return JSONResponse(
+            {"key": body["key"], "size": len(splay_tree), "root_key": splay_tree.root_key}
+        )
 
     @app.post("/api/v1/splaytree/find")
     async def api_st_find(request: Request) -> JSONResponse:
@@ -58,9 +59,14 @@ def register_splaytree_routes(app: Any, splay_tree: Any | None = None) -> Any:
         except SplayTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
         found = value is not _MISS
-        return JSONResponse({"key": body["key"], "found": found,
-                             "value": None if not found else value,
-                             "root_key": splay_tree.root_key})
+        return JSONResponse(
+            {
+                "key": body["key"],
+                "found": found,
+                "value": None if not found else value,
+                "root_key": splay_tree.root_key,
+            }
+        )
 
     @app.delete("/api/v1/splaytree/delete")
     async def api_st_delete(request: Request) -> JSONResponse:

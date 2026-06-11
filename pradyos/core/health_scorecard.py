@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
 class ComponentScore:
     name: str
-    score: float        # 0.0–100.0
-    weight: float       # relative weight (not normalised)
-    details: dict       # arbitrary key-value context
+    score: float  # 0.0–100.0
+    weight: float  # relative weight (not normalised)
+    details: dict  # arbitrary key-value context
 
     def to_dict(self) -> dict:
         return {
@@ -25,10 +25,10 @@ class ComponentScore:
 
 @dataclass
 class HealthReport:
-    score: float        # 0.0–100.0 composite weighted average
-    grade: str          # "A" ≥90, "B" ≥75, "C" ≥60, "D" ≥40, "F" <40
-    components: list    # list[ComponentScore]
-    timestamp: float    # time.time()
+    score: float  # 0.0–100.0 composite weighted average
+    grade: str  # "A" ≥90, "B" ≥75, "C" ≥60, "D" ≥40, "F" <40
+    components: list  # list[ComponentScore]
+    timestamp: float  # time.time()
 
     def to_dict(self) -> dict:
         return {
@@ -95,9 +95,7 @@ class HealthScorecard:
     def get_report(self) -> HealthReport:
         """Compute weighted-average composite score across updated components."""
         with self._lock:
-            updated = {
-                n: v for n, v in self._components.items() if v["score"] is not None
-            }
+            updated = {n: v for n, v in self._components.items() if v["score"] is not None}
 
         if not updated:
             return HealthReport(
@@ -111,9 +109,7 @@ class HealthScorecard:
         if total_weight == 0:
             composite = 100.0
         else:
-            composite = sum(
-                v["score"] * v["weight"] for v in updated.values()
-            ) / total_weight
+            composite = sum(v["score"] * v["weight"] for v in updated.values()) / total_weight
 
         composite = max(0.0, min(100.0, composite))
         grade = _compute_grade(composite)

@@ -3,6 +3,7 @@
 Time-travel state reconstructor that replays the audit ledger up to any
 requested timestamp, returning a deterministic snapshot of reconstructed state.
 """
+
 from __future__ import annotations
 
 import threading
@@ -137,9 +138,7 @@ class AuditReplayEngine:
         ts = timestamp if timestamp is not None else time.time()
         entry = ReplayEntry(timestamp=ts, event_type=event_type, payload=payload)
         with self._lock:
-            self._internal.append(
-                {"timestamp": ts, "event_type": event_type, "payload": payload}
-            )
+            self._internal.append({"timestamp": ts, "event_type": event_type, "payload": payload})
         return entry
 
     def clear(self) -> None:

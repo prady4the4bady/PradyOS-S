@@ -44,8 +44,9 @@ def register_ahocorasick_routes(app: Any, aho_corasick: Any | None = None) -> An
             added = aho_corasick.add(body["pattern"])
         except AhoCorasickError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"pattern": body["pattern"], "added": added,
-                             "num_patterns": aho_corasick.num_patterns})
+        return JSONResponse(
+            {"pattern": body["pattern"], "added": added, "num_patterns": aho_corasick.num_patterns}
+        )
 
     @app.post("/api/v1/ahocorasick/add_many")
     async def api_ac_add_many(request: Request) -> JSONResponse:
@@ -67,8 +68,9 @@ def register_ahocorasick_routes(app: Any, aho_corasick: Any | None = None) -> An
             matches = aho_corasick.search(body["text"])
         except AhoCorasickError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"text": body["text"],
-                             "matches": [list(m) for m in matches], "count": len(matches)})
+        return JSONResponse(
+            {"text": body["text"], "matches": [list(m) for m in matches], "count": len(matches)}
+        )
 
     @app.get("/api/v1/ahocorasick/stats")
     async def api_ac_stats() -> JSONResponse:

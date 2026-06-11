@@ -43,7 +43,9 @@ def register_hyperminhash_routes(app: Any, hyper_minhash: Any | None = None) -> 
         if not isinstance(body, dict) or "element" not in body:
             return JSONResponse({"error": "element is required"}, status_code=422)
         hyper_minhash.add(body["element"])
-        return JSONResponse({"element": body["element"], "cardinality": hyper_minhash.cardinality()})
+        return JSONResponse(
+            {"element": body["element"], "cardinality": hyper_minhash.cardinality()}
+        )
 
     @app.get("/api/v1/hyperminhash/cardinality")
     async def api_hmh_cardinality() -> JSONResponse:
@@ -56,11 +58,13 @@ def register_hyperminhash_routes(app: Any, hyper_minhash: Any | None = None) -> 
             return JSONResponse({"error": "tokens list is required"}, status_code=422)
         other = HyperMinHash(p=hyper_minhash.p, r=hyper_minhash.r, seed=hyper_minhash.seed)
         other.add_many(body["tokens"])
-        return JSONResponse({
-            "jaccard": hyper_minhash.jaccard(other),
-            "union": hyper_minhash.union_cardinality(other),
-            "intersection": hyper_minhash.intersection_cardinality(other),
-        })
+        return JSONResponse(
+            {
+                "jaccard": hyper_minhash.jaccard(other),
+                "union": hyper_minhash.union_cardinality(other),
+                "intersection": hyper_minhash.intersection_cardinality(other),
+            }
+        )
 
     @app.get("/api/v1/hyperminhash/stats")
     async def api_hmh_stats() -> JSONResponse:

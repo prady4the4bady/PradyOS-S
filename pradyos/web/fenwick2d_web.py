@@ -57,8 +57,12 @@ def register_fenwick2d_routes(app: Any, fenwick2d: Any | None = None) -> Any:
         return JSONResponse({"i": i, "j": j, "sum": s})
 
     @app.get("/api/v1/fenwick2d/range_sum")
-    async def api_f2_range(r1: int = Query(..., ge=0), c1: int = Query(..., ge=0),
-                           r2: int = Query(..., ge=0), c2: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_f2_range(
+        r1: int = Query(..., ge=0),
+        c1: int = Query(..., ge=0),
+        r2: int = Query(..., ge=0),
+        c2: int = Query(..., ge=0),
+    ) -> JSONResponse:
         try:
             s = fenwick2d.range_sum(r1, c1, r2, c2)
         except Fenwick2DError as exc:

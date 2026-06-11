@@ -19,7 +19,8 @@ from __future__ import annotations
 import threading
 import time
 from collections import OrderedDict
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class CacheMissError(Exception):
@@ -38,7 +39,7 @@ class SovereignLRUCache:
             raise ValueError("capacity must be a positive integer")
         self._capacity = capacity
         self._now_fn = time_fn or time.monotonic
-        self._data: "OrderedDict[str, list]" = OrderedDict()   # key -> [value, expiry|None]
+        self._data: OrderedDict[str, list] = OrderedDict()  # key -> [value, expiry|None]
         self._hits = 0
         self._misses = 0
         self._evictions = 0
@@ -57,7 +58,7 @@ class SovereignLRUCache:
 
     def _evict_to_capacity(self) -> None:
         while len(self._data) > self._capacity:
-            self._data.popitem(last=False)   # drop least-recently-used
+            self._data.popitem(last=False)  # drop least-recently-used
             self._evictions += 1
 
     # ── mutation ──────────────────────────────────────────────────────────────
@@ -65,7 +66,9 @@ class SovereignLRUCache:
         """Insert or update ``key`` (most-recent); optional ``ttl`` seconds."""
         if not isinstance(key, str) or key == "":
             raise ValueError("key must be a non-empty string")
-        if ttl is not None and (not isinstance(ttl, (int, float)) or isinstance(ttl, bool) or ttl <= 0):
+        if ttl is not None and (
+            not isinstance(ttl, int | float) or isinstance(ttl, bool) or ttl <= 0
+        ):
             raise ValueError("ttl must be a positive number or None")
         with self._lock:
             expiry = (self._now_fn() + ttl) if ttl is not None else None

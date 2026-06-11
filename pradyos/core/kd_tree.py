@@ -23,7 +23,8 @@ distances (no `sqrt`), so it is exact. Pure stdlib; thread-safe via a single
 from __future__ import annotations
 
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 
 class KDTreeError(Exception):
@@ -40,8 +41,8 @@ class _Node:
     def __init__(self, point: tuple, axis: int) -> None:
         self.point = point
         self.axis = axis
-        self.left: "_Node | None" = None
-        self.right: "_Node | None" = None
+        self.left: _Node | None = None
+        self.right: _Node | None = None
 
 
 def _is_pos_int(x: Any) -> bool:
@@ -49,7 +50,7 @@ def _is_pos_int(x: Any) -> bool:
 
 
 def _num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class KDTree:
@@ -84,7 +85,7 @@ class KDTree:
         self._size = len(pts)
         self._root = self._make(pts, 0)
 
-    def _make(self, pts: list, depth: int) -> "_Node | None":
+    def _make(self, pts: list, depth: int) -> _Node | None:
         if not pts:
             return None
         axis = depth % self._dim
@@ -92,7 +93,7 @@ class KDTree:
         mid = len(pts) // 2
         node = _Node(pts[mid], axis)
         node.left = self._make(pts[:mid], depth + 1)
-        node.right = self._make(pts[mid + 1:], depth + 1)
+        node.right = self._make(pts[mid + 1 :], depth + 1)
         return node
 
     def _build(self, points: Iterable[Any]) -> None:
@@ -112,11 +113,11 @@ class KDTree:
         """Return the stored point nearest to ``point`` (Euclidean), or ``None`` if empty."""
         q = self._coerce_point(point, "query point")
         with self._lock:
-            best = [None, float("inf")]          # [point, dist²]
+            best = [None, float("inf")]  # [point, dist²]
             self._nn(self._root, q, best)
             return best[0]
 
-    def _nn(self, node: "_Node | None", q: tuple, best: list) -> None:
+    def _nn(self, node: _Node | None, q: tuple, best: list) -> None:
         if node is None:
             return
         d2 = self._dist2(q, node.point)
@@ -126,7 +127,7 @@ class KDTree:
         diff = q[axis] - node.point[axis]
         near, far = (node.left, node.right) if diff < 0 else (node.right, node.left)
         self._nn(near, q, best)
-        if diff * diff < best[1]:                # the plane is closer than the best → far may help
+        if diff * diff < best[1]:  # the plane is closer than the best → far may help
             self._nn(far, q, best)
 
     def nearest_dist(self, point: Any) -> float | None:
@@ -151,16 +152,16 @@ class KDTree:
             out.sort()
             return out
 
-    def _range(self, node: "_Node | None", lo: tuple, hi: tuple, out: list) -> None:
+    def _range(self, node: _Node | None, lo: tuple, hi: tuple, out: list) -> None:
         if node is None:
             return
         p = node.point
         if all(lo[i] <= p[i] <= hi[i] for i in range(self._dim)):
             out.append(p)
         axis = node.axis
-        if lo[axis] <= p[axis]:                  # left holds coords ≤ p[axis]
+        if lo[axis] <= p[axis]:  # left holds coords ≤ p[axis]
             self._range(node.left, lo, hi, out)
-        if hi[axis] >= p[axis]:                   # right holds coords ≥ p[axis]
+        if hi[axis] >= p[axis]:  # right holds coords ≥ p[axis]
             self._range(node.right, lo, hi, out)
 
     def reset(self) -> None:

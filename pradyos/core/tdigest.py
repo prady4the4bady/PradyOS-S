@@ -19,7 +19,7 @@ import threading
 
 
 def _is_number(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class TDigest:
@@ -32,7 +32,7 @@ class TDigest:
             raise ValueError("compression must be positive")
         self._max_centroids = int(max_centroids)
         self._compression = float(compression)
-        self._centroids: list[list[float]] = []   # [mean, weight], sorted after compress
+        self._centroids: list[list[float]] = []  # [mean, weight], sorted after compress
         self._total = 0.0
         self._min: float | None = None
         self._max: float | None = None
@@ -93,7 +93,7 @@ class TDigest:
             self._max = None
             self._dirty = False
 
-    def merge(self, other: "TDigest") -> "TDigest":
+    def merge(self, other: TDigest) -> TDigest:
         """Return a NEW digest pooling ``self`` and ``other`` (order-independent)."""
         if not isinstance(other, TDigest):
             raise ValueError("can only merge another TDigest")

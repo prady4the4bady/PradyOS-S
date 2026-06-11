@@ -34,7 +34,7 @@ class CartesianTreeError(Exception):
 
 
 def _num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _is_int(x: Any) -> bool:
@@ -65,7 +65,7 @@ class CartesianTree:
         stack: list = []
         for i in range(n):
             last = -1
-            while stack and vals[stack[-1]] > vals[i]:   # strict ⇒ leftmost min on ties
+            while stack and vals[stack[-1]] > vals[i]:  # strict ⇒ leftmost min on ties
                 last = stack.pop()
             left[i] = last
             if last != -1:
@@ -158,8 +158,12 @@ class CartesianTree:
     def structure(self) -> dict:
         """The tree shape: ``root`` and the ``parent`` / ``left`` / ``right`` arrays (-1 = none)."""
         with self._lock:
-            return {"root": self._root, "parent": list(self._parent),
-                    "left": list(self._left), "right": list(self._right)}
+            return {
+                "root": self._root,
+                "parent": list(self._parent),
+                "left": list(self._left),
+                "right": list(self._right),
+            }
 
     def reset(self) -> None:
         """Empty the tree."""

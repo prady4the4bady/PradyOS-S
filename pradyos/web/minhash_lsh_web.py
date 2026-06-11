@@ -39,8 +39,11 @@ def register_minhashlsh_routes(app: Any, minhash_lsh: Any | None = None) -> Any:
     @app.post("/api/v1/minhashlsh/insert")
     async def api_lsh_insert(request: Request) -> JSONResponse:
         body = await request.json()
-        if (not isinstance(body, dict) or "id" not in body
-                or not isinstance(body.get("tokens"), list)):
+        if (
+            not isinstance(body, dict)
+            or "id" not in body
+            or not isinstance(body.get("tokens"), list)
+        ):
             return JSONResponse({"error": "id and tokens list are required"}, status_code=422)
         minhash_lsh.insert(body["id"], body["tokens"])
         return JSONResponse({"id": body["id"], "num_items": len(minhash_lsh)})

@@ -21,9 +21,8 @@ root-to-leaf path (that `O(log n)` height). Pure stdlib; thread-safe via a singl
 from __future__ import annotations
 
 import random
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class ImplicitTreapError(Exception):
@@ -39,7 +38,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _ITNode:
@@ -50,15 +49,15 @@ class _ITNode:
         self.priority = priority
         self.size = 1
         self.sum = value
-        self.left: Optional[_ITNode] = None
-        self.right: Optional[_ITNode] = None
+        self.left: _ITNode | None = None
+        self.right: _ITNode | None = None
 
 
-def _size(node: Optional[_ITNode]) -> int:
+def _size(node: _ITNode | None) -> int:
     return node.size if node is not None else 0
 
 
-def _sum(node: Optional[_ITNode]) -> float:
+def _sum(node: _ITNode | None) -> float:
     return node.sum if node is not None else 0
 
 
@@ -74,11 +73,11 @@ class ImplicitTreap:
         if not _is_int(seed):
             raise ImplicitTreapError("seed must be an int")
         self._lock = threading.Lock()
-        self._root: Optional[_ITNode] = None
+        self._root: _ITNode | None = None
         self._rng = random.Random(seed)
 
     # ── split / merge primitives ──────────────────────────────────────────────────────────
-    def _split(self, node: Optional[_ITNode], k: int) -> tuple:
+    def _split(self, node: _ITNode | None, k: int) -> tuple:
         """Split ``node`` so the left result holds the first ``k`` elements."""
         if node is None:
             return None, None
@@ -91,7 +90,7 @@ class ImplicitTreap:
         _update(node)
         return node, right
 
-    def _merge(self, a: Optional[_ITNode], b: Optional[_ITNode]) -> Optional[_ITNode]:
+    def _merge(self, a: _ITNode | None, b: _ITNode | None) -> _ITNode | None:
         """Merge two treaps where every element of ``a`` precedes every element of ``b``."""
         if a is None:
             return b

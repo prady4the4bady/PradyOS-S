@@ -3,10 +3,11 @@
 A self-describing runtime registry of all PradyOS module capabilities.
 Thread-safe. Stdlib only.
 """
+
 from __future__ import annotations
 
-import time
 import threading
+import time
 from dataclasses import dataclass
 
 
@@ -18,7 +19,7 @@ class Capability:
     version: str
     provided_apis: list
     consumed_apis: list
-    status: str          # "active" | "inactive" | "degraded"
+    status: str  # "active" | "inactive" | "degraded"
     registered_at: float
     metadata: dict
 

@@ -24,10 +24,10 @@ single ``threading.Lock``; static (built once from the bit array, then queried).
 from __future__ import annotations
 
 import threading
-from typing import Any, Iterable
+from typing import Any
 
-_W = 64                  # bits per word
-_S = 8                   # words per superblock (512 bits)
+_W = 64  # bits per word
+_S = 8  # words per superblock (512 bits)
 
 
 class RankSelectError(Exception):
@@ -77,11 +77,11 @@ class RankSelect:
         words = [0] * nwords
         for i, b in enumerate(arr):
             if b:
-                words[i >> 6] |= 1 << (i & 63)            # bit i at position (i mod 64), LSB-first
+                words[i >> 6] |= 1 << (i & 63)  # bit i at position (i mod 64), LSB-first
 
         nsb = (nwords + _S - 1) // _S
-        superblock_cum = [0] * (nsb + 1)                  # set bits before each superblock
-        block_rel = [0] * nwords                          # set bits before this word within its superblock
+        superblock_cum = [0] * (nsb + 1)  # set bits before each superblock
+        block_rel = [0] * nwords  # set bits before this word within its superblock
         total = 0
         for sb in range(nsb):
             superblock_cum[sb] = total
@@ -120,8 +120,11 @@ class RankSelect:
             return self._count1
         w = i >> 6
         off = i & 63
-        return (self._superblock_cum[w // _S] + self._block_rel[w]
-                + (self._words[w] & ((1 << off) - 1)).bit_count())
+        return (
+            self._superblock_cum[w // _S]
+            + self._block_rel[w]
+            + (self._words[w] & ((1 << off) - 1)).bit_count()
+        )
 
     def rank1(self, i: int) -> int:
         """Number of set bits in ``bits[0..i)`` (``i`` in ``[0, n]``)."""
@@ -150,7 +153,7 @@ class RankSelect:
             if not (1 <= k <= self._count1):
                 raise RankSelectError(f"k must be in [1, {self._count1}]")
             lo, hi = 0, self._n - 1
-            while lo < hi:                                # smallest p with rank1(p+1) >= k
+            while lo < hi:  # smallest p with rank1(p+1) >= k
                 mid = (lo + hi) >> 1
                 if self._rank1_locked(mid + 1) >= k:
                     hi = mid
@@ -167,7 +170,7 @@ class RankSelect:
             if not (1 <= k <= count0):
                 raise RankSelectError(f"k must be in [1, {count0}]")
             lo, hi = 0, self._n - 1
-            while lo < hi:                                # smallest p with rank0(p+1) >= k
+            while lo < hi:  # smallest p with rank0(p+1) >= k
                 mid = (lo + hi) >> 1
                 if (mid + 1) - self._rank1_locked(mid + 1) >= k:
                     hi = mid

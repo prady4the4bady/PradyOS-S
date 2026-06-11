@@ -21,9 +21,8 @@ sorted-`low` inserts. Pure stdlib; thread-safe via a single ``threading.Lock``; 
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 _NEG_INF = float("-inf")
 
@@ -42,16 +41,16 @@ class _Node:
     def __init__(self, low: Any, high: Any) -> None:
         self.low = low
         self.high = high
-        self.max = high                 # max high endpoint in this subtree
-        self.left: "_Node | None" = None
-        self.right: "_Node | None" = None
+        self.max = high  # max high endpoint in this subtree
+        self.left: _Node | None = None
+        self.right: _Node | None = None
 
 
 def _num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
-def _submax(node: "_Node | None") -> float:
+def _submax(node: _Node | None) -> float:
     return node.max if node is not None else _NEG_INF
 
 
@@ -107,7 +106,7 @@ class IntervalTree:
                         break
                     cur = cur.right
             self._size += 1
-            for node in reversed(path):          # bottom-up max fixup
+            for node in reversed(path):  # bottom-up max fixup
                 _recompute(node)
 
     def remove(self, low: Any, high: Any) -> bool:
@@ -148,7 +147,7 @@ class IntervalTree:
                     else:
                         parent.right = child
             self._size -= 1
-            for node in reversed(path):          # bottom-up max fixup
+            for node in reversed(path):  # bottom-up max fixup
                 _recompute(node)
             return True
 
@@ -194,11 +193,11 @@ class IntervalTree:
             stack = [self._root]
             while stack:
                 node = stack.pop()
-                if node is None or node.max < low:   # prune: no high in subtree reaches `low`
+                if node is None or node.max < low:  # prune: no high in subtree reaches `low`
                     continue
                 if node.left is not None:
                     stack.append(node.left)
-                if node.low <= high:                 # right lows ≥ node.low; skip if node.low > high
+                if node.low <= high:  # right lows ≥ node.low; skip if node.low > high
                     if self._overlaps(node, low, high):
                         out.append((node.low, node.high))
                     if node.right is not None:

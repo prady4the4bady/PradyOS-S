@@ -47,7 +47,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class DDSketch:
@@ -57,10 +57,10 @@ class DDSketch:
         if not _is_number(alpha) or not (0.0 < alpha < 1.0):
             raise DDSketchError(alpha)
         self._alpha = float(alpha)
-        self._seed = seed                         # accepted for parity; deterministic → unused
+        self._seed = seed  # accepted for parity; deterministic → unused
         self._gamma = (1.0 + self._alpha) / (1.0 - self._alpha)
         self._log_gamma = math.log(self._gamma)
-        self._buckets: dict[int, int] = {}        # bucket index -> count
+        self._buckets: dict[int, int] = {}  # bucket index -> count
         self._n = 0
         self._min: float | None = None
         self._max: float | None = None
@@ -71,7 +71,7 @@ class DDSketch:
         return math.ceil(math.log(value) / self._log_gamma)
 
     def _value_of(self, index: int) -> float:
-        return 2.0 * self._gamma ** index / (self._gamma + 1.0)
+        return 2.0 * self._gamma**index / (self._gamma + 1.0)
 
     # ── mutation ─────────────────────────────────────────────────────────────────
     def _update_locked(self, value: float, count: int) -> None:
@@ -90,7 +90,7 @@ class DDSketch:
         with self._lock:
             self._update_locked(float(value), count)
 
-    def merge(self, other: "DDSketch") -> None:
+    def merge(self, other: DDSketch) -> None:
         """Fold ``other`` (same ``α``) into this sketch — an exact union of bucket counts."""
         if not isinstance(other, DDSketch):
             raise DDSketchError(other)

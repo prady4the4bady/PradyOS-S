@@ -73,13 +73,14 @@ class AugmentedSketch:
 
     def _init_state(self) -> None:
         self._counter = [[0] * self._width for _ in range(self._depth)]
-        self._exact: dict[Any, int] = {}             # augmentation layer (≤ k items)
+        self._exact: dict[Any, int] = {}  # augmentation layer (≤ k items)
         self._total = 0
 
     # ── hashing (pure) ────────────────────────────────────────────────────────────
     def _cell(self, row: int, item: Any) -> tuple[int, int]:
-        digest = hashlib.blake2b(repr((self._seed, row, item)).encode("utf-8"),
-                                 digest_size=16).digest()
+        digest = hashlib.blake2b(
+            repr((self._seed, row, item)).encode("utf-8"), digest_size=16
+        ).digest()
         bucket = int.from_bytes(digest[:8], "big") % self._width
         sign = 1 if (int.from_bytes(digest[8:], "big") & 1) else -1
         return bucket, sign
@@ -110,16 +111,16 @@ class AugmentedSketch:
             raise AugmentedSketchError(delta)
         with self._lock:
             self._total += delta
-            if item in self._exact:                  # already tracked → exact increment
+            if item in self._exact:  # already tracked → exact increment
                 self._exact[item] += delta
                 return self._exact[item]
             self._add_to_sketch(item, delta)
             est = self._sketch_estimate(item)
-            if len(self._exact) < self._k:           # room → promote
+            if len(self._exact) < self._k:  # room → promote
                 self._exact[item] = est
             else:
                 weakest = min(self._exact, key=self._exact.get)
-                if est > self._exact[weakest]:       # beats the k-th largest → swap in
+                if est > self._exact[weakest]:  # beats the k-th largest → swap in
                     del self._exact[weakest]
                     self._exact[item] = est
             return self._exact.get(item, est)
@@ -144,8 +145,13 @@ class AugmentedSketch:
             n = self._k
         return items[:n]
 
-    def reset(self, width: int | None = None, depth: int | None = None,
-              k: int | None = None, seed: int | None = None) -> None:
+    def reset(
+        self,
+        width: int | None = None,
+        depth: int | None = None,
+        k: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear the sketch array and the augmentation dict; optionally reconfigure."""
         with self._lock:
             nw = self._width if width is None else width

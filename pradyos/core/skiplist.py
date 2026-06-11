@@ -40,7 +40,7 @@ class SkipList:
         self._max_level = int(max_level)
         self._p = float(p)
         self._head = _Node(None, None, self._max_level)  # sentinel; forward[0.._max_level-1]
-        self._level = 0          # highest level index currently in use
+        self._level = 0  # highest level index currently in use
         self._size = 0
         self._rng = random.Random(seed)
         self._lock = threading.Lock()

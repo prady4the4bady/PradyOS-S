@@ -3,10 +3,10 @@
 A Prometheus-compatible plain-text metrics collector.
 Thread-safe via threading.Lock.  Zero external dependencies (stdlib only).
 """
+
 from __future__ import annotations
 
 import threading
-from typing import Dict
 
 
 class MetricsRegistry:
@@ -25,7 +25,7 @@ class MetricsRegistry:
 
     def __init__(self) -> None:
         self._lock: threading.Lock = threading.Lock()
-        self._counters: Dict[str, float] = {name: 0.0 for name in self._PRE_REGISTERED}
+        self._counters: dict[str, float] = {name: 0.0 for name in self._PRE_REGISTERED}
 
     # ------------------------------------------------------------------
     # Mutation helpers
@@ -55,7 +55,7 @@ class MetricsRegistry:
         with self._lock:
             return self._counters.get(name, 0.0)
 
-    def get_all(self) -> Dict[str, float]:
+    def get_all(self) -> dict[str, float]:
         """Return a shallow copy of all counters."""
         with self._lock:
             return dict(self._counters)

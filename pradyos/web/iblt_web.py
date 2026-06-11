@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.iblt import InvertibleBloomLookupTable, IBLTError
+from pradyos.core.iblt import IBLTError, InvertibleBloomLookupTable
 
 
 def register_iblt_routes(app: Any, iblt: Any | None = None) -> Any:
@@ -66,16 +66,18 @@ def register_iblt_routes(app: Any, iblt: Any | None = None) -> Any:
             entries = iblt.list_entries()
         except IBLTError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=400)
-        return JSONResponse({"entries": [{"key": k, "value": v} for k, v in entries],
-                            "count": len(entries)})
+        return JSONResponse(
+            {"entries": [{"key": k, "value": v} for k, v in entries], "count": len(entries)}
+        )
 
     @app.post("/api/v1/iblt/reconcile")
     async def api_iblt_reconcile(request: Request) -> JSONResponse:
         body = await request.json()
         if not isinstance(body, dict) or not isinstance(body.get("pairs"), list):
             return JSONResponse({"error": "pairs list is required"}, status_code=422)
-        other = InvertibleBloomLookupTable(num_cells=iblt.num_cells,
-                                           num_hashes=iblt.num_hashes, seed=iblt.seed)
+        other = InvertibleBloomLookupTable(
+            num_cells=iblt.num_cells, num_hashes=iblt.num_hashes, seed=iblt.seed
+        )
         for pair in body["pairs"]:
             if not isinstance(pair, list) or len(pair) != 2:
                 return JSONResponse({"error": "each pair must be [key, value]"}, status_code=422)
@@ -84,10 +86,12 @@ def register_iblt_routes(app: Any, iblt: Any | None = None) -> Any:
             only_here, only_other = iblt.subtract(other).decode_difference()
         except IBLTError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=400)
-        return JSONResponse({
-            "only_here": [{"key": k, "value": v} for k, v in only_here],
-            "only_other": [{"key": k, "value": v} for k, v in only_other],
-        })
+        return JSONResponse(
+            {
+                "only_here": [{"key": k, "value": v} for k, v in only_here],
+                "only_other": [{"key": k, "value": v} for k, v in only_other],
+            }
+        )
 
     @app.get("/api/v1/iblt/stats")
     async def api_iblt_stats() -> JSONResponse:

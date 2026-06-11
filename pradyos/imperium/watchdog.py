@@ -51,9 +51,7 @@ class KernelWatchdog:
         check_interval_s: float = 30.0,
     ) -> None:
         self.kernel = kernel
-        self.max_stuck_s: float = float(
-            os.environ.get("WATCHDOG_MAX_STUCK_S", max_stuck_s)
-        )
+        self.max_stuck_s: float = float(os.environ.get("WATCHDOG_MAX_STUCK_S", max_stuck_s))
         self.check_interval_s: float = float(
             os.environ.get("WATCHDOG_CHECK_INTERVAL_S", check_interval_s)
         )

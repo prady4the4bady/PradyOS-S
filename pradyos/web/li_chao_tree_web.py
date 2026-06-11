@@ -51,7 +51,8 @@ def register_lichao_routes(app: Any, li_chao_tree: Any | None = None) -> Any:
         body = await request.json()
         lines = body.get("lines") if isinstance(body, dict) else None
         if not isinstance(lines, list) or not all(
-                isinstance(p, (list, tuple)) and len(p) == 2 for p in lines):
+            isinstance(p, list | tuple) and len(p) == 2 for p in lines
+        ):
             return JSONResponse({"error": "lines must be a list of [m, b] pairs"}, status_code=422)
         try:
             for m, b in lines:

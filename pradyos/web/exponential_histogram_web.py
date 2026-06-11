@@ -43,14 +43,16 @@ def register_exponential_histogram_routes(app: Any, histogram: Any | None = None
         histogram = ExponentialHistogram(DEFAULT_WINDOW)
 
     @app.post("/api/v1/window/update")
-    async def api_window_update(value: int = Query(default=1, ge=1),
-                                timestamp: int | None = Query(default=None, ge=0)) -> JSONResponse:
+    async def api_window_update(
+        value: int = Query(default=1, ge=1), timestamp: int | None = Query(default=None, ge=0)
+    ) -> JSONResponse:
         try:
             histogram.update(value, timestamp)
         except ExponentialHistogramError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"now": histogram.now, "count": histogram.count(),
-                             "num_buckets": histogram.num_buckets})
+        return JSONResponse(
+            {"now": histogram.now, "count": histogram.count(), "num_buckets": histogram.num_buckets}
+        )
 
     @app.get("/api/v1/window/count")
     async def api_window_count() -> JSONResponse:
@@ -65,8 +67,10 @@ def register_exponential_histogram_routes(app: Any, histogram: Any | None = None
         return JSONResponse(histogram.stats())
 
     @app.post("/api/v1/window/reset")
-    async def api_window_reset(window: int | None = Query(default=None, gt=0),
-                               epsilon: float | None = Query(default=None, gt=0.0, le=1.0)) -> JSONResponse:
+    async def api_window_reset(
+        window: int | None = Query(default=None, gt=0),
+        epsilon: float | None = Query(default=None, gt=0.0, le=1.0),
+    ) -> JSONResponse:
         try:
             histogram.reset(window, epsilon)
         except ExponentialHistogramError as exc:

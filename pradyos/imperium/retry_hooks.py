@@ -19,13 +19,13 @@ import asyncio
 import functools
 import logging
 import os
-import time
 import threading
-from dataclasses import dataclass
+import time
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
-from pradyos.imperium.retry import RetryPolicy, retryable
+from pradyos.imperium.retry import RetryPolicy
 
 log = logging.getLogger("pradyos.imperium.retry_hooks")
 
@@ -41,10 +41,11 @@ __all__ = [
 # Circuit breaker
 # ---------------------------------------------------------------------------
 
+
 class CircuitState(str, Enum):
-    CLOSED  = "closed"   # normal — calls pass through
-    OPEN    = "open"     # tripped — calls fail immediately
-    HALF    = "half"     # probing — one call let through to test recovery
+    CLOSED = "closed"  # normal — calls pass through
+    OPEN = "open"  # tripped — calls fail immediately
+    HALF = "half"  # probing — one call let through to test recovery
 
 
 class CircuitOpenError(RuntimeError):
@@ -145,7 +146,7 @@ class CircuitBreaker:
             return result
         except CircuitOpenError:
             raise
-        except Exception as exc:
+        except Exception:
             self._on_failure()
             raise
 
@@ -162,21 +163,25 @@ class CircuitBreaker:
             return result
         except CircuitOpenError:
             raise
-        except Exception as exc:
+        except Exception:
             self._on_failure()
             raise
 
     def protect(self, fn: Callable) -> Callable:
         """Decorator — wraps sync or async callable."""
         if asyncio.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def _async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return await self.call_async(fn, *args, **kwargs)
+
             return _async_wrapper
         else:
+
             @functools.wraps(fn)
             def _sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 return self.call(fn, *args, **kwargs)
+
             return _sync_wrapper
 
     # ------------------------------------------------------------------
@@ -191,7 +196,8 @@ class CircuitBreaker:
                 self._state = CircuitState.HALF
                 log.info(
                     "CircuitBreaker '%s': OPEN→HALF after %.1fs",
-                    self._name, elapsed,
+                    self._name,
+                    elapsed,
                 )
 
     def _on_success(self) -> None:
@@ -210,18 +216,14 @@ class CircuitBreaker:
                 # Probe failed — reopen immediately
                 self._state = CircuitState.OPEN
                 self._opened_at = time.time()
-                log.warning(
-                    "CircuitBreaker '%s': HALF→OPEN (probe failed)", self._name
-                )
-            elif (
-                self._state == CircuitState.CLOSED
-                and self._consecutive_failures >= threshold
-            ):
+                log.warning("CircuitBreaker '%s': HALF→OPEN (probe failed)", self._name)
+            elif self._state == CircuitState.CLOSED and self._consecutive_failures >= threshold:
                 self._state = CircuitState.OPEN
                 self._opened_at = time.time()
                 log.warning(
                     "CircuitBreaker '%s': CLOSED→OPEN after %d consecutive failures",
-                    self._name, self._consecutive_failures,
+                    self._name,
+                    self._consecutive_failures,
                 )
 
     def reset(self) -> None:
@@ -251,8 +253,8 @@ class CircuitBreaker:
 # ---------------------------------------------------------------------------
 
 # Default circuit breakers (one per subsystem)
-_oracle_cb  = CircuitBreaker(threshold=5, reset_after_sec=60.0, name="oracle")
-_titan_cb   = CircuitBreaker(threshold=5, reset_after_sec=60.0, name="titan")
+_oracle_cb = CircuitBreaker(threshold=5, reset_after_sec=60.0, name="oracle")
+_titan_cb = CircuitBreaker(threshold=5, reset_after_sec=60.0, name="titan")
 _campaign_cb = CircuitBreaker(threshold=5, reset_after_sec=60.0, name="campaign")
 
 
@@ -290,6 +292,7 @@ def apply_retry_policies(
 # Per-subsystem wrappers
 # ---------------------------------------------------------------------------
 
+
 def _apply_oracle_retry(client: Any) -> None:
     policy = RetryPolicy(max_attempts=3, base_delay_s=1.0, jitter=False)
     original = getattr(client, "plan", None)
@@ -298,7 +301,7 @@ def _apply_oracle_retry(client: Any) -> None:
 
     @functools.wraps(original)
     async def _plan_with_retry(*args: Any, **kwargs: Any) -> Any:
-        attempt = [0]
+        attempt = [0]  # noqa: F841
 
         async def _once() -> Any:
             return await original(*args, **kwargs)

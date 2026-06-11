@@ -11,9 +11,9 @@ Public surface:
     InMemoryCitadel   — lightweight stub for testing (no ChromaDB required)
 """
 
-from pradyos.memory_citadel.schema import MemoryRecord, MemoryOutcome
-from pradyos.memory_citadel.store import CitadelStore, get_citadel
 from pradyos.memory_citadel.inmem import InMemoryCitadel
+from pradyos.memory_citadel.schema import MemoryOutcome, MemoryRecord
+from pradyos.memory_citadel.store import CitadelStore, get_citadel
 
 __all__ = [
     "MemoryRecord",

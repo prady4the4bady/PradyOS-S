@@ -18,9 +18,8 @@ degenerate (sorted-insert) character-BST cannot overflow. Pure stdlib; thread-sa
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class TernarySearchTreeError(Exception):
@@ -36,9 +35,9 @@ class _TSTNode:
 
     def __init__(self, ch: str) -> None:
         self.ch = ch
-        self.lo: Optional[_TSTNode] = None
-        self.eq: Optional[_TSTNode] = None
-        self.hi: Optional[_TSTNode] = None
+        self.lo: _TSTNode | None = None
+        self.eq: _TSTNode | None = None
+        self.hi: _TSTNode | None = None
         self.is_end = False
 
 
@@ -47,7 +46,7 @@ class TernarySearchTree:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._root: Optional[_TSTNode] = None
+        self._root: _TSTNode | None = None
         self._size = 0
 
     @staticmethod
@@ -89,7 +88,7 @@ class TernarySearchTree:
                     node = node.eq
 
     # ── contains / delete ─────────────────────────────────────────────────────────────────
-    def _find(self, key: str) -> Optional[_TSTNode]:
+    def _find(self, key: str) -> _TSTNode | None:
         node = self._root
         i = 0
         while node is not None:
@@ -129,7 +128,7 @@ class TernarySearchTree:
 
     # ── prefix queries ─────────────────────────────────────────────────────────────────────
     @staticmethod
-    def _collect(start: Optional[_TSTNode], prefix: str) -> list:
+    def _collect(start: _TSTNode | None, prefix: str) -> list:
         out = []
         if start is None:
             return out
@@ -146,7 +145,7 @@ class TernarySearchTree:
                 out.append(pre + node.ch)
         return out
 
-    def _find_prefix_node(self, prefix: str) -> Optional[_TSTNode]:
+    def _find_prefix_node(self, prefix: str) -> _TSTNode | None:
         node = self._root
         i = 0
         while node is not None:
@@ -177,7 +176,7 @@ class TernarySearchTree:
             out.extend(self._collect(p.eq, prefix))
             return sorted(out)
 
-    def longest_prefix_of(self, query: str) -> Optional[str]:
+    def longest_prefix_of(self, query: str) -> str | None:
         """The longest key that is a prefix of ``query`` (``None`` if no key is a prefix)."""
         self._check_key(query, allow_empty=True)
         with self._lock:

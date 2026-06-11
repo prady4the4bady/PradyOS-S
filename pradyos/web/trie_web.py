@@ -46,22 +46,28 @@ def register_trie_routes(app: Any, trie: Any | None = None) -> Any:
         try:
             value = trie.search(key)
         except KeyNotFoundError:
-            return JSONResponse({"key": key, "found": False, "error": "key not found"}, status_code=404)
+            return JSONResponse(
+                {"key": key, "found": False, "error": "key not found"}, status_code=404
+            )
         return JSONResponse({"key": key, "value": value, "found": True})
 
     @app.delete("/api/v1/trie/{key}")
     async def api_trie_delete(key: str) -> JSONResponse:
         if not trie.delete(key):
-            return JSONResponse({"key": key, "deleted": False, "error": "key not found"}, status_code=404)
+            return JSONResponse(
+                {"key": key, "deleted": False, "error": "key not found"}, status_code=404
+            )
         return JSONResponse({"key": key, "deleted": True, "size": len(trie)})
 
     @app.get("/api/v1/trie/prefix/{prefix}")
     async def api_trie_prefix(prefix: str) -> JSONResponse:
         matches = trie.starts_with(prefix)
-        return JSONResponse({
-            "prefix": prefix,
-            "matches": [[k, v] for k, v in matches],
-            "count": len(matches),
-        })
+        return JSONResponse(
+            {
+                "prefix": prefix,
+                "matches": [[k, v] for k, v in matches],
+                "count": len(matches),
+            }
+        )
 
     return trie

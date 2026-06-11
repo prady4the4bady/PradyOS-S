@@ -17,13 +17,13 @@ from pradyos.imperium.task import ImperiumTask
 
 
 class CampaignStatus(str, Enum):
-    PENDING = "pending"       # created, not started
-    PLANNING = "planning"     # ORACLE is generating the plan
-    RUNNING = "running"       # nodes are executing
-    SUCCEEDED = "succeeded"   # all nodes completed successfully
-    FAILED = "failed"         # one or more nodes failed (rollbacks triggered)
+    PENDING = "pending"  # created, not started
+    PLANNING = "planning"  # ORACLE is generating the plan
+    RUNNING = "running"  # nodes are executing
+    SUCCEEDED = "succeeded"  # all nodes completed successfully
+    FAILED = "failed"  # one or more nodes failed (rollbacks triggered)
     ROLLED_BACK = "rolled_back"  # rollback completed
-    PAUSED = "paused"         # waiting for Sovereign approval
+    PAUSED = "paused"  # waiting for Sovereign approval
     CANCELLED = "cancelled"
 
     @property
@@ -39,12 +39,12 @@ class CampaignStatus(str, Enum):
 class NodeStatus(str, Enum):
     PENDING = "pending"
     PLANNING = "planning"
-    READY = "ready"           # plan produced, waiting for deps
+    READY = "ready"  # plan produced, waiting for deps
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     ROLLED_BACK = "rolled_back"
-    SKIPPED = "skipped"       # skipped because upstream failed
+    SKIPPED = "skipped"  # skipped because upstream failed
     AWAITING_APPROVAL = "awaiting_approval"
 
     @property
@@ -102,9 +102,7 @@ class CampaignNode:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "CampaignNode":
-        from pradyos.core.types import Priority
-
+    def from_dict(cls, d: dict[str, Any]) -> CampaignNode:
         task = ImperiumTask(
             kind=d.get("task_kind", "shell"),
             intent=d.get("task_intent", ""),
@@ -162,9 +160,7 @@ class Campaign:
     def get_ready_nodes(self) -> list[CampaignNode]:
         """Return nodes whose dependencies are all SUCCEEDED and are themselves READY/PENDING."""
         ready: list[CampaignNode] = []
-        succeeded = {
-            nid for nid, n in self.nodes.items() if n.status == NodeStatus.SUCCEEDED
-        }
+        succeeded = {nid for nid, n in self.nodes.items() if n.status == NodeStatus.SUCCEEDED}
         for node in self.nodes.values():
             if node.status not in (NodeStatus.PENDING, NodeStatus.READY):
                 continue
@@ -204,16 +200,13 @@ class Campaign:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Campaign":
+    def from_dict(cls, d: dict[str, Any]) -> Campaign:
         try:
             status = CampaignStatus(d.get("status", "pending"))
         except ValueError:
             status = CampaignStatus.PENDING
 
-        nodes = {
-            nid: CampaignNode.from_dict(nd)
-            for nid, nd in d.get("nodes", {}).items()
-        }
+        nodes = {nid: CampaignNode.from_dict(nd) for nid, nd in d.get("nodes", {}).items()}
         return cls(
             name=d.get("name", "unnamed"),
             intent=d.get("intent", ""),

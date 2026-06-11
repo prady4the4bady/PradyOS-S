@@ -25,9 +25,8 @@ deterministic.
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 _MISS = object()
 
@@ -44,8 +43,8 @@ class _Node:
     __slots__ = ("label", "children", "is_key", "value")
 
     def __init__(self, label: str, is_key: bool = False, value: Any = None) -> None:
-        self.label = label                      # the edge substring from this node's parent
-        self.children: dict[str, _Node] = {}    # first-char of edge → child node
+        self.label = label  # the edge substring from this node's parent
+        self.children: dict[str, _Node] = {}  # first-char of edge → child node
         self.is_key = is_key
         self.value = value
 
@@ -64,7 +63,7 @@ class RadixTree:
     def __init__(self, seed: int = 0) -> None:
         if not isinstance(seed, int) or isinstance(seed, bool):
             raise RadixTreeError("seed must be an int")
-        self._seed = seed                       # accepted for API parity; structure is deterministic
+        self._seed = seed  # accepted for API parity; structure is deterministic
         self._lock = threading.Lock()
         self._root = _Node("")
         self._num_keys = 0
@@ -150,7 +149,7 @@ class RadixTree:
         """Remove ``key``; re-merges a single-child node into its parent. Returns presence."""
         self._check_str(key, "key")
         with self._lock:
-            path: list = []                     # (parent, first-char) chain to the target
+            path: list = []  # (parent, first-char) chain to the target
             node = self._root
             i = 0
             while True:
@@ -215,7 +214,7 @@ class RadixTree:
                 if rem.startswith(label):
                     node = child
                     i += len(label)
-                elif label.startswith(rem):     # prefix ends partway along this edge
+                elif label.startswith(rem):  # prefix ends partway along this edge
                     self._collect(child, prefix[:i] + label, out)
                     break
                 else:

@@ -27,7 +27,7 @@ from fastapi.responses import JSONResponse
 
 from pradyos.core.quotient import QuotientError, QuotientFilter
 
-DEFAULT_Q = 10        # 1024 slots — a sensible per-app default
+DEFAULT_Q = 10  # 1024 slots — a sensible per-app default
 
 
 def register_quotient_routes(app: Any, quotient: Any | None = None) -> Any:
@@ -44,16 +44,21 @@ def register_quotient_routes(app: Any, quotient: Any | None = None) -> Any:
         if not isinstance(body, dict) or "item" not in body:
             return JSONResponse({"error": "item is required"}, status_code=422)
         added = quotient.insert(body.get("item"))
-        return JSONResponse({"inserted": added, "count": quotient.count(body.get("item")),
-                             "used": len(quotient)})
+        return JSONResponse(
+            {"inserted": added, "count": quotient.count(body.get("item")), "used": len(quotient)}
+        )
 
     @app.post("/api/v1/quotient/contains")
     async def api_quotient_contains(request: Request) -> JSONResponse:
         body = await request.json()
         if not isinstance(body, dict) or "item" not in body:
             return JSONResponse({"error": "item is required"}, status_code=422)
-        return JSONResponse({"contains": quotient.contains(body.get("item")),
-                             "count": quotient.count(body.get("item"))})
+        return JSONResponse(
+            {
+                "contains": quotient.contains(body.get("item")),
+                "count": quotient.count(body.get("item")),
+            }
+        )
 
     @app.delete("/api/v1/quotient/delete")
     async def api_quotient_delete(request: Request) -> JSONResponse:
@@ -61,8 +66,9 @@ def register_quotient_routes(app: Any, quotient: Any | None = None) -> Any:
         if not isinstance(body, dict) or "item" not in body:
             return JSONResponse({"error": "item is required"}, status_code=422)
         removed = quotient.delete(body.get("item"))
-        return JSONResponse({"deleted": removed, "count": quotient.count(body.get("item")),
-                             "used": len(quotient)})
+        return JSONResponse(
+            {"deleted": removed, "count": quotient.count(body.get("item")), "used": len(quotient)}
+        )
 
     @app.get("/api/v1/quotient/stats")
     async def api_quotient_stats() -> JSONResponse:

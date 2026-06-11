@@ -19,9 +19,8 @@ thread-safe via a single ``threading.Lock``; deterministic; every operation is i
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class Fenwick2DError(Exception):
@@ -41,7 +40,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class Fenwick2D:
@@ -51,7 +50,7 @@ class Fenwick2D:
         self._validate_dims(rows, cols)
         self._rows = rows
         self._cols = cols
-        self._tree = [[0] * (cols + 1) for _ in range(rows + 1)]   # 1-indexed internally
+        self._tree = [[0] * (cols + 1) for _ in range(rows + 1)]  # 1-indexed internally
         self._lock = threading.Lock()
 
     @staticmethod
@@ -110,8 +109,12 @@ class Fenwick2D:
         with self._lock:
             if not (0 <= r1 <= r2 < self._rows and 0 <= c1 <= c2 < self._cols):
                 raise Fenwick2DError("require 0 <= r1 <= r2 < rows and 0 <= c1 <= c2 < cols")
-            return (self._prefix(r2, c2) - self._prefix(r1 - 1, c2)
-                    - self._prefix(r2, c1 - 1) + self._prefix(r1 - 1, c1 - 1))
+            return (
+                self._prefix(r2, c2)
+                - self._prefix(r1 - 1, c2)
+                - self._prefix(r2, c1 - 1)
+                + self._prefix(r1 - 1, c1 - 1)
+            )
 
     def point_value(self, i: int, j: int) -> float:
         """The accumulated value at cell ``(i, j)``."""
@@ -120,8 +123,12 @@ class Fenwick2D:
         with self._lock:
             if not (0 <= i < self._rows and 0 <= j < self._cols):
                 raise Fenwick2DError(f"(i, j) out of range [0,{self._rows}) x [0,{self._cols})")
-            return (self._prefix(i, j) - self._prefix(i - 1, j)
-                    - self._prefix(i, j - 1) + self._prefix(i - 1, j - 1))
+            return (
+                self._prefix(i, j)
+                - self._prefix(i - 1, j)
+                - self._prefix(i, j - 1)
+                + self._prefix(i - 1, j - 1)
+            )
 
     def total(self) -> float:
         """Sum over the whole grid."""
@@ -150,5 +157,9 @@ class Fenwick2D:
     def stats(self) -> dict:
         """Summary: ``rows`` / ``cols`` / ``cells`` / ``total``."""
         with self._lock:
-            return {"rows": self._rows, "cols": self._cols, "cells": self._rows * self._cols,
-                    "total": self._prefix(self._rows - 1, self._cols - 1)}
+            return {
+                "rows": self._rows,
+                "cols": self._cols,
+                "cells": self._rows * self._cols,
+                "total": self._prefix(self._rows - 1, self._cols - 1),
+            }

@@ -26,8 +26,7 @@ from typing import Any
 from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.persistent_segment_tree import (
-    PersistentSegmentTree, PersistentSegmentTreeError)
+from pradyos.core.persistent_segment_tree import PersistentSegmentTree, PersistentSegmentTreeError
 
 
 def register_perseg_routes(app: Any, persistent_segment_tree: Any | None = None) -> Any:
@@ -53,19 +52,30 @@ def register_perseg_routes(app: Any, persistent_segment_tree: Any | None = None)
     @app.post("/api/v1/perseg/update")
     async def api_perseg_update(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or "version" not in body or "i" not in body or "value" not in body:
+        if (
+            not isinstance(body, dict)
+            or "version" not in body
+            or "i" not in body
+            or "value" not in body
+        ):
             return JSONResponse({"error": "version, i and value are required"}, status_code=422)
         try:
             new_version = pst.update(body["version"], body["i"], body["value"])
         except PersistentSegmentTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"version": new_version, "i": body["i"], "value": body["value"],
-                             "num_versions": pst.num_versions})
+        return JSONResponse(
+            {
+                "version": new_version,
+                "i": body["i"],
+                "value": body["value"],
+                "num_versions": pst.num_versions,
+            }
+        )
 
     @app.get("/api/v1/perseg/range_sum")
-    async def api_perseg_range_sum(version: int = Query(..., ge=0),
-                                   lo: int = Query(..., ge=0),
-                                   hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_perseg_range_sum(
+        version: int = Query(..., ge=0), lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             s = pst.range_sum(version, lo, hi)
         except PersistentSegmentTreeError as exc:
@@ -73,7 +83,9 @@ def register_perseg_routes(app: Any, persistent_segment_tree: Any | None = None)
         return JSONResponse({"version": version, "lo": lo, "hi": hi, "sum": s})
 
     @app.get("/api/v1/perseg/point_query")
-    async def api_perseg_point(version: int = Query(..., ge=0), i: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_perseg_point(
+        version: int = Query(..., ge=0), i: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             v = pst.point_query(version, i)
         except PersistentSegmentTreeError as exc:

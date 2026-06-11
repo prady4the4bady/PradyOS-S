@@ -22,10 +22,9 @@ thread-safe via a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
-from collections import deque
-from typing import Any, Optional
-
 import threading
+from collections import deque
+from typing import Any
 
 _NIL = -1
 
@@ -55,7 +54,7 @@ class BinaryLifting:
         self._n = 0
         self._log = 0
         self._depth: list[int] = []
-        self._up: list[list[int]] = []        # up[k][v] = 2^k-th ancestor of v, or _NIL
+        self._up: list[list[int]] = []  # up[k][v] = 2^k-th ancestor of v, or _NIL
 
     # ── build ────────────────────────────────────────────────────────────────────────────
     def build(self, parents: Any) -> None:
@@ -99,7 +98,7 @@ class BinaryLifting:
             if seen != n:
                 raise BinaryLiftingError("parents form a cycle")
             log = max(1, (n - 1).bit_length())
-            up = [[ _NIL] * n for _ in range(log)]
+            up = [[_NIL] * n for _ in range(log)]
             up[0] = list(par)
             for k in range(1, log):
                 upk = up[k]
@@ -140,7 +139,7 @@ class BinaryLifting:
             self._check_node(v)
             return self._depth[v]
 
-    def kth_ancestor(self, v: int, k: int) -> Optional[int]:
+    def kth_ancestor(self, v: int, k: int) -> int | None:
         """The ``k``-th ancestor of ``v`` (``None`` if ``k`` exceeds its depth)."""
         if not _is_int(k) or k < 0:
             raise BinaryLiftingError("k must be a non-negative int")
@@ -149,7 +148,7 @@ class BinaryLifting:
             r = self._kth(v, k)
             return None if r == _NIL else r
 
-    def lca(self, u: int, v: int) -> Optional[int]:
+    def lca(self, u: int, v: int) -> int | None:
         """Lowest common ancestor of ``u`` and ``v`` (``None`` if in different trees)."""
         with self._lock:
             self._check_node(u)
@@ -157,7 +156,7 @@ class BinaryLifting:
             ru = self._kth(u, self._depth[u])
             rv = self._kth(v, self._depth[v])
             if ru != rv:
-                return None                              # different trees
+                return None  # different trees
             if self._depth[u] < self._depth[v]:
                 u, v = v, u
             u = self._kth(u, self._depth[u] - self._depth[v])
@@ -204,5 +203,9 @@ class BinaryLifting:
         with self._lock:
             max_depth = max(self._depth) if self._depth else 0
             num_roots = sum(1 for v in range(self._n) if self._up[0][v] == _NIL) if self._n else 0
-            return {"size": self._n, "levels": self._log,
-                    "max_depth": max_depth, "num_roots": num_roots}
+            return {
+                "size": self._n,
+                "levels": self._log,
+                "max_depth": max_depth,
+                "num_roots": num_roots,
+            }

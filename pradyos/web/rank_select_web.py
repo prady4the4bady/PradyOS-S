@@ -48,7 +48,9 @@ def register_rankselect_routes(app: Any, rank_select: Any | None = None) -> Any:
         return JSONResponse(rank_select.stats())
 
     @app.get("/api/v1/rankselect/rank")
-    async def api_rs_rank(i: int = Query(..., ge=0), bit: int = Query(1, ge=0, le=1)) -> JSONResponse:
+    async def api_rs_rank(
+        i: int = Query(..., ge=0), bit: int = Query(1, ge=0, le=1)
+    ) -> JSONResponse:
         try:
             r = rank_select.rank1(i) if bit == 1 else rank_select.rank0(i)
         except RankSelectError as exc:
@@ -56,7 +58,9 @@ def register_rankselect_routes(app: Any, rank_select: Any | None = None) -> Any:
         return JSONResponse({"i": i, "bit": bit, "rank": r})
 
     @app.get("/api/v1/rankselect/select")
-    async def api_rs_select(k: int = Query(..., ge=1), bit: int = Query(1, ge=0, le=1)) -> JSONResponse:
+    async def api_rs_select(
+        k: int = Query(..., ge=1), bit: int = Query(1, ge=0, le=1)
+    ) -> JSONResponse:
         try:
             pos = rank_select.select1(k) if bit == 1 else rank_select.select0(k)
         except RankSelectError as exc:

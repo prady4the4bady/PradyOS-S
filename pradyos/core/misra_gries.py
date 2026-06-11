@@ -27,8 +27,8 @@ helpers never re-acquire it.
 
 from __future__ import annotations
 
-from typing import Any
 import threading
+from typing import Any
 
 
 class MisraGriesError(Exception):
@@ -48,7 +48,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class MisraGries:
@@ -58,7 +58,7 @@ class MisraGries:
         if not _is_pos_int(k):
             raise MisraGriesError("k must be at least 1")
         self._k = k
-        self._seed = seed                         # accepted for parity; deterministic → unused
+        self._seed = seed  # accepted for parity; deterministic → unused
         self._counters: dict[Any, int] = {}
         self._n = 0
         self._lock = threading.Lock()

@@ -23,7 +23,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.ams_sketch import AMSSketch, AMSError
+from pradyos.core.ams_sketch import AMSError, AMSSketch
 
 
 def register_ams_routes(app: Any, ams: Any | None = None) -> Any:

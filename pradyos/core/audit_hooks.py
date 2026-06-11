@@ -17,7 +17,8 @@ from __future__ import annotations
 import functools
 import logging
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from pradyos.core.audit import AuditCategory, AuditEvent, EventAuditLog
 
@@ -82,7 +83,7 @@ def _emit(
     """
     safe_payload: dict[str, Any] = {}
     for k, v in payload.items():
-        if isinstance(v, (str, int, float, bool, type(None))):
+        if isinstance(v, str | int | float | bool | type(None)):
             safe_payload[k] = v
         else:
             safe_payload[k] = str(v)
@@ -178,7 +179,11 @@ def _wire_imperium(kernel: Any | None, audit_log: EventAuditLog) -> None:
             AuditCategory.SOVEREIGN,
             actor=str(approver),
             action="task_approved",
-            payload={"task_id": task_id, "approved": bool(result), "error": str(exc) if exc else None},
+            payload={
+                "task_id": task_id,
+                "approved": bool(result),
+                "error": str(exc) if exc else None,
+            },
         )
 
     _wrap(kernel, "approve", None, _after_approve)
@@ -201,6 +206,7 @@ def _wire_imperium(kernel: Any | None, audit_log: EventAuditLog) -> None:
     # Hook: _run_record — task state transitions (RUNNING / SUCCEEDED / FAILED)
     original_run = getattr(kernel, "_run_record", None)
     if original_run is not None:
+
         @functools.wraps(original_run)
         def _run_record_hooked(rec: Any) -> None:  # type: ignore[return]
             _emit(
@@ -260,7 +266,6 @@ def _wire_campaign(engine: Any | None, audit_log: EventAuditLog) -> None:
     # Hook: run_campaign (async — we wrap the coroutine factory)
     original_run = getattr(engine, "run_campaign", None)
     if original_run is not None:
-        import asyncio
 
         @functools.wraps(original_run)
         async def _run_campaign_hooked(campaign: Any) -> Any:
@@ -281,8 +286,10 @@ def _wire_campaign(engine: Any | None, audit_log: EventAuditLog) -> None:
                 exc = e
             status = str(getattr(result, "status", getattr(campaign, "status", "?")))
             action = (
-                "campaign_succeeded" if "succeed" in status.lower()
-                else "campaign_failed" if "fail" in status.lower()
+                "campaign_succeeded"
+                if "succeed" in status.lower()
+                else "campaign_failed"
+                if "fail" in status.lower()
                 else "campaign_terminal"
             )
             _emit(
@@ -306,7 +313,6 @@ def _wire_campaign(engine: Any | None, audit_log: EventAuditLog) -> None:
     # Hook: _execute_node (node succeeded / failed)
     original_node = getattr(engine, "_execute_node", None)
     if original_node is not None:
-        import asyncio
 
         @functools.wraps(original_node)
         async def _execute_node_hooked(campaign: Any, node: Any, execution_order: list) -> None:
@@ -317,8 +323,10 @@ def _wire_campaign(engine: Any | None, audit_log: EventAuditLog) -> None:
                 exc = e
             node_status = str(getattr(node, "status", "?"))
             action = (
-                "node_succeeded" if "succeed" in node_status.lower()
-                else "node_failed" if "fail" in node_status.lower()
+                "node_succeeded"
+                if "succeed" in node_status.lower()
+                else "node_failed"
+                if "fail" in node_status.lower()
                 else f"node_{node_status.lower()}"
             )
             _emit(
@@ -400,7 +408,7 @@ def _wire_oracle(planner: Any | None, audit_log: EventAuditLog) -> None:
         except Exception as e:  # noqa: BLE001
             exc = e
 
-        ok = (result is not None and getattr(result, "ok", True) and exc is None)
+        ok = result is not None and getattr(result, "ok", True) and exc is None
         action = "plan_produced" if ok else "plan_errored"
         _emit(
             audit_log,
@@ -410,7 +418,9 @@ def _wire_oracle(planner: Any | None, audit_log: EventAuditLog) -> None:
             payload={
                 "task_id": getattr(task, "task_id", "?"),
                 "intent": getattr(task, "intent", "?"),
-                "requires_approval": getattr(result, "requires_approval", False) if result else False,
+                "requires_approval": getattr(result, "requires_approval", False)
+                if result
+                else False,
                 "step_count": len(getattr(result, "steps", [])) if result else 0,
                 "error": str(exc) if exc else getattr(result, "error", None) if result else None,
                 "ok": ok,

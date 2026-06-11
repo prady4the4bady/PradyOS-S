@@ -15,7 +15,7 @@ cleanly. Pure stdlib; thread-safe via a single non-reentrant ``threading.Lock``.
 from __future__ import annotations
 
 import threading
-from typing import Mapping
+from collections.abc import Mapping
 
 
 class VectorClock:
@@ -39,7 +39,7 @@ class VectorClock:
             self._clock[actor] = self._clock.get(actor, 0) + 1
             return self._clock[actor]
 
-    def merge(self, other: "VectorClock") -> None:
+    def merge(self, other: VectorClock) -> None:
         """Fold ``other`` into this clock via element-wise max (on message receipt)."""
         if not isinstance(other, VectorClock):
             raise ValueError("can only merge another VectorClock")
@@ -70,11 +70,11 @@ class VectorClock:
         with self._lock:
             return dict(self._clock)
 
-    def copy(self) -> "VectorClock":
+    def copy(self) -> VectorClock:
         """An independent copy of this clock."""
         return VectorClock(self.to_dict())
 
-    def compare(self, other: "VectorClock") -> str:
+    def compare(self, other: VectorClock) -> str:
         """Causal relation of this clock to ``other``.
 
         Returns ``"equal"``, ``"before"`` (this happened-before other),

@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import threading
 
-
 _MODES = ("sum", "min", "max")
 
 
@@ -29,7 +28,7 @@ def _is_int(x) -> bool:
 
 
 def _is_number(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class SegmentTree:
@@ -42,7 +41,7 @@ class SegmentTree:
             raise ValueError("mode must be one of 'sum', 'min', 'max'")
         self._n = size
         self._mode = mode
-        self._tree = [0] * (2 * size)   # leaves live in [n, 2n)
+        self._tree = [0] * (2 * size)  # leaves live in [n, 2n)
         self._lock = threading.Lock()
 
     # ── aggregation primitives ───────────────────────────────────────────────
@@ -73,7 +72,7 @@ class SegmentTree:
     def _query_locked(self, lo: int, hi: int):
         res = self._identity
         left = (lo - 1) + self._n
-        right = hi + self._n            # half-open upper bound
+        right = hi + self._n  # half-open upper bound
         while left < right:
             if left & 1:
                 res = self._combine(res, self._tree[left])

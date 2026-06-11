@@ -26,7 +26,8 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 _SENTINEL = object()
 
@@ -52,9 +53,9 @@ class CuckooHashTable:
 
     def __init__(self, capacity: int = 16, seed: int = 0) -> None:
         self._validate(capacity, seed)
-        self._m = capacity                       # slots per table
+        self._m = capacity  # slots per table
         self._seed = seed
-        self._round = 0                          # bumped on every rehash → fresh hashes
+        self._round = 0  # bumped on every rehash → fresh hashes
         self._rehashes = 0
         self._size = 0
         self._t1: list = [None] * capacity
@@ -82,13 +83,28 @@ class CuckooHashTable:
         raise CuckooHashError("key must be str, bytes or int")
 
     def _salt(self, table: int) -> bytes:
-        return repr(self._seed).encode("ascii") + b":" + repr(self._round).encode("ascii") + bytes([table])
+        return (
+            repr(self._seed).encode("ascii")
+            + b":"
+            + repr(self._round).encode("ascii")
+            + bytes([table])
+        )
 
     def _h1(self, key_bytes: bytes) -> int:
-        return int.from_bytes(hashlib.blake2b(self._salt(1) + key_bytes, digest_size=8).digest(), "big") % self._m
+        return (
+            int.from_bytes(
+                hashlib.blake2b(self._salt(1) + key_bytes, digest_size=8).digest(), "big"
+            )
+            % self._m
+        )
 
     def _h2(self, key_bytes: bytes) -> int:
-        return int.from_bytes(hashlib.blake2b(self._salt(2) + key_bytes, digest_size=8).digest(), "big") % self._m
+        return (
+            int.from_bytes(
+                hashlib.blake2b(self._salt(2) + key_bytes, digest_size=8).digest(), "big"
+            )
+            % self._m
+        )
 
     def _max_kicks(self) -> int:
         return max(32, 8 * self._m.bit_length())
@@ -127,7 +143,7 @@ class CuckooHashTable:
             self._t2 = [None] * self._m
             if all(self._seat(k, v, kb) is True for (k, v, kb) in items):
                 return
-            grow = True                          # seed change wasn't enough → grow and retry
+            grow = True  # seed change wasn't enough → grow and retry
 
     def put(self, key: Any, value: Any) -> None:
         """Insert or update ``key → value`` (exact; updates in place if present)."""
@@ -152,7 +168,7 @@ class CuckooHashTable:
         """Insert/update many ``(key, value)`` pairs; returns the count consumed."""
         parsed = []
         for it in items:
-            if not isinstance(it, (list, tuple)) or len(it) != 2:
+            if not isinstance(it, list | tuple) or len(it) != 2:
                 raise CuckooHashError("each item must be a (key, value) pair")
             parsed.append((it[0], it[1]))
         for key, value in parsed:

@@ -20,9 +20,8 @@ deterministic.
 from __future__ import annotations
 
 import math
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class ScapegoatTreeError(Exception):
@@ -34,7 +33,7 @@ class ScapegoatTreeError(Exception):
 
 
 def _orderable(key: Any) -> bool:
-    return isinstance(key, (int, float, str)) and not isinstance(key, bool)
+    return isinstance(key, int | float | str) and not isinstance(key, bool)
 
 
 class _SGNode:
@@ -42,8 +41,8 @@ class _SGNode:
 
     def __init__(self, key: Any) -> None:
         self.key = key
-        self.left: Optional[_SGNode] = None
-        self.right: Optional[_SGNode] = None
+        self.left: _SGNode | None = None
+        self.right: _SGNode | None = None
 
 
 class ScapegoatTree:
@@ -54,12 +53,12 @@ class ScapegoatTree:
             raise ScapegoatTreeError("alpha must be a float in (0.5, 1.0)")
         self._alpha = alpha
         self._lock = threading.Lock()
-        self._root: Optional[_SGNode] = None
+        self._root: _SGNode | None = None
         self._n = 0
         self._max_n = 0
 
     # ── helpers (under the lock) ─────────────────────────────────────────────────────────
-    def _size(self, node: Optional[_SGNode]) -> int:
+    def _size(self, node: _SGNode | None) -> int:
         total = 0
         stack = [node]
         while stack:
@@ -70,7 +69,7 @@ class ScapegoatTree:
                 stack.append(nd.right)
         return total
 
-    def _flatten(self, node: Optional[_SGNode]) -> list:
+    def _flatten(self, node: _SGNode | None) -> list:
         out = []
         stack = []
         cur = node
@@ -81,15 +80,15 @@ class ScapegoatTree:
             cur = stack.pop()
             out.append(cur)
             cur = cur.right
-        return out                                  # in-order list of nodes
+        return out  # in-order list of nodes
 
-    def _build_balanced(self, nodes: list) -> Optional[_SGNode]:
+    def _build_balanced(self, nodes: list) -> _SGNode | None:
         if not nodes:
             return None
         mid = len(nodes) // 2
         root = nodes[mid]
         root.left = self._build_balanced(nodes[:mid])
-        root.right = self._build_balanced(nodes[mid + 1:])
+        root.right = self._build_balanced(nodes[mid + 1 :])
         return root
 
     def _rebuild(self, node: _SGNode) -> _SGNode:
@@ -187,7 +186,7 @@ class ScapegoatTree:
                 succ = succ.left
             node.key = succ.key
             node = succ
-        child = node.left if node.left is not None else node.right   # ≤1 child
+        child = node.left if node.left is not None else node.right  # ≤1 child
         if parent is None:
             self._root = child
         elif parent.left is node:
@@ -217,7 +216,7 @@ class ScapegoatTree:
                 raise ScapegoatTreeError("keys must be mutually comparable") from exc
             return False
 
-    def minimum(self) -> Optional[Any]:
+    def minimum(self) -> Any | None:
         """Smallest key, or None if empty."""
         with self._lock:
             if self._root is None:
@@ -227,7 +226,7 @@ class ScapegoatTree:
                 node = node.left
             return node.key
 
-    def maximum(self) -> Optional[Any]:
+    def maximum(self) -> Any | None:
         """Largest key, or None if empty."""
         with self._lock:
             if self._root is None:
@@ -247,7 +246,7 @@ class ScapegoatTree:
         with self._lock:
             return self._height_of(self._root)
 
-    def _height_of(self, root: Optional[_SGNode]) -> int:
+    def _height_of(self, root: _SGNode | None) -> int:
         if root is None:
             return 0
         best = 0
@@ -298,5 +297,10 @@ class ScapegoatTree:
                 while node.right is not None:
                     node = node.right
                 mx = node.key
-            return {"size": self._n, "height": self._height_of(self._root),
-                    "alpha": self._alpha, "min": mn, "max": mx}
+            return {
+                "size": self._n,
+                "height": self._height_of(self._root),
+                "alpha": self._alpha,
+                "min": mn,
+                "max": mx,
+            }

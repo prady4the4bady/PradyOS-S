@@ -47,8 +47,9 @@ def register_spectralbloom_routes(app: Any, spectral: Any | None = None) -> Any:
             estimate = spectral.add(str(body["item"]), body.get("count", 1))
         except SpectralBloomError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"item": str(body["item"]), "count": body.get("count", 1),
-                             "estimate": estimate})
+        return JSONResponse(
+            {"item": str(body["item"]), "count": body.get("count", 1), "estimate": estimate}
+        )
 
     @app.get("/api/v1/spectralbloom/query")
     async def api_sb_query(item: str) -> JSONResponse:
@@ -63,8 +64,13 @@ def register_spectralbloom_routes(app: Any, spectral: Any | None = None) -> Any:
             removed = spectral.remove(str(body["item"]), body.get("count", 1))
         except SpectralBloomError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"item": str(body["item"]), "removed": removed,
-                             "estimate": spectral.query(str(body["item"]))})
+        return JSONResponse(
+            {
+                "item": str(body["item"]),
+                "removed": removed,
+                "estimate": spectral.query(str(body["item"])),
+            }
+        )
 
     @app.get("/api/v1/spectralbloom/stats")
     async def api_sb_stats() -> JSONResponse:

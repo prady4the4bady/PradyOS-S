@@ -54,13 +54,20 @@ def register_suffixarray_routes(app: Any, suffix_array: Any | None = None) -> An
             pos = suffix_array.positions(body["pattern"])
         except SuffixArrayError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"pattern": body["pattern"], "contains": len(pos) > 0,
-                             "count": len(pos), "positions": pos})
+        return JSONResponse(
+            {
+                "pattern": body["pattern"],
+                "contains": len(pos) > 0,
+                "count": len(pos),
+                "positions": pos,
+            }
+        )
 
     @app.get("/api/v1/suffixarray/array")
     async def api_sa_array() -> JSONResponse:
-        return JSONResponse({"suffix_array": suffix_array.suffix_array(),
-                             "lcp_array": suffix_array.lcp_array()})
+        return JSONResponse(
+            {"suffix_array": suffix_array.suffix_array(), "lcp_array": suffix_array.lcp_array()}
+        )
 
     @app.get("/api/v1/suffixarray/stats")
     async def api_sa_stats() -> JSONResponse:

@@ -18,9 +18,8 @@ Pure stdlib; thread-safe via a single ``threading.Lock``; deterministic.
 from __future__ import annotations
 
 import heapq
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class PRQuadtreeError(Exception):
@@ -32,7 +31,7 @@ class PRQuadtreeError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _QNode:
@@ -45,8 +44,8 @@ class _QNode:
         self.y1 = y1
         self.depth = depth
         self.leaf = True
-        self.points: dict = {}            # id -> (x, y)  (only when leaf)
-        self.children: Optional[list] = None
+        self.points: dict = {}  # id -> (x, y)  (only when leaf)
+        self.children: list | None = None
 
     def quadrant(self, x: float, y: float) -> int:
         midx = (self.x0 + self.x1) / 2
@@ -75,8 +74,9 @@ class _QNode:
 class PRQuadtree:
     """Point-region quadtree: named points, rectangle range queries, nearest-neighbour."""
 
-    def __init__(self, x_min: float, y_min: float, x_max: float, y_max: float,
-                 max_depth: int = 12) -> None:
+    def __init__(
+        self, x_min: float, y_min: float, x_max: float, y_max: float, max_depth: int = 12
+    ) -> None:
         if not all(_is_num(v) for v in (x_min, y_min, x_max, y_max)):
             raise PRQuadtreeError("bounds must be numbers")
         if not (x_min < x_max and y_min < y_max):
@@ -90,7 +90,7 @@ class PRQuadtree:
         self._max_depth = max_depth
         self._lock = threading.Lock()
         self._root = _QNode(x_min, y_min, x_max, y_max, 0)
-        self._index: dict = {}            # id -> (x, y)
+        self._index: dict = {}  # id -> (x, y)
 
     def _check_point(self, x: Any, y: Any) -> None:
         if not _is_num(x) or not _is_num(y):
@@ -122,7 +122,8 @@ class PRQuadtree:
                     node.leaf = False
                     node.points = {}
                     node.children = [
-                        _QNode(*node.child_bounds(i), node.depth + 1) for i in range(4)]
+                        _QNode(*node.child_bounds(i), node.depth + 1) for i in range(4)
+                    ]
                     for pid, (px, py) in bucket.items():
                         c = node.children[node.quadrant(px, py)]
                         c.points[pid] = (px, py)
@@ -164,7 +165,7 @@ class PRQuadtree:
             return True
 
     # ── exact lookup by coordinate ────────────────────────────────────────────────────────
-    def search(self, x: float, y: float) -> Optional[Any]:
+    def search(self, x: float, y: float) -> Any | None:
         """Return a ``point_id`` located exactly at ``(x, y)``, or None."""
         if not _is_num(x) or not _is_num(y):
             raise PRQuadtreeError("x and y must be numbers")
@@ -202,7 +203,7 @@ class PRQuadtree:
         return out
 
     # ── nearest neighbour (branch-and-bound) ───────────────────────────────────────────────
-    def nearest(self, x: float, y: float) -> Optional[Any]:
+    def nearest(self, x: float, y: float) -> Any | None:
         """Return the id of the point closest to ``(x, y)`` (Euclidean; ties → smallest id)."""
         if not _is_num(x) or not _is_num(y):
             raise PRQuadtreeError("x and y must be numbers")
@@ -258,5 +259,8 @@ class PRQuadtree:
                     max_depth_reached = node.depth
                 if not node.leaf:
                     stack.extend(node.children)
-            return {"num_points": len(self._index), "num_nodes": num_nodes,
-                    "max_depth_reached": max_depth_reached}
+            return {
+                "num_points": len(self._index),
+                "num_nodes": num_nodes,
+                "max_depth_reached": max_depth_reached,
+            }

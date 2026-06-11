@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class CuckooError(Exception):
@@ -54,8 +55,14 @@ def _is_pos_int(x: Any) -> bool:
 class SovereignCuckooFilter:
     """Probabilistic membership filter with deletion (stdlib only)."""
 
-    def __init__(self, capacity: int, bucket_size: int = 4, fingerprint_bits: int = 8,
-                 max_kicks: int = 500, hash_fn: Callable[[Any], int] | None = None) -> None:
+    def __init__(
+        self,
+        capacity: int,
+        bucket_size: int = 4,
+        fingerprint_bits: int = 8,
+        max_kicks: int = 500,
+        hash_fn: Callable[[Any], int] | None = None,
+    ) -> None:
         if not _is_pos_int(capacity):
             raise CuckooError(capacity)
         if not _is_pos_int(bucket_size):
@@ -64,7 +71,7 @@ class SovereignCuckooFilter:
             raise CuckooError(fingerprint_bits)
         if not _is_pos_int(max_kicks):
             raise CuckooError(max_kicks)
-        self._capacity = _next_pow2(capacity)        # bucket count (power of two)
+        self._capacity = _next_pow2(capacity)  # bucket count (power of two)
         self._bucket_size = bucket_size
         self._fp_bits = fingerprint_bits
         self._fp_max = (1 << fingerprint_bits) - 1
@@ -77,7 +84,7 @@ class SovereignCuckooFilter:
     # ── hashing helpers (no lock; pure) ──────────────────────────────────────
     def _fingerprint(self, h: int) -> int:
         fp = h & self._fp_max
-        return fp if fp != 0 else 1            # 0 is reserved for "empty"
+        return fp if fp != 0 else 1  # 0 is reserved for "empty"
 
     def _candidates(self, item: Any) -> tuple[int, int, int]:
         h = self._hash_fn(item)

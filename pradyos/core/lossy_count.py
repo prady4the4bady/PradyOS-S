@@ -44,7 +44,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class LossyCount:
@@ -54,15 +54,15 @@ class LossyCount:
         if not _is_number(epsilon) or not (0.0 < epsilon < 1.0):
             raise LossyCountError(epsilon)
         self._epsilon = float(epsilon)
-        self._seed = seed                         # accepted for parity; deterministic → unused
+        self._seed = seed  # accepted for parity; deterministic → unused
         self._w = math.ceil(1.0 / self._epsilon)  # bucket width
-        self._d: dict[Any, list[int]] = {}        # element -> [freq, delta]
-        self._n = 0                               # total items seen
+        self._d: dict[Any, list[int]] = {}  # element -> [freq, delta]
+        self._n = 0  # total items seen
         self._lock = threading.Lock()
 
     # ── internal (run under the lock; never re-acquire) ──────────────────────────
     def _b_current(self) -> int:
-        return (self._n + self._w - 1) // self._w   # ⌈n / w⌉
+        return (self._n + self._w - 1) // self._w  # ⌈n / w⌉
 
     def _update_locked(self, element: Any, count: int) -> None:
         n_before = self._n

@@ -39,7 +39,7 @@ import random
 import threading
 from typing import Any
 
-_FP_MASK = (1 << 32) - 1        # 32-bit fingerprints → ~2**-32 collision per bucket
+_FP_MASK = (1 << 32) - 1  # 32-bit fingerprints → ~2**-32 collision per bucket
 
 
 class HeavyKeeperError(Exception):
@@ -61,8 +61,9 @@ def _is_int(x: Any) -> bool:
 class HeavyKeeper:
     """Probabilistic top-K heavy-hitter sketch with exponential-decay eviction."""
 
-    def __init__(self, k: int = 10, width: int = 1024, depth: int = 4,
-                 decay: float = 1.08, seed: int = 0) -> None:
+    def __init__(
+        self, k: int = 10, width: int = 1024, depth: int = 4, decay: float = 1.08, seed: int = 0
+    ) -> None:
         self._validate(k, width, depth, decay, seed)
         self._k = k
         self._width = width
@@ -81,16 +82,16 @@ class HeavyKeeper:
             raise HeavyKeeperError(width)
         if not _is_pos_int(depth):
             raise HeavyKeeperError(depth)
-        if isinstance(decay, bool) or not isinstance(decay, (int, float)) or decay <= 1.0:
-            raise HeavyKeeperError(decay)            # decay must be > 1 for a valid decay prob
+        if isinstance(decay, bool) or not isinstance(decay, int | float) or decay <= 1.0:
+            raise HeavyKeeperError(decay)  # decay must be > 1 for a valid decay prob
         if not _is_int(seed):
             raise HeavyKeeperError(seed)
 
     def _init_state(self) -> None:
         self._fp = [[0] * self._width for _ in range(self._depth)]
         self._cnt = [[0] * self._width for _ in range(self._depth)]
-        self._heap: list[list] = []                 # indexed min-heap of [count, item]
-        self._pos: dict[Any, int] = {}              # item -> heap index
+        self._heap: list[list] = []  # indexed min-heap of [count, item]
+        self._pos: dict[Any, int] = {}  # item -> heap index
         self._total = 0
         self._rng = random.Random(self._seed)
 
@@ -139,17 +140,17 @@ class HeavyKeeper:
             i = smallest
 
     def _heap_update(self, item: Any, est: int) -> None:
-        if item in self._pos:                       # already tracked → re-key
+        if item in self._pos:  # already tracked → re-key
             i = self._pos[item]
             self._heap[i][0] = est
             self._sift_up(i)
             self._sift_down(i)
-        elif len(self._heap) < self._k:             # room → insert
+        elif len(self._heap) < self._k:  # room → insert
             self._heap.append([est, item])
             i = len(self._heap) - 1
             self._pos[item] = i
             self._sift_up(i)
-        elif est > self._heap[0][0]:                # beats the weakest → replace min
+        elif est > self._heap[0][0]:  # beats the weakest → replace min
             old = self._heap[0][1]
             del self._pos[old]
             self._heap[0] = [est, item]
@@ -204,15 +205,22 @@ class HeavyKeeper:
     def top_k(self, n: int | None = None) -> list[tuple[Any, int]]:
         """The tracked heavy hitters as ``(item, estimate)`` sorted by estimate descending."""
         with self._lock:
-            items = [(item, self._estimate(item, self._fingerprint(item)))
-                     for _, item in self._heap]
+            items = [
+                (item, self._estimate(item, self._fingerprint(item))) for _, item in self._heap
+            ]
         items.sort(key=lambda kv: (-kv[1], repr(kv[0])))
         if n is None:
             n = self._k
         return items[:n]
 
-    def reset(self, k: int | None = None, width: int | None = None, depth: int | None = None,
-              decay: float | None = None, seed: int | None = None) -> None:
+    def reset(
+        self,
+        k: int | None = None,
+        width: int | None = None,
+        depth: int | None = None,
+        decay: float | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear all buckets and the heap; optionally reconfigure before reallocating."""
         with self._lock:
             nk = self._k if k is None else k

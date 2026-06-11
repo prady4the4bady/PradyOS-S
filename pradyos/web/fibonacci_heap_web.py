@@ -71,8 +71,14 @@ def register_fibonacci_routes(app: Any, fibonacci_heap: Any | None = None) -> An
             fh.decrease_key(body["handle"], body["value"])
         except FibonacciHeapError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"handle": body["handle"], "value": body["value"],
-                             "min": fh.stats()["min"], "size": fh.size})
+        return JSONResponse(
+            {
+                "handle": body["handle"],
+                "value": body["value"],
+                "min": fh.stats()["min"],
+                "size": fh.size,
+            }
+        )
 
     @app.get("/api/v1/fibonacci/stats")
     async def api_fib_stats() -> JSONResponse:

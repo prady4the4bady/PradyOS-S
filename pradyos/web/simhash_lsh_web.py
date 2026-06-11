@@ -40,8 +40,11 @@ def register_simhashlsh_routes(app: Any, simhash_lsh: Any | None = None) -> Any:
     @app.post("/api/v1/simhashlsh/insert")
     async def api_simhash_insert(request: Request) -> JSONResponse:
         body = await request.json()
-        if (not isinstance(body, dict) or "id" not in body
-                or not isinstance(body.get("vector"), list)):
+        if (
+            not isinstance(body, dict)
+            or "id" not in body
+            or not isinstance(body.get("vector"), list)
+        ):
             return JSONResponse({"error": "id and vector list are required"}, status_code=422)
         try:
             simhash_lsh.insert(body["id"], body["vector"])
@@ -82,7 +85,9 @@ def register_simhashlsh_routes(app: Any, simhash_lsh: Any | None = None) -> Any:
         if not isinstance(body, dict):
             body = {}
         try:
-            simhash_lsh.reset(body.get("dim"), body.get("bands"), body.get("rows"), body.get("seed"))
+            simhash_lsh.reset(
+                body.get("dim"), body.get("bands"), body.get("rows"), body.get("seed")
+            )
         except SimHashLSHError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
         return JSONResponse(simhash_lsh.stats())

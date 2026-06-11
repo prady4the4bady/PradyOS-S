@@ -19,9 +19,8 @@ a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class SuffixAutomatonError(Exception):
@@ -47,7 +46,7 @@ class SuffixAutomaton:
         self._link = [-1]
         self._trans: list[dict] = [{}]
         self._last = 0
-        self._length = 0          # number of characters added (length of the text)
+        self._length = 0  # number of characters added (length of the text)
 
     def _new_state(self, length: int, link: int, trans: dict) -> int:
         self._len.append(length)
@@ -140,5 +139,9 @@ class SuffixAutomaton:
             for v in range(1, len(self._len)):
                 distinct += self._len[v] - self._len[self._link[v]]
             transitions = sum(len(t) for t in self._trans)
-            return {"num_states": len(self._len), "length": self._length,
-                    "distinct_substrings": distinct, "transitions": transitions}
+            return {
+                "num_states": len(self._len),
+                "length": self._length,
+                "distinct_substrings": distinct,
+                "transitions": transitions,
+            }

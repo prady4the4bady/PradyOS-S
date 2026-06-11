@@ -14,7 +14,8 @@ from __future__ import annotations
 import os
 import threading
 from collections import defaultdict
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 Subscriber = Callable[[str, dict[str, Any]], None]
 
@@ -63,13 +64,14 @@ def get_bus() -> EventBus:  # type: ignore[return-value]
                 backend = os.environ.get("PRADYOS_BUS_BACKEND", "").lower()
                 if backend == "redis":
                     from pradyos.core.redis_bus import RedisBus  # noqa: PLC0415
+
                     _singleton = RedisBus()  # type: ignore[assignment]
                 else:
                     _singleton = EventBus()
     return _singleton  # type: ignore[return-value]
 
 
-def reset_bus_for_tests() -> "EventBus":
+def reset_bus_for_tests() -> EventBus:
     """Reset the global singleton and return a fresh EventBus.
 
     Called by the ``isolated_bus`` pytest fixture so every test starts

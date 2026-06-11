@@ -27,7 +27,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
-import time
 from typing import Any
 
 from pradyos.core.bus import EventBus, get_bus
@@ -221,9 +220,7 @@ class CampaignTitanBridge:
         try:
             await asyncio.wait_for(done_event.wait(), timeout=self._timeout)
         except asyncio.TimeoutError:
-            log.warning(
-                "Bridge timeout waiting for tasks; remaining=%s", remaining
-            )
+            log.warning("Bridge timeout waiting for tasks; remaining=%s", remaining)
             # Mark timed-out tasks as failed
             for tid in remaining:
                 results[tid] = "failed"

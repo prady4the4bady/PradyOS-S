@@ -21,9 +21,8 @@ deterministic.
 from __future__ import annotations
 
 import bisect
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class RangeTreeError(Exception):
@@ -35,7 +34,7 @@ class RangeTreeError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _RTNode:
@@ -44,10 +43,10 @@ class _RTNode:
     def __init__(self) -> None:
         self.xmin = 0.0
         self.xmax = 0.0
-        self.ys: list = []                  # subtree y-values, ascending
-        self.pts: list = []                 # subtree points (x, y), ordered by y (parallel to ys)
-        self.left: Optional[_RTNode] = None
-        self.right: Optional[_RTNode] = None
+        self.ys: list = []  # subtree y-values, ascending
+        self.pts: list = []  # subtree points (x, y), ordered by y (parallel to ys)
+        self.left: _RTNode | None = None
+        self.right: _RTNode | None = None
 
 
 class RangeTree:
@@ -55,7 +54,7 @@ class RangeTree:
 
     def __init__(self, points: Any = None) -> None:
         self._lock = threading.Lock()
-        self._root: Optional[_RTNode] = None
+        self._root: _RTNode | None = None
         self._size = 0
         if points is not None:
             self.build(points)
@@ -68,9 +67,11 @@ class RangeTree:
         la, lb = len(a), len(b)
         while i < la and j < lb:
             if a[i][1] <= b[j][1]:
-                out.append(a[i]); i += 1
+                out.append(a[i])
+                i += 1
             else:
-                out.append(b[j]); j += 1
+                out.append(b[j])
+                j += 1
         if i < la:
             out.extend(a[i:])
         if j < lb:
@@ -103,7 +104,9 @@ class RangeTree:
             raise RangeTreeError("points must be iterable") from exc
         pts = []
         for p in raw:
-            if not (isinstance(p, (list, tuple)) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])):
+            if not (
+                isinstance(p, list | tuple) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])
+            ):
                 raise RangeTreeError("each point must be a (x, y) pair of numbers")
             pts.append((p[0], p[1]))
         with self._lock:
@@ -132,8 +135,8 @@ class RangeTree:
                 if node is None:
                     continue
                 if node.xmax < x_min or node.xmin > x_max:
-                    continue                                # disjoint in x
-                if x_min <= node.xmin and node.xmax <= x_max:   # canonical: x fully covered
+                    continue  # disjoint in x
+                if x_min <= node.xmin and node.xmax <= x_max:  # canonical: x fully covered
                     lo = bisect.bisect_left(node.ys, y_min)
                     hi = bisect.bisect_right(node.ys, y_max)
                     out.extend(node.pts[lo:hi])
@@ -202,5 +205,9 @@ class RangeTree:
             while node is not None:
                 h += 1
                 node = node.left
-            return {"size": self._size, "height": h,
-                    "x_min": self._root.xmin, "x_max": self._root.xmax}
+            return {
+                "size": self._size,
+                "height": h,
+                "x_min": self._root.xmin,
+                "x_max": self._root.xmax,
+            }

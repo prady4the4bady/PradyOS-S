@@ -23,7 +23,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.scalable_bloom import ScalableBloomFilter, ScalableBloomError
+from pradyos.core.scalable_bloom import ScalableBloomError, ScalableBloomFilter
 
 
 def register_scalablebloom_routes(app: Any, scalable_bloom: Any | None = None) -> Any:
@@ -40,8 +40,9 @@ def register_scalablebloom_routes(app: Any, scalable_bloom: Any | None = None) -
         if not isinstance(body, dict) or "element" not in body:
             return JSONResponse({"error": "element is required"}, status_code=422)
         added = scalable_bloom.add(str(body["element"]))
-        return JSONResponse({"element": str(body["element"]), "added": added,
-                            "count": scalable_bloom.count})
+        return JSONResponse(
+            {"element": str(body["element"]), "added": added, "count": scalable_bloom.count}
+        )
 
     @app.get("/api/v1/scalablebloom/contains")
     async def api_sb_contains(element: str) -> JSONResponse:
@@ -61,8 +62,11 @@ def register_scalablebloom_routes(app: Any, scalable_bloom: Any | None = None) -
             body = {}
         try:
             scalable_bloom.reset(
-                body.get("initial_capacity"), body.get("error_rate"),
-                body.get("ratio"), body.get("growth"), body.get("seed"),
+                body.get("initial_capacity"),
+                body.get("error_rate"),
+                body.get("ratio"),
+                body.get("growth"),
+                body.get("seed"),
             )
         except ScalableBloomError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)

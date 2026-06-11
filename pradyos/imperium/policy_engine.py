@@ -38,10 +38,10 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Sentinel / error type (imported by imperium.py)
 # ---------------------------------------------------------------------------
+
 
 class PolicyViolationError(Exception):
     """Raised by ImperiumKernel when a task is blocked by the PolicyEngine."""
@@ -50,6 +50,7 @@ class PolicyViolationError(Exception):
 # ---------------------------------------------------------------------------
 # Verdict dataclass
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PolicyVerdict:
@@ -63,6 +64,7 @@ class PolicyVerdict:
 # ---------------------------------------------------------------------------
 # PolicyEngine
 # ---------------------------------------------------------------------------
+
 
 class PolicyEngine:
     """Evaluate ImperiumTasks against a loaded ruleset.
@@ -216,10 +218,7 @@ class PolicyEngine:
             if len(timestamps) >= max_per_minute:
                 # Don't record this attempt — it's blocked
                 self._rate_counters[idx] = timestamps
-                return (
-                    f"rate limit exceeded: max {max_per_minute} per "
-                    f"{window_seconds}s window"
-                )
+                return f"rate limit exceeded: max {max_per_minute} per " f"{window_seconds}s window"
             # Record this dispatch
             timestamps.append(now)
             self._rate_counters[idx] = timestamps
@@ -230,6 +229,7 @@ class PolicyEngine:
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
+
 
 def _match(task: Any, match: dict[str, Any]) -> bool:
     """Return True when all key/value pairs in *match* are satisfied by

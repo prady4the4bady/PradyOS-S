@@ -9,7 +9,6 @@ Windows-safe: no fork(), no signals, all stdlib.
 
 from __future__ import annotations
 
-import math
 import threading
 from typing import Any
 
@@ -26,10 +25,10 @@ class Counter:
     """
 
     def __init__(self, name: str, description: str = "") -> None:
-        self.name        = name
+        self.name = name
         self.description = description
-        self._value      = 0.0
-        self._lock       = threading.Lock()
+        self._value = 0.0
+        self._lock = threading.Lock()
 
     def inc(self, amount: float = 1.0) -> None:
         if amount < 0:
@@ -43,8 +42,12 @@ class Counter:
             return self._value
 
     def snapshot(self) -> dict[str, Any]:
-        return {"type": "counter", "name": self.name, "value": self.value,
-                "description": self.description}
+        return {
+            "type": "counter",
+            "name": self.name,
+            "value": self.value,
+            "description": self.description,
+        }
 
 
 class Gauge:
@@ -56,10 +59,10 @@ class Gauge:
     """
 
     def __init__(self, name: str, description: str = "") -> None:
-        self.name        = name
+        self.name = name
         self.description = description
-        self._value      = 0.0
-        self._lock       = threading.Lock()
+        self._value = 0.0
+        self._lock = threading.Lock()
 
     def set(self, value: float) -> None:
         with self._lock:
@@ -75,8 +78,12 @@ class Gauge:
             return self._value
 
     def snapshot(self) -> dict[str, Any]:
-        return {"type": "gauge", "name": self.name, "value": self.value,
-                "description": self.description}
+        return {
+            "type": "gauge",
+            "name": self.name,
+            "value": self.value,
+            "description": self.description,
+        }
 
 
 class Histogram:
@@ -94,21 +101,22 @@ class Histogram:
         description: str = "",
         buckets: list[float] | None = None,
     ) -> None:
-        self.name        = name
+        self.name = name
         self.description = description
         # Default exponential buckets (ms-scale friendly)
-        self._buckets    = sorted(buckets or [0.005, 0.01, 0.025, 0.05, 0.1,
-                                               0.25, 0.5, 1.0, 2.5, 5.0, 10.0])
-        self._counts     = [0] * len(self._buckets)  # le-bucket counts
-        self._inf_count  = 0   # observations > largest bucket
-        self._total      = 0
-        self._sum        = 0.0
-        self._lock       = threading.Lock()
+        self._buckets = sorted(
+            buckets or [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+        )
+        self._counts = [0] * len(self._buckets)  # le-bucket counts
+        self._inf_count = 0  # observations > largest bucket
+        self._total = 0
+        self._sum = 0.0
+        self._lock = threading.Lock()
 
     def observe(self, value: float) -> None:
         with self._lock:
             self._total += 1
-            self._sum   += value
+            self._sum += value
             placed = False
             for i, upper in enumerate(self._buckets):
                 if value <= upper:
@@ -139,17 +147,17 @@ class Histogram:
         with self._lock:
             bucket_data = [
                 {"le": upper, "count": cnt}
-                for upper, cnt in zip(self._buckets, self._counts)
+                for upper, cnt in zip(self._buckets, self._counts, strict=False)
             ]
             bucket_data.append({"le": "+Inf", "count": self._inf_count})
             return {
-                "type":        "histogram",
-                "name":        self.name,
+                "type": "histogram",
+                "name": self.name,
                 "description": self.description,
-                "count":       self._total,
-                "sum":         self._sum,
-                "mean":        (self._sum / self._total) if self._total else None,
-                "buckets":     bucket_data,
+                "count": self._total,
+                "sum": self._sum,
+                "mean": (self._sum / self._total) if self._total else None,
+                "buckets": bucket_data,
             }
 
 

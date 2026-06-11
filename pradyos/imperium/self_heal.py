@@ -33,7 +33,6 @@ from typing import Any
 from pradyos.core.audit import AuditLog, get_audit_log
 from pradyos.core.bus import EventBus, get_bus
 from pradyos.core.snapshot import SnapshotStore
-from pradyos.imperium.exceptions import TaskNotFound
 
 _DEFAULT_STATE_DIR = Path(
     os.environ.get(
@@ -51,7 +50,7 @@ class HealResult:
 
     task_id: str
     action_taken: str
-    rolled_back_to: str | None   # snapshot_id (ts as string) or "none"
+    rolled_back_to: str | None  # snapshot_id (ts as string) or "none"
     quarantined: bool
 
 
@@ -143,12 +142,15 @@ class SelfHealEngine:
 
         # 4. Bus event — WARDEN listens on system.* and raises an incident.
         ts = time.time()
-        self._bus.publish("system.self_heal", {
-            "task_id": task_id,
-            "reason": reason,
-            "snapshot_id": snapshot_id,
-            "ts": ts,
-        })
+        self._bus.publish(
+            "system.self_heal",
+            {
+                "task_id": task_id,
+                "reason": reason,
+                "snapshot_id": snapshot_id,
+                "ts": ts,
+            },
+        )
 
         # 5. Audit entry.
         self._audit.record(

@@ -102,7 +102,7 @@ class Treap:
         if node is None:
             return _Node(key, value, priority)
         if key == node.key:
-            node.value = value                       # update in place; no duplicate
+            node.value = value  # update in place; no duplicate
             return node
         if key < node.key:
             node.left = self._insert(node.left, key, value, priority)
@@ -212,7 +212,7 @@ class Treap:
                 else:
                     i -= left_size + 1
                     node = node.right
-            raise TreapError(index)               # unreachable given the bounds check
+            raise TreapError(index)  # unreachable given the bounds check
 
     def min_key(self) -> Any:
         with self._lock:

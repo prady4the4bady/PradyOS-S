@@ -20,9 +20,8 @@ thread-safe via a single ``threading.Lock``; deterministic; every operation is i
 from __future__ import annotations
 
 import math
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class SqrtDecompositionError(Exception):
@@ -38,7 +37,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class SqrtDecomposition:
@@ -158,7 +157,8 @@ class SqrtDecomposition:
         with self._lock:
             return sum(self._block_sum) + sum(
                 self._tag[b] * (self._block_bounds(b)[1] - self._block_bounds(b)[0] + 1)
-                for b in range(self._nblocks))
+                for b in range(self._nblocks)
+            )
 
     def reset(self) -> None:
         """Empty the structure."""
@@ -186,6 +186,11 @@ class SqrtDecomposition:
         with self._lock:
             total = sum(self._block_sum) + sum(
                 self._tag[b] * (self._block_bounds(b)[1] - self._block_bounds(b)[0] + 1)
-                for b in range(self._nblocks))
-            return {"size": self._n, "block_size": self._bs,
-                    "num_blocks": self._nblocks, "total": total}
+                for b in range(self._nblocks)
+            )
+            return {
+                "size": self._n,
+                "block_size": self._bs,
+                "num_blocks": self._nblocks,
+                "total": total,
+            }

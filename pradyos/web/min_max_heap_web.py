@@ -45,8 +45,14 @@ def register_minmaxheap_routes(app: Any, min_max_heap: Any | None = None) -> Any
             min_max_heap.push(body["value"])
         except MinMaxHeapError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"value": body["value"], "size": len(min_max_heap),
-                             "min": min_max_heap.peek_min(), "max": min_max_heap.peek_max()})
+        return JSONResponse(
+            {
+                "value": body["value"],
+                "size": len(min_max_heap),
+                "min": min_max_heap.peek_min(),
+                "max": min_max_heap.peek_max(),
+            }
+        )
 
     @app.post("/api/v1/minmaxheap/extract_min")
     async def api_mmh_extract_min() -> JSONResponse:
@@ -68,8 +74,13 @@ def register_minmaxheap_routes(app: Any, min_max_heap: Any | None = None) -> Any
     async def api_mmh_peek() -> JSONResponse:
         if min_max_heap.is_empty():
             return JSONResponse({"min": None, "max": None, "size": 0})
-        return JSONResponse({"min": min_max_heap.peek_min(), "max": min_max_heap.peek_max(),
-                             "size": len(min_max_heap)})
+        return JSONResponse(
+            {
+                "min": min_max_heap.peek_min(),
+                "max": min_max_heap.peek_max(),
+                "size": len(min_max_heap),
+            }
+        )
 
     @app.get("/api/v1/minmaxheap/stats")
     async def api_mmh_stats() -> JSONResponse:

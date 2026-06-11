@@ -50,7 +50,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _Layer:
@@ -84,15 +84,21 @@ class _Layer:
     def add(self, seed: int, element: Any) -> None:
         bits = self.bits
         for p in self._positions(seed, element):
-            bits[p >> 3] |= (1 << (p & 7))
+            bits[p >> 3] |= 1 << (p & 7)
         self.count += 1
 
 
 class ScalableBloomFilter:
     """Capacity-free Bloom filter: grows by appending tighter, larger layers."""
 
-    def __init__(self, initial_capacity: int = 1000, error_rate: float = 0.01,
-                 ratio: float = 0.9, growth: int = 2, seed: int = 0) -> None:
+    def __init__(
+        self,
+        initial_capacity: int = 1000,
+        error_rate: float = 0.01,
+        ratio: float = 0.9,
+        growth: int = 2,
+        seed: int = 0,
+    ) -> None:
         self._validate(initial_capacity, error_rate, ratio, growth, seed)
         self._initial_capacity = initial_capacity
         self._error_rate = error_rate
@@ -103,8 +109,9 @@ class ScalableBloomFilter:
         self._init_state()
 
     @staticmethod
-    def _validate(initial_capacity: Any, error_rate: Any, ratio: Any,
-                  growth: Any, seed: Any) -> None:
+    def _validate(
+        initial_capacity: Any, error_rate: Any, ratio: Any, growth: Any, seed: Any
+    ) -> None:
         if not _is_pos_int(initial_capacity):
             raise ScalableBloomError(initial_capacity)
         if not (_is_number(error_rate) and 0.0 < error_rate < 1.0):
@@ -118,10 +125,10 @@ class ScalableBloomFilter:
 
     def _layer_error(self, index: int) -> float:
         # P_i = P_target * (1 - ratio) * ratio^i ⇒ Σ_i P_i = P_target.
-        return self._error_rate * (1.0 - self._ratio) * (self._ratio ** index)
+        return self._error_rate * (1.0 - self._ratio) * (self._ratio**index)
 
     def _layer_capacity(self, index: int) -> int:
-        return self._initial_capacity * (self._growth ** index)
+        return self._initial_capacity * (self._growth**index)
 
     def _new_layer(self) -> _Layer:
         idx = len(self._layers)
@@ -170,12 +177,17 @@ class ScalableBloomFilter:
     def _fpr_locked(self) -> float:
         prod = 1.0
         for layer in self._layers:
-            prod *= (1.0 - layer.error_rate)
+            prod *= 1.0 - layer.error_rate
         return 1.0 - prod
 
-    def reset(self, initial_capacity: int | None = None, error_rate: float | None = None,
-              ratio: float | None = None, growth: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self,
+        initial_capacity: int | None = None,
+        error_rate: float | None = None,
+        ratio: float | None = None,
+        growth: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear all layers; optionally reconfigure."""
         with self._lock:
             ic = self._initial_capacity if initial_capacity is None else initial_capacity

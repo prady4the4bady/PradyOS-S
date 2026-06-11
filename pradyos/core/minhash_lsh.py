@@ -35,7 +35,7 @@ import random
 import threading
 from typing import Any
 
-_PRIME = (1 << 61) - 1          # Mersenne prime 2^61 - 1 (universal hashing modulus)
+_PRIME = (1 << 61) - 1  # Mersenne prime 2^61 - 1 (universal hashing modulus)
 
 
 class MinHashLSHError(Exception):
@@ -55,7 +55,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _base_hash(token: Any) -> int:
@@ -99,16 +99,13 @@ class MinHashLSH:
         except TypeError as exc:
             raise MinHashLSHError("tokens must be an iterable of hashable items") from exc
         if not bases:
-            return tuple([_PRIME] * self._k)        # empty set → max signature
+            return tuple([_PRIME] * self._k)  # empty set → max signature
         a, b = self._a, self._b
-        return tuple(
-            min((a[i] * base + b[i]) % _PRIME for base in bases)
-            for i in range(self._k)
-        )
+        return tuple(min((a[i] * base + b[i]) % _PRIME for base in bases) for i in range(self._k))
 
     def _band_key(self, sig: tuple, band_idx: int) -> tuple:
         start = band_idx * self._rows
-        return sig[start:start + self._rows]
+        return sig[start : start + self._rows]
 
     # ── mutation ──────────────────────────────────────────────────────────────────────
     def insert(self, item_id: Any, tokens: Any) -> None:
@@ -141,8 +138,9 @@ class MinHashLSH:
                 if not bucket:
                     del self._buckets[bi][key]
 
-    def reset(self, bands: int | None = None, rows: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, bands: int | None = None, rows: int | None = None, seed: int | None = None
+    ) -> None:
         """Clear the index; optionally reconfigure ``bands`` / ``rows`` / ``seed``."""
         with self._lock:
             nb = self._bands if bands is None else bands
@@ -171,7 +169,7 @@ class MinHashLSH:
             results = []
             for cid in candidates:
                 csig = self._sigs[cid]
-                est = sum(1 for x, y in zip(sig, csig) if x == y) / k
+                est = sum(1 for x, y in zip(sig, csig, strict=False) if x == y) / k
                 if est >= threshold:
                     results.append((cid, est))
         results.sort(key=lambda p: (-p[1], str(p[0])))
@@ -181,7 +179,7 @@ class MinHashLSH:
         """Estimated Jaccard similarity of two token sets (signature agreement)."""
         sa = self._signature(tokens_a)
         sb = self._signature(tokens_b)
-        return sum(1 for x, y in zip(sa, sb) if x == y) / self._k
+        return sum(1 for x, y in zip(sa, sb, strict=False) if x == y) / self._k
 
     # ── introspection ──────────────────────────────────────────────────────────────────
     def contains(self, item_id: Any) -> bool:

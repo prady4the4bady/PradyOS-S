@@ -78,14 +78,16 @@ class XorFilter:
         return self._digest("fp", key) & self._mask
 
     def _buckets(self, key: Any, segment: int) -> tuple[int, int, int]:
-        return (self._digest(0, key) % segment,
-                self._digest(1, key) % segment + segment,
-                self._digest(2, key) % segment + 2 * segment)
+        return (
+            self._digest(0, key) % segment,
+            self._digest(1, key) % segment + segment,
+            self._digest(2, key) % segment + 2 * segment,
+        )
 
     # ── build (static construction) ──────────────────────────────────────────────
     def build(self, keys: Any) -> None:
         """Construct the filter from a complete key set (replaces any prior filter)."""
-        distinct = list(dict.fromkeys(keys))          # dedup, preserve order
+        distinct = list(dict.fromkeys(keys))  # dedup, preserve order
         n = len(distinct)
         # ⌈1.23·n⌉ slots PER SEGMENT (3 segments) — the generous sizing under which
         # single-pass peeling essentially never stalls.

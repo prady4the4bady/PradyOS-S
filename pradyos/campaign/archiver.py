@@ -59,9 +59,7 @@ class CampaignArchiver:
 
         for campaign in list(registry.all()):
             status_val = (
-                campaign.status.value
-                if hasattr(campaign.status, "value")
-                else str(campaign.status)
+                campaign.status.value if hasattr(campaign.status, "value") else str(campaign.status)
             ).lower()
 
             if status_val not in _TERMINAL_STATUSES:
@@ -88,7 +86,9 @@ class CampaignArchiver:
                 registry.delete(campaign_id)
                 log.info(
                     "Archived campaign [%s] status=%s age=%.0fs",
-                    campaign_id[:8], status_val, now - float(age_ts),
+                    campaign_id[:8],
+                    status_val,
+                    now - float(age_ts),
                 )
                 archived += 1
 
@@ -135,9 +135,9 @@ class CampaignArchiver:
                 pass
         # Fallback: grab common fields
         return {
-            "campaign_id":  getattr(campaign, "campaign_id", "?"),
-            "name":         getattr(campaign, "name", ""),
-            "status":       str(getattr(campaign, "status", "")),
-            "created_at":   getattr(campaign, "created_at", None),
-            "finished_at":  getattr(campaign, "finished_at", None),
+            "campaign_id": getattr(campaign, "campaign_id", "?"),
+            "name": getattr(campaign, "name", ""),
+            "status": str(getattr(campaign, "status", "")),
+            "created_at": getattr(campaign, "created_at", None),
+            "finished_at": getattr(campaign, "finished_at", None),
         }

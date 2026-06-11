@@ -144,7 +144,8 @@ class OracleAdmissionBridge:
                 detail=detail,
             )
         elif hasattr(self._audit, "append"):
-            from pradyos.core.audit import AuditEvent, AuditCategory  # noqa: PLC0415
+            from pradyos.core.audit import AuditCategory, AuditEvent  # noqa: PLC0415
+
             self._audit.append(
                 AuditEvent(
                     category=AuditCategory.ORACLE,
@@ -158,6 +159,7 @@ class OracleAdmissionBridge:
 # ---------------------------------------------------------------------------
 # Standalone daemon
 # ---------------------------------------------------------------------------
+
 
 async def _run_admission_daemon(debug: bool = False) -> None:
     """Instantiate the bridge and block until SIGTERM / SIGINT."""

@@ -47,7 +47,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class SimHashLSH:
@@ -102,11 +102,11 @@ class SimHashLSH:
 
     def _band_key(self, sig: tuple, band_idx: int) -> tuple:
         start = band_idx * self._rows
-        return sig[start:start + self._rows]
+        return sig[start : start + self._rows]
 
     @staticmethod
     def _cosine_from_agreement(sig_a: tuple, sig_b: tuple, k: int) -> float:
-        agree = sum(1 for x, y in zip(sig_a, sig_b) if x == y) / k
+        agree = sum(1 for x, y in zip(sig_a, sig_b, strict=False) if x == y) / k
         return math.cos(math.pi * (1.0 - agree))
 
     # ── mutation ──────────────────────────────────────────────────────────────────────
@@ -139,8 +139,13 @@ class SimHashLSH:
                 if not bucket:
                     del self._buckets[bi][key]
 
-    def reset(self, dim: int | None = None, bands: int | None = None,
-              rows: int | None = None, seed: int | None = None) -> None:
+    def reset(
+        self,
+        dim: int | None = None,
+        bands: int | None = None,
+        rows: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear the index; optionally reconfigure ``dim`` / ``bands`` / ``rows`` / ``seed``."""
         with self._lock:
             nd = self._dim if dim is None else dim

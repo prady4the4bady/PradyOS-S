@@ -19,9 +19,8 @@ The merge recursion descends only the right spines, so its depth is structurally
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class LeftistHeapError(Exception):
@@ -33,7 +32,7 @@ class LeftistHeapError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _LHNode:
@@ -41,12 +40,12 @@ class _LHNode:
 
     def __init__(self, key: float) -> None:
         self.key = key
-        self.left: Optional[_LHNode] = None
-        self.right: Optional[_LHNode] = None
-        self.rank = 1                       # rank(leaf) = 1; rank(None) = 0
+        self.left: _LHNode | None = None
+        self.right: _LHNode | None = None
+        self.rank = 1  # rank(leaf) = 1; rank(None) = 0
 
 
-def _rank(node: Optional[_LHNode]) -> int:
+def _rank(node: _LHNode | None) -> int:
     return node.rank if node is not None else 0
 
 
@@ -55,17 +54,17 @@ class LeftistHeap:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._root: Optional[_LHNode] = None
+        self._root: _LHNode | None = None
         self._size = 0
 
     # ── merge (descends the right spines; bounded by O(log n)) ───────────────────────────
-    def _merge(self, a: Optional[_LHNode], b: Optional[_LHNode]) -> Optional[_LHNode]:
+    def _merge(self, a: _LHNode | None, b: _LHNode | None) -> _LHNode | None:
         if a is None:
             return b
         if b is None:
             return a
         if a.key > b.key:
-            a, b = b, a                     # a is the smaller root
+            a, b = b, a  # a is the smaller root
         a.right = self._merge(a.right, b)
         if _rank(a.left) < _rank(a.right):
             a.left, a.right = a.right, a.left
@@ -100,7 +99,7 @@ class LeftistHeap:
             return root.key
 
     # ── merge two instances (id()-ordered locking) ───────────────────────────────────────
-    def merge(self, other: "LeftistHeap") -> None:
+    def merge(self, other: LeftistHeap) -> None:
         """Meld all elements of ``other`` into this heap; ``other`` is left empty."""
         if not isinstance(other, LeftistHeap):
             raise LeftistHeapError("can only merge with another LeftistHeap")
@@ -135,5 +134,8 @@ class LeftistHeap:
     def stats(self) -> dict:
         """Summary: ``size`` / ``rank`` (right-spine length) / ``min`` (None if empty)."""
         with self._lock:
-            return {"size": self._size, "rank": _rank(self._root),
-                    "min": None if self._root is None else self._root.key}
+            return {
+                "size": self._size,
+                "rank": _rank(self._root),
+                "min": None if self._root is None else self._root.key,
+            }

@@ -4,6 +4,7 @@ Provides a self-contained, dark-themed HTML page served at GET /audit.
 The page fetches live data from three API endpoints and auto-refreshes
 every 10 seconds.  No external dependencies — pure HTML / CSS / JS.
 """
+
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
@@ -13,10 +14,10 @@ from __future__ import annotations
 
 AUDIT_HTML: str = (
     "<!DOCTYPE html>"
-    "\n<html lang=\"en\">"
+    '\n<html lang="en">'
     "\n<head>"
-    "\n  <meta charset=\"UTF-8\">"
-    "\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+    '\n  <meta charset="UTF-8">'
+    '\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">'
     "\n  <title>PRADY OS -- Audit Trail</title>"
     "\n  <style>"
     "\n    * { box-sizing: border-box; margin: 0; padding: 0; }"
@@ -53,56 +54,56 @@ AUDIT_HTML: str = (
     "\n<body>"
     "\n  <header>"
     "\n    <h1>PRADY OS — AUDIT TRAIL</h1>"
-    "\n    <div style=\"display:flex;align-items:center;gap:1rem;\">"
-    "\n      <a href=\"/\" class=\"nav-link\">← Dashboard</a>"
-    "\n      <span id=\"refresh-info\">Auto-refresh: 10s</span>"
-    "\n      <span class=\"badge\" id=\"status-badge\">LIVE</span>"
+    '\n    <div style="display:flex;align-items:center;gap:1rem;">'
+    '\n      <a href="/" class="nav-link">← Dashboard</a>'
+    '\n      <span id="refresh-info">Auto-refresh: 10s</span>'
+    '\n      <span class="badge" id="status-badge">LIVE</span>'
     "\n    </div>"
     "\n  </header>"
     "\n  <main>"
     "\n"
     "\n    <!-- ===== Event Ledger ===== -->"
-    "\n    <div class=\"section\" id=\"section-ledger\">"
+    '\n    <div class="section" id="section-ledger">'
     "\n      <h2>Event Ledger</h2>"
-    "\n      <div class=\"tbl-wrap\">"
-    "\n        <table id=\"ledger-table\">"
+    '\n      <div class="tbl-wrap">'
+    '\n        <table id="ledger-table">'
     "\n          <thead><tr>"
     "\n            <th>#</th><th>Timestamp</th><th>Service</th>"
     "\n            <th>Event</th><th>Payload</th><th>Hash</th>"
     "\n          </tr></thead>"
-    "\n          <tbody id=\"ledger-body\">"
-    "\n            <tr><td colspan=\"6\" class=\"empty\">Loading…</td></tr>"
+    '\n          <tbody id="ledger-body">'
+    '\n            <tr><td colspan="6" class="empty">Loading…</td></tr>'
     "\n          </tbody>"
     "\n        </table>"
     "\n      </div>"
     "\n    </div>"
     "\n"
     "\n    <!-- ===== Telemetry Spans ===== -->"
-    "\n    <div class=\"section\" id=\"section-telemetry\">"
+    '\n    <div class="section" id="section-telemetry">'
     "\n      <h2>Telemetry Spans</h2>"
-    "\n      <div class=\"tbl-wrap\">"
-    "\n        <table id=\"telemetry-table\">"
+    '\n      <div class="tbl-wrap">'
+    '\n        <table id="telemetry-table">'
     "\n          <thead><tr>"
     "\n            <th>Span ID</th><th>Trace ID</th><th>Name</th>"
     "\n            <th>Service</th><th>Start</th><th>Duration (ms)</th><th>Status</th>"
     "\n          </tr></thead>"
-    "\n          <tbody id=\"telemetry-body\">"
-    "\n            <tr><td colspan=\"7\" class=\"empty\">Loading…</td></tr>"
+    '\n          <tbody id="telemetry-body">'
+    '\n            <tr><td colspan="7" class="empty">Loading…</td></tr>'
     "\n          </tbody>"
     "\n        </table>"
     "\n      </div>"
     "\n    </div>"
     "\n"
     "\n    <!-- ===== Intent Suggestions ===== -->"
-    "\n    <div class=\"section\" id=\"section-intent\">"
+    '\n    <div class="section" id="section-intent">'
     "\n      <h2>Intent Suggestions</h2>"
-    "\n      <div class=\"tbl-wrap\">"
-    "\n        <table id=\"intent-table\">"
+    '\n      <div class="tbl-wrap">'
+    '\n        <table id="intent-table">'
     "\n          <thead><tr>"
     "\n            <th>Action</th><th>Priority</th><th>Reason</th><th>Rule</th><th>Params</th>"
     "\n          </tr></thead>"
-    "\n          <tbody id=\"intent-body\">"
-    "\n            <tr><td colspan=\"5\" class=\"empty\">Loading…</td></tr>"
+    '\n          <tbody id="intent-body">'
+    '\n            <tr><td colspan="5" class="empty">Loading…</td></tr>'
     "\n          </tbody>"
     "\n        </table>"
     "\n      </div>"

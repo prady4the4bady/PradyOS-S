@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.cuckoo_hashtable import CuckooHashTable, CuckooHashError
+from pradyos.core.cuckoo_hashtable import CuckooHashError, CuckooHashTable
 
 _MISS = object()
 
@@ -59,8 +59,9 @@ def register_cuckoohash_routes(app: Any, cuckoo_hashtable: Any | None = None) ->
         except CuckooHashError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
         found = value is not _MISS
-        return JSONResponse({"key": body["key"], "found": found,
-                             "value": None if not found else value})
+        return JSONResponse(
+            {"key": body["key"], "found": found, "value": None if not found else value}
+        )
 
     @app.delete("/api/v1/cuckoohash/remove")
     async def api_ch_remove(request: Request) -> JSONResponse:

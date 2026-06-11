@@ -22,9 +22,8 @@ avoid recursion entirely per platform discipline). Pure stdlib; thread-safe via 
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class LiChaoTreeError(Exception):
@@ -40,7 +39,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class LiChaoTree:
@@ -62,7 +61,7 @@ class LiChaoTree:
         self._hi = x_max
         self._mode = mode
         self._sign = 1 if mode == "min" else -1
-        self._lines: dict[tuple[int, int], tuple[float, float]] = {}   # (l, r) -> (m, b)
+        self._lines: dict[tuple[int, int], tuple[float, float]] = {}  # (l, r) -> (m, b)
         self._count = 0
 
     # ── add_line ─────────────────────────────────────────────────────────────────────────
@@ -86,7 +85,7 @@ class LiChaoTree:
                 mid_better = ln[0] * mid + ln[1] < cur[0] * mid + cur[1]
                 if mid_better:
                     lines[(l, r)] = ln
-                    ln = cur                       # the loser descends
+                    ln = cur  # the loser descends
                 if l == r:
                     continue
                 if left_better != mid_better:
@@ -124,8 +123,9 @@ class LiChaoTree:
             return None if best is None else self._sign * best
 
     # ── maintenance ──────────────────────────────────────────────────────────────────────
-    def reset(self, x_min: int | None = None, x_max: int | None = None,
-              mode: str | None = None) -> None:
+    def reset(
+        self, x_min: int | None = None, x_max: int | None = None, mode: str | None = None
+    ) -> None:
         """Clear all lines; optionally reconfigure the domain / mode."""
         with self._lock:
             nlo = self._lo if x_min is None else x_min
@@ -156,5 +156,10 @@ class LiChaoTree:
     def stats(self) -> dict:
         """Summary: ``num_lines`` / ``x_min`` / ``x_max`` / ``mode`` / ``nodes``."""
         with self._lock:
-            return {"num_lines": self._count, "x_min": self._lo, "x_max": self._hi,
-                    "mode": self._mode, "nodes": len(self._lines)}
+            return {
+                "num_lines": self._count,
+                "x_min": self._lo,
+                "x_max": self._hi,
+                "mode": self._mode,
+                "nodes": len(self._lines),
+            }

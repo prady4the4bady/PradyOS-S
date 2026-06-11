@@ -24,8 +24,8 @@ class HeartbeatLoop:
         config: HeartbeatConfig | None = None,
     ) -> None:
         self._cp = control_plane
-        self._config = config if config is not None else HeartbeatConfig(
-            interval_seconds=5.0, max_ticks=None
+        self._config = (
+            config if config is not None else HeartbeatConfig(interval_seconds=5.0, max_ticks=None)
         )
         self._running = False
         self._tick_count = 0
@@ -64,10 +64,7 @@ class HeartbeatLoop:
             with self._lock:
                 self._tick_count += 1
 
-            if (
-                self._config.max_ticks is not None
-                and self._tick_count >= self._config.max_ticks
-            ):
+            if self._config.max_ticks is not None and self._tick_count >= self._config.max_ticks:
                 self._running = False
                 break
 

@@ -14,9 +14,8 @@ input-dependent). Pure stdlib; thread-safe via a single ``threading.Lock``; dete
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class SparseSegmentTreeError(Exception):
@@ -32,7 +31,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class _Node:
@@ -40,8 +39,8 @@ class _Node:
 
     def __init__(self) -> None:
         self.sum: float = 0
-        self.lc: Optional[_Node] = None
-        self.rc: Optional[_Node] = None
+        self.lc: _Node | None = None
+        self.rc: _Node | None = None
 
 
 class SparseSegmentTree:
@@ -52,11 +51,11 @@ class SparseSegmentTree:
             raise SparseSegmentTreeError("universe must be a positive int")
         self._u = universe
         self._lock = threading.Lock()
-        self._root: Optional[_Node] = None
+        self._root: _Node | None = None
         self._node_count = 0
 
     # ── update (point add) ─────────────────────────────────────────────────────────────────
-    def _add(self, node: Optional[_Node], lo: int, hi: int, idx: int, delta: float) -> _Node:
+    def _add(self, node: _Node | None, lo: int, hi: int, idx: int, delta: float) -> _Node:
         if node is None:
             node = _Node()
             self._node_count += 1
@@ -94,16 +93,15 @@ class SparseSegmentTree:
             self._root = self._add(self._root, 0, self._u - 1, index, value - cur)
 
     # ── queries ──────────────────────────────────────────────────────────────────────────
-    def _range(self, node: Optional[_Node], lo: int, hi: int, ql: int, qr: int) -> float:
+    def _range(self, node: _Node | None, lo: int, hi: int, ql: int, qr: int) -> float:
         if node is None or qr < lo or hi < ql:
             return 0
         if ql <= lo and hi <= qr:
             return node.sum
         mid = (lo + hi) // 2
-        return (self._range(node.lc, lo, mid, ql, qr)
-                + self._range(node.rc, mid + 1, hi, ql, qr))
+        return self._range(node.lc, lo, mid, ql, qr) + self._range(node.rc, mid + 1, hi, ql, qr)
 
-    def _point(self, node: Optional[_Node], lo: int, hi: int, idx: int) -> float:
+    def _point(self, node: _Node | None, lo: int, hi: int, idx: int) -> float:
         while node is not None and lo != hi:
             mid = (lo + hi) // 2
             if idx <= mid:
@@ -159,5 +157,8 @@ class SparseSegmentTree:
     def stats(self) -> dict:
         """Summary: ``universe`` / ``num_nodes`` / ``total``."""
         with self._lock:
-            return {"universe": self._u, "num_nodes": self._node_count,
-                    "total": self._root.sum if self._root is not None else 0}
+            return {
+                "universe": self._u,
+                "num_nodes": self._node_count,
+                "total": self._root.sum if self._root is not None else 0,
+            }

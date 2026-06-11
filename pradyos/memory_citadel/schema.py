@@ -61,7 +61,6 @@ class MemoryRecord:
 
     def to_document(self) -> str:
         """Text representation for embedding. Combines summary + payload keys."""
-        import json
         extras: list[str] = []
         for k, v in self.payload.items():
             if isinstance(v, str):
@@ -69,7 +68,7 @@ class MemoryRecord:
         return self.summary + (" | " + " | ".join(extras) if extras else "")
 
     @classmethod
-    def from_query_result(cls, doc: str, metadata: dict[str, Any]) -> "MemoryRecord":
+    def from_query_result(cls, doc: str, metadata: dict[str, Any]) -> MemoryRecord:
         """Reconstruct a MemoryRecord from a ChromaDB query hit."""
         try:
             outcome = MemoryOutcome(metadata.get("outcome", "unknown"))

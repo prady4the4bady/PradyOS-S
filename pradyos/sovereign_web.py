@@ -1,4 +1,5 @@
 """Sovereign Web Dashboard (Phase 4C / Phase 5 extensions)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,153 +7,115 @@ import json
 import logging
 import os
 import time
-from pathlib import Path
-from typing import Any, AsyncGenerator
-
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from pathlib import Path
+from typing import Any
+
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
-from pradyos.core.ledger import EventLedger
-from pradyos.core.audit_replay import AuditReplayEngine  # Phase 25
-from pradyos.core.bus_inspector import BusInspector  # Phase 27
-from pradyos.core.decision_journal import DecisionJournal  # Phase 28
-from pradyos.core.capability_registry import CapabilityRegistry  # Phase 29
-from pradyos.core.watchpoint import WatchpointSystem  # Phase 30
-from pradyos.core.signal_aggregator import SignalAggregator  # Phase 31
-from pradyos.core.snapshot_store import SnapshotStore  # Phase 32
-from pradyos.core.correlation_engine import CorrelationEngine  # Phase 33
-from pradyos.core.integration_bus import SovereignBus  # Phase 34
-from pradyos.core.reactor import ReactorEngine  # Phase 35
-from pradyos.core.state_manager import StateManager  # Phase 36
-from pradyos.core.healing_monitor import HealingMonitor  # Phase 37
-from pradyos.core.scheduler import TaskScheduler as CoreTaskScheduler  # Phase 38
-from pradyos.core.memory_store import MemoryStore  # Phase 39
-from pradyos.core.control_plane import ControlPlane, VERSION as OS_VERSION  # Phase 40
-from pradyos.core.heartbeat import HeartbeatLoop  # Phase 41
-from pradyos.core.guardrail import GuardrailGate, RiskLevel  # Phase 43
-from pradyos.core.approval_queue import ApprovalQueue, ApprovalStatus  # Phase 43
-from pradyos.core.execution_engine import ExecutionEngine, ExecutionStatus  # Phase 44
-from pradyos.core.reasoning_engine import ReasoningEngine  # Phase 45
-from pradyos.core.web_agent import WebAgent  # Phase 46
-from pradyos.core.memory_graph import MemoryGraph as Phase47MemoryGraph  # Phase 47
-from pradyos.core.event_store import EventStore  # Phase 48
-from pradyos.core.task_queue import TaskQueue  # Phase 49
-from pradyos.core.pubsub import PubSubBroker  # Phase 50
-from pradyos.core.statesync import StateSyncManager  # Phase 51
-from pradyos.core.distributed_lock import LockManager  # Phase 52
-from pradyos.core.circuit_breaker import CircuitBreaker, BreakerState  # Phase 53
-from pradyos.core.retry_policy import RetryPolicy  # Phase 54
-from pradyos.core.bulkhead_pool import BulkheadManager, BulkheadRejectedError  # Phase 55
-from pradyos.core.timeout_guard import TimeoutGuard, TimeoutExpiredError  # Phase 56
-from pradyos.core.semaphore_gate import SemaphoreGate, SemaphoreNotFoundError  # Phase 57
-from pradyos.core.event_filter import EventFilterRegistry, FilterRule  # Phase 58
-from pradyos.core.throttle_map import ThrottleMap  # Phase 59
-from pradyos.core.pipeline_chain import PipelineRegistry, PipelineChain, Step, StepError  # Phase 60
-from pradyos.core.tag_index import TagIndex  # Phase 61
-from pradyos.core.event_router import RouterRegistry  # Phase 62
-from pradyos.core.aggregate_root import AggregateRegistry  # Phase 63
-from pradyos.core.anomaly_detector import AnomalyDetector  # Phase 69
-from pradyos.core.dependency_graph import DependencyGraph, CycleError  # Phase 70
-from pradyos.core.anomaly_watch import AnomalyWatch, SourceNotFoundError  # Phase 71
-from pradyos.core.bloom_filter import BloomFilter  # Phase 72
-from pradyos.core.hash_ring import HashRing, NodeNotFoundError  # Phase 73
-from pradyos.core.hyperloglog import HyperLogLog  # Phase 74
-from pradyos.core.vectorclock import VectorClock  # Phase 75
+from pradyos.core.anomaly_watch import SourceNotFoundError  # Phase 71
+from pradyos.core.approval_queue import ApprovalStatus  # Phase 43
+from pradyos.core.bulkhead_pool import BulkheadRejectedError  # Phase 55
+from pradyos.core.control_plane import VERSION as OS_VERSION
 from pradyos.core.countminsketch import CountMinSketch  # Phase 76
-from pradyos.core.merkle_tree import MerkleTree  # Phase 77
-from pradyos.core.skiplist import SkipList  # Phase 78
+from pradyos.core.dependency_graph import CycleError  # Phase 70
+from pradyos.core.event_filter import FilterRule  # Phase 58
+from pradyos.core.guardrail import RiskLevel  # Phase 43
+from pradyos.core.hash_ring import NodeNotFoundError  # Phase 73
+from pradyos.core.pipeline_chain import PipelineChain, Step, StepError  # Phase 60
+from pradyos.core.semaphore_gate import SemaphoreNotFoundError  # Phase 57
 from pradyos.core.tdigest import TDigest  # Phase 79
-from pradyos.core.fenwick import FenwickTree  # Phase 80
-from pradyos.core.segtree import SegmentTree  # Phase 81
-from pradyos.core.unionfind import UnionFind  # Phase 82
-from pradyos.web.trie_web import register_trie_routes  # Phase 83
-from pradyos.web.lru_web import register_lru_routes  # Phase 84
-from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
-from pradyos.web.cuckoo_web import register_cuckoo_routes  # Phase 86
-from pradyos.web.topk_web import register_topk_routes  # Phase 87
-from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
-from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
-from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
-from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
-from pradyos.web.kll_sketch_web import register_kll_sketch_routes  # Phase 92
-from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 93
-from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
-from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
-from pradyos.web.ddsketch_web import register_ddsketch_routes  # Phase 96
-from pradyos.web.exponential_histogram_web import register_exponential_histogram_routes  # Phase 97
-from pradyos.web.weighted_reservoir_web import register_weighted_reservoir_routes  # Phase 98
-from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
-from pradyos.web.xor_filter_web import register_xor_filter_routes  # Phase 100
-from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
-from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
-from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
-from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
-from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
-from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
-from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
-from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
-from pradyos.web.vacuum_web import register_vacuum_routes  # Phase 109
-from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 110
-from pradyos.web.morris_web import register_morris_routes  # Phase 111
-from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
-from pradyos.web.treap_web import register_treap_routes  # Phase 113
-from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
-from pradyos.web.minhash_lsh_web import register_minhashlsh_routes  # Phase 115
-from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
-from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
-from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
-from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
-from pradyos.web.maglev_web import register_maglev_routes  # Phase 120
-from pradyos.web.iblt_web import register_iblt_routes  # Phase 121
-from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 122
-from pradyos.web.cu_sketch_web import register_cusketch_routes  # Phase 123
-from pradyos.web.jump_web import register_jump_routes  # Phase 124
-from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
-from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
-from pradyos.web.random_projection_web import register_randomprojection_routes  # Phase 127
-from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
-from pradyos.web.fmsketch_web import register_fmsketch_routes  # Phase 129
-from pradyos.web.ams_web import register_ams_routes  # Phase 130
-from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
-from pradyos.web.cuckoohash_web import register_cuckoohash_routes  # Phase 132
-from pradyos.web.splay_tree_web import register_splaytree_routes  # Phase 133
-from pradyos.web.rank_select_web import register_rankselect_routes  # Phase 134
-from pradyos.web.wavelet_tree_web import register_wavelet_routes  # Phase 135
-from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
-from pradyos.web.interval_tree_web import register_intervaltree_routes  # Phase 137
-from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
-from pradyos.web.kd_tree_web import register_kdtree_routes  # Phase 139
-from pradyos.web.radix_tree_web import register_radixtree_routes  # Phase 140
-from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
+from pradyos.core.timeout_guard import TimeoutExpiredError  # Phase 56
+from pradyos.core.vectorclock import VectorClock  # Phase 75
+from pradyos.sovereign.audit_ui import build_audit_html
 from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
-from pradyos.web.xor_trie_web import register_xortrie_routes  # Phase 143
-from pradyos.web.min_max_heap_web import register_minmaxheap_routes  # Phase 144
-from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
-from pradyos.web.fenwick2d_web import register_fenwick2d_routes  # Phase 146
-from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
-from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
-from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Phase 149
-from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 150
-from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
-from pradyos.web.van_emde_boas_web import register_veb_routes  # Phase 152
-from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
-from pradyos.web.fibonacci_heap_web import register_fibonacci_routes  # Phase 154
+from pradyos.web.ams_web import register_ams_routes  # Phase 130
+from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
 from pradyos.web.avl_tree_web import register_avl_routes  # Phase 155
 from pradyos.web.b_tree_web import register_btree_routes  # Phase 156
-from pradyos.web.range_tree_web import register_rangetree_routes  # Phase 157
-from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
-from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
-from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
+from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 122
+from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
 from pradyos.web.binary_lifting_web import register_binarylifting_routes  # Phase 161
-from pradyos.web.implicit_treap_web import register_implicittreap_routes  # Phase 162
-from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 163
-from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
-from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
-from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
+from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
+from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
+from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
 from pradyos.web.convex_hull_web import register_convexhull_routes  # Phase 167
+from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
+from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
+from pradyos.web.cu_sketch_web import register_cusketch_routes  # Phase 123
+from pradyos.web.cuckoo_web import register_cuckoo_routes  # Phase 86
+from pradyos.web.cuckoohash_web import register_cuckoohash_routes  # Phase 132
+from pradyos.web.ddsketch_web import register_ddsketch_routes  # Phase 96
+from pradyos.web.exponential_histogram_web import register_exponential_histogram_routes  # Phase 97
+from pradyos.web.fenwick2d_web import register_fenwick2d_routes  # Phase 146
+from pradyos.web.fibonacci_heap_web import register_fibonacci_routes  # Phase 154
+from pradyos.web.fmsketch_web import register_fmsketch_routes  # Phase 129
+from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
+from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
+from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
+from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
+from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
+from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
+from pradyos.web.iblt_web import register_iblt_routes  # Phase 121
+from pradyos.web.implicit_treap_web import register_implicittreap_routes  # Phase 162
+from pradyos.web.interval_tree_web import register_intervaltree_routes  # Phase 137
+from pradyos.web.jump_web import register_jump_routes  # Phase 124
+from pradyos.web.kd_tree_web import register_kdtree_routes  # Phase 139
+from pradyos.web.kll_sketch_web import register_kll_sketch_routes  # Phase 92
+from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 163
+from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
+from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
+from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
+from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
+from pradyos.web.lru_web import register_lru_routes  # Phase 84
+from pradyos.web.maglev_web import register_maglev_routes  # Phase 120
+from pradyos.web.min_max_heap_web import register_minmaxheap_routes  # Phase 144
+from pradyos.web.minhash_lsh_web import register_minhashlsh_routes  # Phase 115
+from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
+from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
+from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
+from pradyos.web.morris_web import register_morris_routes  # Phase 111
+from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 150
+from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Phase 149
 from pradyos.web.polygon_web import register_polygon_routes  # Phase 168
-from pradyos.sovereign.audit_ui import build_audit_html
+from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
+from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
+from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
+from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
+from pradyos.web.radix_tree_web import register_radixtree_routes  # Phase 140
+from pradyos.web.random_projection_web import register_randomprojection_routes  # Phase 127
+from pradyos.web.range_tree_web import register_rangetree_routes  # Phase 157
+from pradyos.web.rank_select_web import register_rankselect_routes  # Phase 134
+from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
+from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
+from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
+from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
+from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
+from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
+from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
+from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
+from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
+from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
+from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
+from pradyos.web.splay_tree_web import register_splaytree_routes  # Phase 133
+from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
+from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 110
+from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
+from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
+from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
+from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 93
+from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
+from pradyos.web.topk_web import register_topk_routes  # Phase 87
+from pradyos.web.treap_web import register_treap_routes  # Phase 113
+from pradyos.web.trie_web import register_trie_routes  # Phase 83
+from pradyos.web.vacuum_web import register_vacuum_routes  # Phase 109
+from pradyos.web.van_emde_boas_web import register_veb_routes  # Phase 152
+from pradyos.web.wavelet_tree_web import register_wavelet_routes  # Phase 135
+from pradyos.web.weighted_reservoir_web import register_weighted_reservoir_routes  # Phase 98
+from pradyos.web.xor_filter_web import register_xor_filter_routes  # Phase 100
+from pradyos.web.xor_trie_web import register_xortrie_routes  # Phase 143
 
 log = logging.getLogger("pradyos.sovereign_web")
 
@@ -366,6 +329,7 @@ def create_app(
     polygon: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
+
     @asynccontextmanager
     async def _lifespan(app):
         if heartbeat is not None:
@@ -374,7 +338,9 @@ def create_app(
         if heartbeat is not None:
             await heartbeat.stop()
 
-    app = FastAPI(title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs", lifespan=_lifespan)
+    app = FastAPI(
+        title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs", lifespan=_lifespan
+    )
 
     if bus is not None:
         bus.subscribe("*", _publish_to_sse)
@@ -397,12 +363,15 @@ def create_app(
                 active_campaigns = [c.to_dict() for c in campaign_registry.active()]
             except Exception:
                 active_campaigns = []
-        return JSONResponse({
-            "ok": True, "timestamp": time.time(),
-            "checkpoint": checkpoint_summary,
-            "warden": {"status": "operational"},
-            "active_campaigns": active_campaigns,
-        })
+        return JSONResponse(
+            {
+                "ok": True,
+                "timestamp": time.time(),
+                "checkpoint": checkpoint_summary,
+                "warden": {"status": "operational"},
+                "active_campaigns": active_campaigns,
+            }
+        )
 
     @app.get("/api/campaigns")
     async def api_campaigns() -> JSONResponse:
@@ -421,6 +390,7 @@ def create_app(
     async def api_health() -> JSONResponse:
         try:
             from pradyos.core.healthcheck import get_health_registry
+
             reg = health_registry if health_registry is not None else get_health_registry()
             overall = reg.overall()
             probes = reg.run_all()
@@ -433,6 +403,7 @@ def create_app(
     async def api_analytics() -> JSONResponse:
         try:
             from pradyos.campaign.analytics import CampaignAnalytics
+
             reg = campaign_registry
             if reg is None:
                 raise ValueError("no registry")
@@ -440,13 +411,20 @@ def create_app(
             return JSONResponse(analytics.to_dict())
         except Exception as e:
             log.debug("Analytics unavailable: %s", e)
-            return JSONResponse({"success_rate": 0.0, "avg_duration_s": 0.0,
-                                 "node_failure_histogram": {}, "busiest_hours": []})
+            return JSONResponse(
+                {
+                    "success_rate": 0.0,
+                    "avg_duration_s": 0.0,
+                    "node_failure_histogram": {},
+                    "busiest_hours": [],
+                }
+            )
 
     @app.get("/api/metrics")
     async def api_metrics() -> JSONResponse:
         try:
             from pradyos.core.metrics import get_registry
+
             snapshot = get_registry().snapshot()
         except Exception as exc:
             snapshot = {"error": str(exc)}
@@ -455,9 +433,10 @@ def create_app(
     @app.get("/api/recommendations")
     async def api_recommendations() -> JSONResponse:
         try:
-            from pradyos.oracle.advisor import SovereignAdvisor
             from pradyos.core.audit import get_audit_log
             from pradyos.core.metrics import get_registry
+            from pradyos.oracle.advisor import SovereignAdvisor
+
             advisor = SovereignAdvisor(
                 audit_log=get_audit_log(),
                 metrics_registry=get_registry(),
@@ -471,8 +450,16 @@ def create_app(
 
     @app.get("/api/v1/dashboard")
     async def api_dashboard() -> JSONResponse:
-        _zero = {"bus_events": [], "quarantine": [], "system_health": {
-            "status": "ok", "active_tasks": 0, "dead_letter_count": 0, "last_event_ts": None}}
+        _zero = {
+            "bus_events": [],
+            "quarantine": [],
+            "system_health": {
+                "status": "ok",
+                "active_tasks": 0,
+                "dead_letter_count": 0,
+                "last_event_ts": None,
+            },
+        }
         if observability_dashboard is None:
             return JSONResponse(_zero, status_code=200)
         try:
@@ -525,8 +512,15 @@ def create_app(
     async def api_scheduler_add_job(request: Request) -> JSONResponse:
         if scheduler is None:
             return JSONResponse(
-                {"job_id": None, "cron_expr": None, "campaign_spec": {},
-                 "priority": 5, "sla_seconds": None, "next_run": 0.0, "enabled": True},
+                {
+                    "job_id": None,
+                    "cron_expr": None,
+                    "campaign_spec": {},
+                    "priority": 5,
+                    "sla_seconds": None,
+                    "next_run": 0.0,
+                    "enabled": True,
+                },
                 status_code=200,
             )
         try:
@@ -584,7 +578,6 @@ def create_app(
         data = [s.to_dict() for s in spans]
         return JSONResponse({"spans": data, "count": len(data)}, status_code=200)
 
-
     # ------------------------------------------------------------------
     # Phase 17 -- Memory Graph endpoints
     # ------------------------------------------------------------------
@@ -607,7 +600,7 @@ def create_app(
             kind=kind if kind else None,
             label=label if label else None,
         )
-        capped = nodes[:max(1, limit)]
+        capped = nodes[: max(1, limit)]
         data = [n.to_dict() for n in capped]
         return JSONResponse({"nodes": data, "count": len(data)}, status_code=200)
 
@@ -647,7 +640,9 @@ def create_app(
         log.info("Sovereign APPROVED task %s", task_id)
         if bus is not None:
             bus.publish("sovereign.approved", {"task_id": task_id})
-        return JSONResponse({"ok": True, "task_id": task_id, "decision": "approved", "ts": record["ts"]})
+        return JSONResponse(
+            {"ok": True, "task_id": task_id, "decision": "approved", "ts": record["ts"]}
+        )
 
     @app.post("/api/reject/{task_id}")
     async def api_reject(task_id: str) -> JSONResponse:
@@ -655,7 +650,9 @@ def create_app(
         log.info("Sovereign REJECTED task %s", task_id)
         if bus is not None:
             bus.publish("sovereign.rejected", {"task_id": task_id})
-        return JSONResponse({"ok": True, "task_id": task_id, "decision": "rejected", "ts": record["ts"]})
+        return JSONResponse(
+            {"ok": True, "task_id": task_id, "decision": "rejected", "ts": record["ts"]}
+        )
 
     @app.get("/stream")
     async def stream_events() -> StreamingResponse:
@@ -665,7 +662,6 @@ def create_app(
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
-
 
     # ── Phase 18: Sovereign Event Ledger endpoints ──────────────────────────
 
@@ -727,8 +723,6 @@ def create_app(
         data = [s.to_dict() for s in suggestions]
         return JSONResponse({"suggestions": data, "count": len(data)}, status_code=200)
 
-
-
     # ── Phase 20: Sovereign Audit Trail UI ──────────────────────────────────
 
     @app.get("/audit", response_class=HTMLResponse, include_in_schema=False)
@@ -754,6 +748,7 @@ def create_app(
     @app.post("/api/v1/config/reload")
     async def config_reload() -> JSONResponse:
         import time as _time
+
         if config_reloader is not None:
             result = config_reloader.load()
             return JSONResponse(result.to_dict(), status_code=200)
@@ -780,7 +775,7 @@ def create_app(
         )
 
     @app.get("/api/v1/metrics")
-    async def api_metrics() -> JSONResponse:
+    async def api_v1_metrics() -> JSONResponse:
         if metrics is None:
             return JSONResponse({})
         return JSONResponse(metrics.get_all())
@@ -788,13 +783,15 @@ def create_app(
     @app.get("/api/v1/ratelimit/status")
     async def api_ratelimit_status() -> JSONResponse:
         if rate_limiter is None:
-            return JSONResponse({
-                "active_clients": 0,
-                "total_hits": 0,
-                "rules": {},
-                "default_limit": 0,
-                "default_window": 0,
-            })
+            return JSONResponse(
+                {
+                    "active_clients": 0,
+                    "total_hits": 0,
+                    "rules": {},
+                    "default_limit": 0,
+                    "default_window": 0,
+                }
+            )
         return JSONResponse(rate_limiter.status())
 
     @app.post("/api/v1/ratelimit/rules")
@@ -815,21 +812,24 @@ def create_app(
         client_id = body["client_id"]
         endpoint = body["endpoint"]
         if rate_limiter is None:
-            return JSONResponse({
-                "allowed": True,
-                "client_id": client_id,
-                "endpoint": endpoint,
-                "limit": 0,
-                "window_secs": 0,
-                "current": 0,
-                "retry_after": None,
-            })
+            return JSONResponse(
+                {
+                    "allowed": True,
+                    "client_id": client_id,
+                    "endpoint": endpoint,
+                    "limit": 0,
+                    "window_secs": 0,
+                    "current": 0,
+                    "retry_after": None,
+                }
+            )
         result = rate_limiter.check(client_id=client_id, endpoint=endpoint)
         return JSONResponse(result.to_dict())
 
     @app.get("/api/v1/health/score")
     async def api_health_score() -> JSONResponse:
         import time as _time
+
         if scorecard is None:
             return JSONResponse(
                 {"score": 100.0, "grade": "A", "components": [], "timestamp": _time.time()},
@@ -851,31 +851,34 @@ def create_app(
     @app.get("/api/v1/audit/replay")
     async def api_audit_replay(at: float | None = None) -> JSONResponse:
         import time as _time
+
         ts = at if at is not None else _time.time()
         if replay_engine is None:
-            return JSONResponse(
-                {"at": ts, "entries": [], "state": {}, "event_count": 0}
-            )
+            return JSONResponse({"at": ts, "entries": [], "state": {}, "event_count": 0})
         return JSONResponse(replay_engine.replay(ts).to_dict())
 
     @app.get("/api/v1/plugins")
     async def api_plugins_list() -> JSONResponse:
         if plugin_sandbox is None:
             return JSONResponse({"plugins": [], "status": {}})
-        return JSONResponse({
-            "plugins": [p.to_dict() for p in plugin_sandbox.get_plugins()],
-            "status": plugin_sandbox.status(),
-        })
+        return JSONResponse(
+            {
+                "plugins": [p.to_dict() for p in plugin_sandbox.get_plugins()],
+                "status": plugin_sandbox.status(),
+            }
+        )
 
     @app.post("/api/v1/plugins/reload")
     async def api_plugins_reload() -> JSONResponse:
         if plugin_sandbox is None:
             return JSONResponse({"reloaded": 0, "plugins": []})
         result = plugin_sandbox.reload_all()
-        return JSONResponse({
-            "reloaded": len(result),
-            "plugins": [p.to_dict() for p in result.values()],
-        })
+        return JSONResponse(
+            {
+                "reloaded": len(result),
+                "plugins": [p.to_dict() for p in result.values()],
+            }
+        )
 
     @app.get("/api/v1/bus/events")
     async def api_bus_events(
@@ -891,11 +894,8 @@ def create_app(
     @app.get("/api/v1/bus/stats")
     async def api_bus_stats() -> JSONResponse:
         if bus_inspector is None:
-            return JSONResponse(
-                {"total_events": 0, "buffer_size": 0, "max_size": 0, "topics": {}}
-            )
+            return JSONResponse({"total_events": 0, "buffer_size": 0, "max_size": 0, "topics": {}})
         return JSONResponse(bus_inspector.get_stats())
-
 
     @app.get("/api/v1/decisions")
     async def api_decisions_get(
@@ -907,15 +907,19 @@ def create_app(
         if decision_journal is None:
             return JSONResponse({"entries": [], "count": 0, "total": 0})
         entries = decision_journal.get_entries(
-            limit=limit, offset=offset,
-            agent_id=agent_id, decision_type=decision_type,
+            limit=limit,
+            offset=offset,
+            agent_id=agent_id,
+            decision_type=decision_type,
         )
         total = decision_journal.count()
-        return JSONResponse({
-            "entries": [e.to_dict() for e in entries],
-            "count": len(entries),
-            "total": total,
-        })
+        return JSONResponse(
+            {
+                "entries": [e.to_dict() for e in entries],
+                "count": len(entries),
+                "total": total,
+            }
+        )
 
     @app.post("/api/v1/decisions")
     async def api_decisions_post(request: Request) -> JSONResponse:
@@ -930,15 +934,16 @@ def create_app(
         )
         return JSONResponse(entry.to_dict())
 
-
     @app.get("/api/v1/capabilities")
     async def api_capabilities_get() -> JSONResponse:
         if capability_registry is None:
             return JSONResponse({"capabilities": [], "summary": {}})
-        return JSONResponse({
-            "capabilities": [c.to_dict() for c in capability_registry.list_all()],
-            "summary": capability_registry.summary(),
-        })
+        return JSONResponse(
+            {
+                "capabilities": [c.to_dict() for c in capability_registry.list_all()],
+                "summary": capability_registry.summary(),
+            }
+        )
 
     @app.post("/api/v1/capabilities")
     async def api_capabilities_post(request: Request) -> JSONResponse:
@@ -964,16 +969,16 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(cap.to_dict())
 
-
-
     @app.get("/api/v1/watchpoints")
     async def api_watchpoints_get() -> JSONResponse:
         if watchpoint_system is None:
             return JSONResponse({"watchpoints": [], "status": {}})
-        return JSONResponse({
-            "watchpoints": [w.to_dict() for w in watchpoint_system.get_watchpoints()],
-            "status": watchpoint_system.status(),
-        })
+        return JSONResponse(
+            {
+                "watchpoints": [w.to_dict() for w in watchpoint_system.get_watchpoints()],
+                "status": watchpoint_system.status(),
+            }
+        )
 
     @app.post("/api/v1/watchpoints")
     async def api_watchpoints_post(request: Request) -> JSONResponse:
@@ -1000,7 +1005,6 @@ def create_app(
             value=float(body["value"]),
         )
         return JSONResponse({"alerts": [a.to_dict() for a in fired], "count": len(fired)})
-
 
     @app.get("/api/v1/signals")
     async def api_signals_list() -> JSONResponse:
@@ -1029,22 +1033,25 @@ def create_app(
         except (ValueError, TypeError):
             limit = 100
         points = signal_aggregator.get(name, limit=limit)
-        return JSONResponse({
-            "name": name,
-            "points": [pt.to_dict() for pt in points],
-            "count": len(points),
-            "stats": signal_aggregator.stats(name),
-        })
-
+        return JSONResponse(
+            {
+                "name": name,
+                "points": [pt.to_dict() for pt in points],
+                "count": len(points),
+                "stats": signal_aggregator.stats(name),
+            }
+        )
 
     @app.get("/api/v1/snapshots/{namespace}")
     async def api_snapshots_list(namespace: str) -> JSONResponse:
         if snapshot_store is None:
             return JSONResponse({"namespace": namespace, "keys": []})
-        return JSONResponse({
-            "namespace": namespace,
-            "keys": snapshot_store.list_keys(namespace),
-        })
+        return JSONResponse(
+            {
+                "namespace": namespace,
+                "keys": snapshot_store.list_keys(namespace),
+            }
+        )
 
     @app.post("/api/v1/snapshots/{namespace}/{key}")
     async def api_snapshots_save(namespace: str, key: str, request: Request) -> JSONResponse:
@@ -1074,7 +1081,6 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
 
-
     @app.get("/api/v1/correlate")
     async def api_correlate_get(request: Request) -> JSONResponse:
         if correlation_engine is None:
@@ -1103,13 +1109,11 @@ def create_app(
         result = correlation_engine.correlate(sa, sb, window_secs=window)
         return JSONResponse(result.to_dict())
 
-
     @app.get("/api/v1/integration/status")
     async def api_integration_status() -> JSONResponse:
         if integration_bus is None:
             return JSONResponse({"wired": {}, "wire_count": 0})
         return JSONResponse(integration_bus.status())
-
 
     @app.get("/api/v1/reactor/rules")
     async def api_reactor_rules_list() -> JSONResponse:
@@ -1146,10 +1150,11 @@ def create_app(
             limit = int(request.query_params.get("limit", 100))
         except (ValueError, TypeError):
             limit = 100
-        return JSONResponse({
-            "reactions": [r.to_dict() for r in reactor_engine.get_log(limit)],
-        })
-
+        return JSONResponse(
+            {
+                "reactions": [r.to_dict() for r in reactor_engine.get_log(limit)],
+            }
+        )
 
     @app.post("/api/v1/os/shutdown")
     async def api_os_shutdown(request: Request) -> JSONResponse:
@@ -1162,10 +1167,12 @@ def create_app(
     async def api_os_state_list(module: str) -> JSONResponse:
         if state_manager is None or state_manager._store is None:
             return JSONResponse({"module": module, "keys": []})
-        return JSONResponse({
-            "module": module,
-            "keys": state_manager._store.list_keys(module),
-        })
+        return JSONResponse(
+            {
+                "module": module,
+                "keys": state_manager._store.list_keys(module),
+            }
+        )
 
     @app.get("/api/v1/os/state/{module}/{key}")
     async def api_os_state_get(module: str, key: str, request: Request) -> JSONResponse:
@@ -1189,13 +1196,14 @@ def create_app(
     @app.get("/api/v1/os/status")
     async def api_os_status() -> JSONResponse:
         if state_manager is None:
-            return JSONResponse({
-                "store_connected": False,
-                "registered_modules": [],
-                "hook_count": 0,
-            })
+            return JSONResponse(
+                {
+                    "store_connected": False,
+                    "registered_modules": [],
+                    "hook_count": 0,
+                }
+            )
         return JSONResponse(state_manager.status())
-
 
     @app.get("/api/v1/healer/components")
     async def api_healer_components() -> JSONResponse:
@@ -1218,10 +1226,11 @@ def create_app(
             limit = int(request.query_params.get("limit", 100))
         except (ValueError, TypeError):
             limit = 100
-        return JSONResponse({
-            "events": [e.to_dict() for e in healing_monitor.get_log(limit)],
-        })
-
+        return JSONResponse(
+            {
+                "events": [e.to_dict() for e in healing_monitor.get_log(limit)],
+            }
+        )
 
     @app.get("/api/v1/scheduler/tasks")
     async def api_scheduler_tasks_list() -> JSONResponse:
@@ -1257,15 +1266,16 @@ def create_app(
         runs = task_scheduler.tick()
         return JSONResponse({"runs": [r.to_dict() for r in runs]})
 
-
     @app.get("/api/v1/memory/search")
     async def api_memory_search(request: Request) -> JSONResponse:
         tag = request.query_params.get("tag")
         if memory_store is None or not tag:
             return JSONResponse({"entries": []})
-        return JSONResponse({
-            "entries": [e.to_dict() for e in memory_store.search(tag)],
-        })
+        return JSONResponse(
+            {
+                "entries": [e.to_dict() for e in memory_store.search(tag)],
+            }
+        )
 
     @app.post("/api/v1/memory/expire")
     async def api_memory_expire() -> JSONResponse:
@@ -1304,15 +1314,16 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
 
-
     @app.get("/api/v1/os/control")
     async def api_os_control() -> JSONResponse:
         if control_plane is None:
-            return JSONResponse({
-                "os_version": OS_VERSION,
-                "uptime_seconds": 0,
-                "modules": {},
-            })
+            return JSONResponse(
+                {
+                    "os_version": OS_VERSION,
+                    "uptime_seconds": 0,
+                    "modules": {},
+                }
+            )
         return JSONResponse(control_plane.status())
 
     @app.post("/api/v1/os/tick")
@@ -1321,15 +1332,16 @@ def create_app(
             return JSONResponse({"ticks": [], "healed": [], "reactions": []})
         return JSONResponse(control_plane.tick())
 
-
     @app.get("/api/v1/heartbeat/status")
     async def api_heartbeat_status() -> JSONResponse:
         if heartbeat is None:
-            return JSONResponse({
-                "running": False,
-                "tick_count": 0,
-                "interval_seconds": 0,
-            })
+            return JSONResponse(
+                {
+                    "running": False,
+                    "tick_count": 0,
+                    "interval_seconds": 0,
+                }
+            )
         return JSONResponse(heartbeat.status())
 
     @app.post("/api/v1/heartbeat/stop")
@@ -1338,7 +1350,6 @@ def create_app(
             return JSONResponse({"stopped": False})
         await heartbeat.stop()
         return JSONResponse({"stopped": True})
-
 
     @app.get("/api/v1/guardrail/status")
     async def api_guardrail_status() -> JSONResponse:
@@ -1415,15 +1426,16 @@ def create_app(
         expired = approval_queue.expire_stale()
         return JSONResponse({"expired": len(expired)})
 
-
     @app.get("/api/v1/execute/status")
     async def api_execute_status() -> JSONResponse:
         if execution_engine is None:
-            return JSONResponse({
-                "allowlist": [],
-                "total_runs": 0,
-                "last_status": None,
-            })
+            return JSONResponse(
+                {
+                    "allowlist": [],
+                    "total_runs": 0,
+                    "last_status": None,
+                }
+            )
         return JSONResponse(execution_engine.status())
 
     @app.get("/api/v1/execute/history")
@@ -1434,9 +1446,11 @@ def create_app(
             limit = int(request.query_params.get("limit", 50))
         except (ValueError, TypeError):
             limit = 50
-        return JSONResponse({
-            "results": [r.to_dict() for r in execution_engine.history(limit)],
-        })
+        return JSONResponse(
+            {
+                "results": [r.to_dict() for r in execution_engine.history(limit)],
+            }
+        )
 
     @app.post("/api/v1/execute/{entry_id}")
     async def api_execute_run(entry_id: str) -> JSONResponse:
@@ -1449,7 +1463,6 @@ def create_app(
             return JSONResponse({"error": "entry not found"}, status_code=404)
         result = execution_engine.run(entry)
         return JSONResponse(result.to_dict())
-
 
     @app.get("/api/v1/reason/status")
     async def api_reason_status() -> JSONResponse:
@@ -1481,16 +1494,17 @@ def create_app(
         )
         return JSONResponse(plan.to_dict())
 
-
     @app.get("/api/v1/web/status")
     async def api_web_status() -> JSONResponse:
         if web_agent is None:
-            return JSONResponse({
-                "cache_enabled": False,
-                "guardrail_enabled": False,
-                "max_age": 3600,
-                "timeout": 10,
-            })
+            return JSONResponse(
+                {
+                    "cache_enabled": False,
+                    "guardrail_enabled": False,
+                    "max_age": 3600,
+                    "timeout": 10,
+                }
+            )
         return JSONResponse(web_agent.status())
 
     @app.get("/api/v1/web/fetch")
@@ -1511,15 +1525,16 @@ def create_app(
         results = web_agent.search(query=str(body["query"]), max_results=max_results)
         return JSONResponse({"results": [r.to_dict() for r in results]})
 
-
     @app.get("/api/v1/memgraph/nodes")
     async def api_memgraph_nodes_list() -> JSONResponse:
         if memory_graph is None:
             return JSONResponse({"nodes": [], "count": 0})
-        return JSONResponse({
-            "nodes": [n.to_dict() for n in memory_graph._nodes.values()],
-            "count": memory_graph.node_count(),
-        })
+        return JSONResponse(
+            {
+                "nodes": [n.to_dict() for n in memory_graph._nodes.values()],
+                "count": memory_graph.node_count(),
+            }
+        )
 
     @app.post("/api/v1/memgraph/nodes")
     async def api_memgraph_nodes_add(request: Request) -> JSONResponse:
@@ -1559,10 +1574,12 @@ def create_app(
             return JSONResponse({"name": name, "neighbors": []})
         relation = request.query_params.get("relation")
         neighbors = memory_graph.get_neighbors(name, relation=relation)
-        return JSONResponse({
-            "name": name,
-            "neighbors": [n.to_dict() for n in neighbors],
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "neighbors": [n.to_dict() for n in neighbors],
+            }
+        )
 
     @app.get("/api/v1/memgraph/path")
     async def api_memgraph_path(src: str, dst: str) -> JSONResponse:
@@ -1570,7 +1587,6 @@ def create_app(
             return JSONResponse({"src": src, "dst": dst, "path": None})
         path = memory_graph.shortest_path(src, dst)
         return JSONResponse({"src": src, "dst": dst, "path": path})
-
 
     @app.get("/api/v1/events/{stream}")
     async def api_events_read(stream: str, request: Request) -> JSONResponse:
@@ -1581,11 +1597,13 @@ def create_app(
         except (ValueError, TypeError):
             from_seq = 0
         events = event_store.read(stream, from_seq=from_seq)
-        return JSONResponse({
-            "stream": stream,
-            "events": [e.to_dict() for e in events],
-            "count": len(events),
-        })
+        return JSONResponse(
+            {
+                "stream": stream,
+                "events": [e.to_dict() for e in events],
+                "count": len(events),
+            }
+        )
 
     @app.post("/api/v1/events/{stream}/project")
     async def api_events_project(stream: str, request: Request) -> JSONResponse:
@@ -1623,7 +1641,6 @@ def create_app(
         )
         return JSONResponse(event.to_dict())
 
-
     @app.post("/api/v1/tasks")
     async def api_tasks_submit(request: Request) -> JSONResponse:
         if task_queue is None:
@@ -1644,10 +1661,12 @@ def create_app(
             return JSONResponse({"tasks": [], "count": 0})
         status = request.query_params.get("status")
         tasks = task_queue.list_tasks(status=status)
-        return JSONResponse({
-            "tasks": [t.to_dict() for t in tasks],
-            "count": len(tasks),
-        })
+        return JSONResponse(
+            {
+                "tasks": [t.to_dict() for t in tasks],
+                "count": len(tasks),
+            }
+        )
 
     @app.get("/api/v1/tasks/{task_id}")
     async def api_tasks_get(task_id: str) -> JSONResponse:
@@ -1670,7 +1689,6 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cancelled": True})
 
-
     @app.get("/api/v1/pubsub/topics")
     async def api_pubsub_topics() -> JSONResponse:
         if pubsub is None:
@@ -1682,10 +1700,12 @@ def create_app(
     async def api_pubsub_subscribers(topic: str) -> JSONResponse:
         if pubsub is None:
             return JSONResponse({"topic": topic, "subscriber_count": 0})
-        return JSONResponse({
-            "topic": topic,
-            "subscriber_count": pubsub.count_subscribers(topic),
-        })
+        return JSONResponse(
+            {
+                "topic": topic,
+                "subscriber_count": pubsub.count_subscribers(topic),
+            }
+        )
 
     @app.post("/api/v1/pubsub/{topic}")
     async def api_pubsub_publish(topic: str, request: Request) -> JSONResponse:
@@ -1694,10 +1714,11 @@ def create_app(
         body = await request.json()
         if "message" not in body:
             return JSONResponse({"error": "missing 'message' key"}, status_code=400)
-        message = body["message"] if isinstance(body["message"], dict) else {"value": body["message"]}
+        message = (
+            body["message"] if isinstance(body["message"], dict) else {"value": body["message"]}
+        )
         notified = pubsub.publish(topic, message)
         return JSONResponse({"topic": topic, "notified": notified})
-
 
     @app.get("/api/v1/statesync/sessions")
     async def api_statesync_list(request: Request) -> JSONResponse:
@@ -1706,10 +1727,12 @@ def create_app(
         flag = (request.query_params.get("active_only") or "").lower()
         active_only = flag in ("true", "1", "yes")
         sessions = statesync.list_sessions(active_only=active_only)
-        return JSONResponse({
-            "sessions": [s.to_dict() for s in sessions],
-            "count": len(sessions),
-        })
+        return JSONResponse(
+            {
+                "sessions": [s.to_dict() for s in sessions],
+                "count": len(sessions),
+            }
+        )
 
     @app.post("/api/v1/statesync/sessions")
     async def api_statesync_create(request: Request) -> JSONResponse:
@@ -1741,7 +1764,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"stopped": True})
-
 
     @app.get("/api/v1/locks")
     async def api_locks_list() -> JSONResponse:
@@ -1796,15 +1818,16 @@ def create_app(
             return JSONResponse({"error": "not found or wrong holder"}, status_code=404)
         return JSONResponse({"released": True})
 
-
     @app.get("/api/v1/breakers")
     async def api_breakers_list() -> JSONResponse:
         if circuit_breaker is None:
             return JSONResponse({"breakers": [], "count": 0})
-        return JSONResponse({
-            "breakers": circuit_breaker.list_breakers(),
-            "count": circuit_breaker.count(),
-        })
+        return JSONResponse(
+            {
+                "breakers": circuit_breaker.list_breakers(),
+                "count": circuit_breaker.count(),
+            }
+        )
 
     @app.post("/api/v1/breakers")
     async def api_breakers_register(request: Request) -> JSONResponse:
@@ -1837,15 +1860,16 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(bs.to_dict())
 
-
     @app.get("/api/v1/retry")
     async def api_retry_list() -> JSONResponse:
         if retry_policy is None:
             return JSONResponse({"names": [], "count": 0})
-        return JSONResponse({
-            "names": retry_policy.list_names(),
-            "count": retry_policy.count(),
-        })
+        return JSONResponse(
+            {
+                "names": retry_policy.list_names(),
+                "count": retry_policy.count(),
+            }
+        )
 
     @app.post("/api/v1/retry/execute")
     async def api_retry_execute(request: Request) -> JSONResponse:
@@ -1873,21 +1897,25 @@ def create_app(
             error = repr(exc)
 
         attempts = len(retry_policy.get_history(name))
-        return JSONResponse({
-            "name": name,
-            "result": result,
-            "attempts": attempts,
-            "error": error,
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "result": result,
+                "attempts": attempts,
+                "error": error,
+            }
+        )
 
     @app.get("/api/v1/retry/{name}/history")
     async def api_retry_history(name: str) -> JSONResponse:
         if retry_policy is None:
             return JSONResponse({"name": name, "history": []})
-        return JSONResponse({
-            "name": name,
-            "history": retry_policy.get_history(name),
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "history": retry_policy.get_history(name),
+            }
+        )
 
     @app.delete("/api/v1/retry/{name}/history")
     async def api_retry_clear(name: str) -> JSONResponse:
@@ -1897,7 +1925,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cleared": True})
-
 
     @app.get("/api/v1/bulkheads")
     async def api_bulkheads_list() -> JSONResponse:
@@ -1953,11 +1980,13 @@ def create_app(
                 },
                 status_code=429,
             )
-        return JSONResponse({
-            "name": name,
-            "submitted": True,
-            "stats": pool.get_stats().to_dict(),
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "submitted": True,
+                "stats": pool.get_stats().to_dict(),
+            }
+        )
 
     @app.get("/api/v1/bulkheads/{name}")
     async def api_bulkheads_get(name: str) -> JSONResponse:
@@ -1968,15 +1997,16 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(pool.get_stats().to_dict())
 
-
     @app.get("/api/v1/timeouts")
     async def api_timeouts_list() -> JSONResponse:
         if timeout_guard is None:
             return JSONResponse({"names": [], "total": 0})
-        return JSONResponse({
-            "names": timeout_guard.list_names(),
-            "total": timeout_guard.count(),
-        })
+        return JSONResponse(
+            {
+                "names": timeout_guard.list_names(),
+                "total": timeout_guard.count(),
+            }
+        )
 
     @app.post("/api/v1/timeouts/execute")
     async def api_timeouts_execute(request: Request) -> JSONResponse:
@@ -1999,7 +2029,7 @@ def create_app(
             return "ok"
 
         try:
-            result = timeout_guard.execute(name, _no_op, timeout=timeout_v)
+            result = timeout_guard.execute(name, _no_op, timeout=timeout_v)  # noqa: F841
         except TimeoutExpiredError as exc:
             return JSONResponse(
                 {"name": name, "outcome": "timeout", "error": str(exc)},
@@ -2013,22 +2043,26 @@ def create_app(
 
         history = timeout_guard.get_history(name)
         last_record = history[-1].to_dict() if history else None
-        return JSONResponse({
-            "name": name,
-            "outcome": "success",
-            "elapsed": last_record["elapsed"] if last_record else 0.0,
-            "record": last_record,
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "outcome": "success",
+                "elapsed": last_record["elapsed"] if last_record else 0.0,
+                "record": last_record,
+            }
+        )
 
     @app.get("/api/v1/timeouts/{name}/history")
     async def api_timeouts_history(name: str) -> JSONResponse:
         if timeout_guard is None:
             return JSONResponse({"name": name, "records": []})
         records = timeout_guard.get_history(name)
-        return JSONResponse({
-            "name": name,
-            "records": [r.to_dict() for r in records],
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "records": [r.to_dict() for r in records],
+            }
+        )
 
     @app.delete("/api/v1/timeouts/{name}/history")
     async def api_timeouts_clear(name: str) -> JSONResponse:
@@ -2038,7 +2072,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"cleared": True})
-
 
     @app.get("/api/v1/semaphores")
     async def api_semaphores_list() -> JSONResponse:
@@ -2077,11 +2110,13 @@ def create_app(
             stats = semaphore_gate.get_stats(name)
         except SemaphoreNotFoundError:
             return JSONResponse({"error": "not found"}, status_code=404)
-        return JSONResponse({
-            "name": name,
-            "acquired": bool(ok),
-            "stats": stats.to_dict(),
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "acquired": bool(ok),
+                "stats": stats.to_dict(),
+            }
+        )
 
     @app.post("/api/v1/semaphores/{name}/release")
     async def api_semaphores_release(name: str) -> JSONResponse:
@@ -2092,11 +2127,13 @@ def create_app(
             stats = semaphore_gate.get_stats(name)
         except SemaphoreNotFoundError:
             return JSONResponse({"error": "not found"}, status_code=404)
-        return JSONResponse({
-            "name": name,
-            "released": True,
-            "stats": stats.to_dict(),
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "released": True,
+                "stats": stats.to_dict(),
+            }
+        )
 
     @app.get("/api/v1/semaphores/{name}")
     async def api_semaphores_get(name: str) -> JSONResponse:
@@ -2107,7 +2144,6 @@ def create_app(
         except SemaphoreNotFoundError:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse(stats.to_dict())
-
 
     @app.get("/api/v1/filters")
     async def api_filters_list() -> JSONResponse:
@@ -2131,11 +2167,13 @@ def create_app(
         for r in rules_raw:
             if not isinstance(r, dict):
                 continue
-            rules.append(FilterRule(
-                field=str(r.get("field", "")),
-                op=str(r.get("op", "")),
-                value=r.get("value"),
-            ))
+            rules.append(
+                FilterRule(
+                    field=str(r.get("field", "")),
+                    op=str(r.get("op", "")),
+                    value=r.get("value"),
+                )
+            )
         name = str(body["name"])
         filt = event_filter_registry.register(name, rules, mode)
         result = {"name": name}
@@ -2154,11 +2192,13 @@ def create_app(
             matched = event_filter_registry.apply(name, events)
         except KeyError:
             return JSONResponse({"error": "not found"}, status_code=404)
-        return JSONResponse({
-            "name": name,
-            "matched": len(matched),
-            "events": matched,
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "matched": len(matched),
+                "events": matched,
+            }
+        )
 
     @app.delete("/api/v1/filters/{name}")
     async def api_filters_delete(name: str) -> JSONResponse:
@@ -2168,7 +2208,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
-
 
     @app.get("/api/v1/throttle")
     async def api_throttle_list() -> JSONResponse:
@@ -2233,7 +2272,6 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
 
-
     @app.get("/api/v1/pipelines")
     async def api_pipelines_list() -> JSONResponse:
         if pipeline_registry is None:
@@ -2259,18 +2297,22 @@ def create_app(
         for s in steps_raw:
             if not isinstance(s, dict):
                 continue
-            steps.append(Step(
-                name=str(s.get("name", "")),
-                transform_type=str(s.get("transform_type", "")),
-                params=dict(s.get("params") or {}),
-            ))
+            steps.append(
+                Step(
+                    name=str(s.get("name", "")),
+                    transform_type=str(s.get("transform_type", "")),
+                    params=dict(s.get("params") or {}),
+                )
+            )
         chain = PipelineChain(name=name, steps=steps)
         pipeline_registry.register(chain)
-        return JSONResponse({
-            "registered": True,
-            "name": name,
-            "step_count": len(steps),
-        })
+        return JSONResponse(
+            {
+                "registered": True,
+                "name": name,
+                "step_count": len(steps),
+            }
+        )
 
     @app.post("/api/v1/pipelines/{name}/run")
     async def api_pipelines_run(name: str, request: Request) -> JSONResponse:
@@ -2302,7 +2344,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
-
 
     @app.get("/api/v1/tags")
     async def api_tags_list() -> JSONResponse:
@@ -2360,7 +2401,6 @@ def create_app(
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
 
-
     @app.get("/api/v1/routers")
     async def api_routers_list() -> JSONResponse:
         if router_registry is None:
@@ -2399,12 +2439,14 @@ def create_app(
             except ValueError:
                 # duplicate route name in same payload — skip
                 continue
-        return JSONResponse({
-            "created": True,
-            "name": name,
-            "route_count": added,
-            "default_destination": default_dest,
-        })
+        return JSONResponse(
+            {
+                "created": True,
+                "name": name,
+                "route_count": added,
+                "default_destination": default_dest,
+            }
+        )
 
     @app.post("/api/v1/routers/{name}/route")
     async def api_routers_route(name: str, request: Request) -> JSONResponse:
@@ -2416,11 +2458,13 @@ def create_app(
         body = await request.json()
         event = body.get("event") if isinstance(body.get("event"), dict) else {}
         destinations = router.route(event)
-        return JSONResponse({
-            "name": name,
-            "destinations": destinations,
-            "matched": len(destinations),
-        })
+        return JSONResponse(
+            {
+                "name": name,
+                "destinations": destinations,
+                "matched": len(destinations),
+            }
+        )
 
     @app.delete("/api/v1/routers/{name}")
     async def api_routers_delete(name: str) -> JSONResponse:
@@ -2430,7 +2474,6 @@ def create_app(
         if not ok:
             return JSONResponse({"error": "not found"}, status_code=404)
         return JSONResponse({"deleted": True})
-
 
     @app.get("/api/v1/aggregates")
     async def api_aggregates_list() -> JSONResponse:
@@ -2459,11 +2502,13 @@ def create_app(
         agg = aggregate_registry.get(aggregate_id)
         if agg is None:
             return JSONResponse({"error": "not found"}, status_code=404)
-        return JSONResponse({
-            "aggregate_id": agg.aggregate_id,
-            "version": agg.version,
-            "state": agg.get_state(),
-        })
+        return JSONResponse(
+            {
+                "aggregate_id": agg.aggregate_id,
+                "version": agg.version,
+                "state": agg.get_state(),
+            }
+        )
 
     @app.get("/api/v1/aggregates/{aggregate_id}/events")
     async def api_aggregates_events(aggregate_id: str, request: Request) -> JSONResponse:
@@ -2477,10 +2522,12 @@ def create_app(
         except (TypeError, ValueError):
             since = 0
         events = agg.get_events(since_version=since)
-        return JSONResponse({
-            "aggregate_id": agg.aggregate_id,
-            "events": [e.to_dict() for e in events],
-        })
+        return JSONResponse(
+            {
+                "aggregate_id": agg.aggregate_id,
+                "events": [e.to_dict() for e in events],
+            }
+        )
 
     @app.delete("/api/v1/aggregates/{aggregate_id}")
     async def api_aggregates_delete(aggregate_id: str) -> JSONResponse:
@@ -2802,7 +2849,6 @@ def create_app(
             )
         return JSONResponse({"cancelled": True})
 
-
     @app.get("/api/v1/anomaly")
     async def api_anomaly_get(request: Request) -> JSONResponse:
         if anomaly_detector is None:
@@ -2854,7 +2900,6 @@ def create_app(
         d["cached"] = False
         return JSONResponse(d)
 
-
     @app.get("/api/v1/deps/{node}")
     async def api_deps_get(node: str) -> JSONResponse:
         if dependency_graph is None:
@@ -2896,7 +2941,6 @@ def create_app(
             return JSONResponse({"error": "no dependency graph configured"})
         return JSONResponse({"node": node, "impact_score": dependency_graph.impact_score(node)})
 
-
     @app.get("/api/v1/anomaly/sources")
     async def api_anomaly_sources_list() -> JSONResponse:
         if anomaly_watch is None:
@@ -2936,7 +2980,6 @@ def create_app(
             return JSONResponse({"error": f"no such source: {name}"}, status_code=404)
         return JSONResponse({"name": name, "removed": True})
 
-
     @app.get("/api/v1/bloom")
     async def api_bloom_stats() -> JSONResponse:
         if bloom_filter is None:
@@ -2975,7 +3018,6 @@ def create_app(
         bloom_filter.clear()
         return JSONResponse({"cleared": True})
 
-
     @app.get("/api/v1/hashring")
     async def api_hashring_stats() -> JSONResponse:
         if hash_ring is None:
@@ -3008,7 +3050,6 @@ def create_app(
         except NodeNotFoundError:
             return JSONResponse({"error": f"no such node: {node}"}, status_code=404)
         return JSONResponse({"node": node, "removed": True})
-
 
     @app.get("/api/v1/cardinality")
     async def api_cardinality_stats() -> JSONResponse:
@@ -3048,7 +3089,6 @@ def create_app(
         hyperloglog.clear()
         return JSONResponse({"cleared": True})
 
-
     @app.get("/api/v1/clocks")
     async def api_clocks_state() -> JSONResponse:
         if vectorclock is None:
@@ -3077,7 +3117,9 @@ def create_app(
         try:
             vectorclock.merge(VectorClock(incoming))
         except (ValueError, TypeError):
-            return JSONResponse({"error": "clock must map actors to non-negative integers"}, status_code=422)
+            return JSONResponse(
+                {"error": "clock must map actors to non-negative integers"}, status_code=422
+            )
         return JSONResponse({"clock": vectorclock.to_dict()})
 
     @app.post("/api/v1/clocks/compare")
@@ -3091,9 +3133,10 @@ def create_app(
         try:
             relation = vectorclock.compare(VectorClock(incoming))
         except (ValueError, TypeError):
-            return JSONResponse({"error": "clock must map actors to non-negative integers"}, status_code=422)
+            return JSONResponse(
+                {"error": "clock must map actors to non-negative integers"}, status_code=422
+            )
         return JSONResponse({"relation": relation})
-
 
     @app.get("/api/v1/frequency")
     async def api_frequency_stats() -> JSONResponse:
@@ -3113,7 +3156,9 @@ def create_app(
         if not isinstance(count, int) or isinstance(count, bool) or count < 1:
             return JSONResponse({"error": "count must be a positive integer"}, status_code=422)
         countminsketch.add(item, count)
-        return JSONResponse({"item": item, "count": count, "estimate": countminsketch.estimate(item)})
+        return JSONResponse(
+            {"item": item, "count": count, "estimate": countminsketch.estimate(item)}
+        )
 
     @app.post("/api/v1/frequency/estimate")
     async def api_frequency_estimate(request: Request) -> JSONResponse:
@@ -3142,7 +3187,6 @@ def create_app(
         if isinstance(query, str) and query:
             result["estimate"] = merged.estimate(query)
         return JSONResponse(result)
-
 
     @app.get("/api/v1/merkle")
     async def api_merkle_stats() -> JSONResponse:
@@ -3185,7 +3229,6 @@ def create_app(
             return JSONResponse({"error": str(exc)}, status_code=404)
         return JSONResponse({"item": item, "proof": path, "root": merkle_tree.root})
 
-
     @app.get("/api/v1/skiplist")
     async def api_skiplist_stats() -> JSONResponse:
         if skiplist is None:
@@ -3224,8 +3267,9 @@ def create_app(
         if not isinstance(lo, str) or not isinstance(hi, str):
             return JSONResponse({"error": "lo and hi are required strings"}, status_code=422)
         pairs = skiplist.range_query(lo, hi)
-        return JSONResponse({"lo": lo, "hi": hi, "results": [[k, v] for k, v in pairs], "count": len(pairs)})
-
+        return JSONResponse(
+            {"lo": lo, "hi": hi, "results": [[k, v] for k, v in pairs], "count": len(pairs)}
+        )
 
     @app.get("/api/v1/tdigest")
     async def api_tdigest_stats() -> JSONResponse:
@@ -3239,10 +3283,10 @@ def create_app(
             return JSONResponse({"error": "no t-digest configured"})
         body = await request.json()
         value = body.get("value")
-        if not isinstance(value, (int, float)) or isinstance(value, bool):
+        if not isinstance(value, int | float) or isinstance(value, bool):
             return JSONResponse({"error": "value must be a number"}, status_code=422)
         weight = body.get("weight", 1)
-        if not isinstance(weight, (int, float)) or isinstance(weight, bool) or weight <= 0:
+        if not isinstance(weight, int | float) or isinstance(weight, bool) or weight <= 0:
             return JSONResponse({"error": "weight must be a positive number"}, status_code=422)
         tdigest.add(value, weight)
         return JSONResponse({"value": value, "weight": weight, "count": tdigest.count})
@@ -3253,7 +3297,7 @@ def create_app(
             return JSONResponse({"error": "no t-digest configured"})
         body = await request.json()
         q = body.get("q")
-        if not isinstance(q, (int, float)) or isinstance(q, bool) or not 0.0 <= q <= 100.0:
+        if not isinstance(q, int | float) or isinstance(q, bool) or not 0.0 <= q <= 100.0:
             return JSONResponse({"error": "q must be a number in [0, 100]"}, status_code=422)
         try:
             value = tdigest.percentile(q)
@@ -3268,7 +3312,7 @@ def create_app(
         body = await request.json()
         values = body.get("values")
         if not isinstance(values, list) or not all(
-            isinstance(x, (int, float)) and not isinstance(x, bool) for x in values
+            isinstance(x, int | float) and not isinstance(x, bool) for x in values
         ):
             return JSONResponse({"error": "values must be a list of numbers"}, status_code=422)
         other = TDigest()
@@ -3277,10 +3321,14 @@ def create_app(
         merged = tdigest.merge(other)
         result = {"merged": True, "count": merged.count}
         q = body.get("q")
-        if isinstance(q, (int, float)) and not isinstance(q, bool) and 0.0 <= q <= 100.0 and merged.count > 0:
+        if (
+            isinstance(q, int | float)
+            and not isinstance(q, bool)
+            and 0.0 <= q <= 100.0
+            and merged.count > 0
+        ):
             result["percentile"] = merged.percentile(q)
         return JSONResponse(result)
-
 
     @app.get("/api/v1/fenwick")
     async def api_fenwick_stats() -> JSONResponse:
@@ -3297,7 +3345,13 @@ def create_app(
             fenwick.update(body.get("index"), body.get("delta"))
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"index": body.get("index"), "delta": body.get("delta"), "total": fenwick.stats()["total"]})
+        return JSONResponse(
+            {
+                "index": body.get("index"),
+                "delta": body.get("delta"),
+                "total": fenwick.stats()["total"],
+            }
+        )
 
     @app.post("/api/v1/fenwick/query")
     async def api_fenwick_query(request: Request) -> JSONResponse:
@@ -3321,7 +3375,6 @@ def create_app(
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"index": body.get("index"), "value": value})
 
-
     @app.get("/api/v1/segtree")
     async def api_segtree_stats() -> JSONResponse:
         if segtree is None:
@@ -3337,7 +3390,13 @@ def create_app(
             segtree.update(body.get("index"), body.get("value"))
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"index": body.get("index"), "value": body.get("value"), "aggregate": segtree.stats()["aggregate"]})
+        return JSONResponse(
+            {
+                "index": body.get("index"),
+                "value": body.get("value"),
+                "aggregate": segtree.stats()["aggregate"],
+            }
+        )
 
     @app.post("/api/v1/segtree/query")
     async def api_segtree_query(request: Request) -> JSONResponse:
@@ -3348,7 +3407,9 @@ def create_app(
             result = segtree.query(body.get("lo"), body.get("hi"))
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"lo": body.get("lo"), "hi": body.get("hi"), "mode": segtree.mode, "result": result})
+        return JSONResponse(
+            {"lo": body.get("lo"), "hi": body.get("hi"), "mode": segtree.mode, "result": result}
+        )
 
     @app.post("/api/v1/segtree/point")
     async def api_segtree_point(request: Request) -> JSONResponse:
@@ -3360,7 +3421,6 @@ def create_app(
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"index": body.get("index"), "value": value})
-
 
     @app.get("/api/v1/unionfind")
     async def api_unionfind_stats() -> JSONResponse:
@@ -3377,7 +3437,14 @@ def create_app(
             united = unionfind.union(body.get("a"), body.get("b"))
         except (ValueError, TypeError) as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"a": body.get("a"), "b": body.get("b"), "united": united, "components": unionfind.component_count()})
+        return JSONResponse(
+            {
+                "a": body.get("a"),
+                "b": body.get("b"),
+                "united": united,
+                "components": unionfind.component_count(),
+            }
+        )
 
     @app.post("/api/v1/unionfind/find")
     async def api_unionfind_find(request: Request) -> JSONResponse:
@@ -3595,15 +3662,17 @@ def _read_checkpoint_summary(checkpoint_store: Any) -> dict[str, Any]:
     return {"status": "available"}
 
 
-
 _DASHBOARD_HTML = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>PRADY OS -- Sovereign Dashboard</title>\n  <style>\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n    body { background: #0a0a0f; color: #e0e0f0; font-family: \'Courier New\', monospace; }\n    header { background: #12121e; border-bottom: 1px solid #2a2a4a; padding: 1rem 2rem;\n             display: flex; align-items: center; justify-content: space-between; }\n    header h1 { font-size: 1.4rem; color: #7b8fff; letter-spacing: 2px; }\n    header .badge { font-size: 0.75rem; color: #4caf50; border: 1px solid #4caf50;\n                    padding: 2px 8px; border-radius: 4px; }\n    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }\n    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }\n    .card { background: #12121e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 1.2rem; }\n    .card h2 { font-size: 0.85rem; color: #7b8fff; text-transform: uppercase;\n                letter-spacing: 1px; margin-bottom: 0.8rem; }\n    .stat { display: flex; justify-content: space-between; padding: 4px 0;\n            border-bottom: 1px solid #1e1e32; font-size: 0.85rem; }\n    .stat:last-child { border-bottom: none; }\n    .stat .val { color: #a0cfff; }\n    #log { background: #0d0d16; border: 1px solid #2a2a4a; border-radius: 8px;\n           padding: 1rem; margin-top: 1rem; height: 200px; overflow-y: auto;\n           font-size: 0.8rem; color: #6a6a9a; }\n    #log p { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }\n  </style>\n</head>\n<body>\n  <header>\n    <h1>PRADY OS -- SOVEREIGN</h1>\n    <span class="badge" id="status-badge">ONLINE</span>\n  </header>\n  <main>\n    <div class="grid">\n      <div class="card" id="status-card">\n        <h2>System Status</h2>\n        <div class="stat"><span>Kernel</span><span class="val" id="s-kernel">--</span></div>\n        <div class="stat"><span>Warden</span><span class="val" id="s-warden">--</span></div>\n        <div class="stat"><span>Campaigns</span><span class="val" id="s-campaigns">--</span></div>\n        <div class="stat"><span>Last refresh</span><span class="val" id="s-ts">--</span></div>\n      </div>\n      <div class="card">\n        <h2>Event Stream</h2>\n        <div id="log"><p>Connecting...</p></div>\n      </div>\n    </div>\n  </main>\n  <script>\n    async function fetchStatus() {\n      try {\n        const r = await fetch(\'/api/status\');\n        const d = await r.json();\n        document.getElementById(\'s-kernel\').textContent =\n          d.checkpoint && d.checkpoint.file ? \'checkpoint ok\' : \'active\';\n        document.getElementById(\'s-warden\').textContent =\n          d.warden ? d.warden.status : \'unknown\';\n        document.getElementById(\'s-campaigns\').textContent =\n          d.active_campaigns ? d.active_campaigns.length : \'0\';\n        document.getElementById(\'s-ts\').textContent =\n          new Date(d.timestamp * 1000).toLocaleTimeString();\n      } catch(e) { console.error(e); }\n    }\n    fetchStatus();\n    setInterval(fetchStatus, 5000);\n    const log = document.getElementById(\'log\');\n    log.innerHTML = \'\';\n    const es = new EventSource(\'/stream\');\n    es.onmessage = e => {\n      const p = document.createElement(\'p\');\n      p.textContent = e.data.slice(0, 120);\n      log.prepend(p);\n      if (log.children.length > 50) log.removeChild(log.lastChild);\n    };\n    es.onerror = () => {\n      const p = document.createElement(\'p\');\n      p.textContent = \'[stream disconnected]\';\n      log.prepend(p);\n    };\n  </script>\n</body>\n</html>'
+
 
 def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
+
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
     from pradyos.imperium.checkpoint import CheckpointStore
+
     bus = get_bus()
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()

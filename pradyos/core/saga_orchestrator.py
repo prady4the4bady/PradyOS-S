@@ -4,8 +4,8 @@ import threading
 import time
 import uuid
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 
 @dataclass
@@ -107,11 +107,13 @@ class SagaOrchestrator:
             handler = handlers_snapshot.get(step_name)
 
             if handler is None:
-                saga_run.payload_trace.append({
-                    "step": step_name,
-                    "input": dict(payload),
-                    "error": f"no handler: {step_name}",
-                })
+                saga_run.payload_trace.append(
+                    {
+                        "step": step_name,
+                        "input": dict(payload),
+                        "error": f"no handler: {step_name}",
+                    }
+                )
                 saga_run.status = "failed"
                 saga_run.error = f"no handler: {step_name}"
                 saga_run.finished_at = time.time()
@@ -121,11 +123,13 @@ class SagaOrchestrator:
             try:
                 output = handler(step_input)
             except Exception as exc:
-                saga_run.payload_trace.append({
-                    "step": step_name,
-                    "input": step_input,
-                    "error": str(exc),
-                })
+                saga_run.payload_trace.append(
+                    {
+                        "step": step_name,
+                        "input": step_input,
+                        "error": str(exc),
+                    }
+                )
                 saga_run.status = "failed"
                 saga_run.error = str(exc)
                 saga_run.finished_at = time.time()
@@ -133,11 +137,13 @@ class SagaOrchestrator:
 
             if not isinstance(output, dict):
                 output = {"value": output}
-            saga_run.payload_trace.append({
-                "step": step_name,
-                "input": step_input,
-                "output": dict(output),
-            })
+            saga_run.payload_trace.append(
+                {
+                    "step": step_name,
+                    "input": step_input,
+                    "output": dict(output),
+                }
+            )
             payload = output  # chain: next step's input
 
         saga_run.status = "completed"

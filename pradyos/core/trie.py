@@ -46,8 +46,8 @@ class SovereignTrie:
 
     def __init__(self) -> None:
         self._root = _Node()
-        self._size = 0      # number of stored keys
-        self._nodes = 1     # number of nodes, including the root
+        self._size = 0  # number of stored keys
+        self._nodes = 1  # number of nodes, including the root
         self._lock = threading.Lock()
 
     # ── internal (callers already hold the lock) ─────────────────────────────

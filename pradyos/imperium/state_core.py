@@ -20,7 +20,7 @@ from pradyos.core.audit import AuditLog, get_audit_log
 from pradyos.core.bus import EventBus, get_bus
 from pradyos.core.types import TaskState
 from pradyos.imperium.checkpoint import CheckpointStore
-from pradyos.imperium.task import ImperiumTask, TaskRecord
+from pradyos.imperium.task import TaskRecord
 
 
 class StateCore:
@@ -43,8 +43,11 @@ class StateCore:
     def mark_queued(self, rec: TaskRecord, reason: str = "") -> None:
         rec.state = TaskState.QUEUED
         rec.queued_at = time.time()
-        self._commit(rec, f"queued: {rec.spec.intent or rec.spec.kind}"
-                    + (f" ({reason})" if reason else ""), "imperium.task_queued")
+        self._commit(
+            rec,
+            f"queued: {rec.spec.intent or rec.spec.kind}" + (f" ({reason})" if reason else ""),
+            "imperium.task_queued",
+        )
 
     def mark_running(self, rec: TaskRecord) -> None:
         rec.state = TaskState.RUNNING
@@ -58,7 +61,9 @@ class StateCore:
         rec.last_error = None
         if result is not None:
             rec.last_result = result
-        self._commit(rec, f"succeeded: {rec.spec.intent or rec.spec.kind}", "imperium.task_succeeded")
+        self._commit(
+            rec, f"succeeded: {rec.spec.intent or rec.spec.kind}", "imperium.task_succeeded"
+        )
 
     def mark_failed(self, rec: TaskRecord, error: str) -> None:
         rec.state = TaskState.FAILED
@@ -80,8 +85,11 @@ class StateCore:
         rec.state = TaskState.QUEUED
         rec.escalation_reason = None
         rec.queued_at = time.time()
-        self._commit(rec, f"APPROVED by {approver}: {rec.spec.intent or rec.spec.kind}",
-                     "imperium.task_approved")
+        self._commit(
+            rec,
+            f"APPROVED by {approver}: {rec.spec.intent or rec.spec.kind}",
+            "imperium.task_approved",
+        )
 
     def mark_rejected(self, rec: TaskRecord, approver: str, reason: str) -> None:
         rec.state = TaskState.CANCELLED
@@ -91,8 +99,11 @@ class StateCore:
     def mark_cancelled(self, rec: TaskRecord, reason: str = "") -> None:
         rec.state = TaskState.CANCELLED
         rec.finished_at = time.time()
-        self._commit(rec, f"cancelled: {reason or rec.spec.intent or rec.spec.kind}",
-                     "imperium.task_cancelled")
+        self._commit(
+            rec,
+            f"cancelled: {reason or rec.spec.intent or rec.spec.kind}",
+            "imperium.task_cancelled",
+        )
 
     # ---------- resume ----------
 

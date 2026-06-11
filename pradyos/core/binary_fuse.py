@@ -90,9 +90,9 @@ class BinaryFuseFilter:
     def _slots(self, u64: int, seed: int, segment: int) -> tuple[int, int, int, int]:
         """Return ``(h0, h1, h2, fingerprint)`` for a folded key under ``seed``."""
         mix = self._mix(u64, seed)
-        h0 = (mix % segment)
-        h1 = ((mix >> 21) % segment)
-        h2 = ((mix >> 42) % segment)
+        h0 = mix % segment
+        h1 = (mix >> 21) % segment
+        h2 = (mix >> 42) % segment
         f = mix & 0xFF
         return h0, h1, h2, f
 
@@ -142,8 +142,7 @@ class BinaryFuseFilter:
             seed = (seed + 1) & _MASK64
         raise BinaryFuseError("build failed: cycle detected")
 
-    def _try_build(self, u64s: list[int], seed: int, segment: int,
-                   total: int) -> list[int] | None:
+    def _try_build(self, u64s: list[int], seed: int, segment: int, total: int) -> list[int] | None:
         """One peeling + back-substitution attempt; return the array or ``None`` on stall."""
         n = len(u64s)
         slots = []

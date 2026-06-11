@@ -81,7 +81,9 @@ def register_implicittreap_routes(app: Any, implicit_treap: Any | None = None) -
         return JSONResponse({"index": body["index"], "value": body["value"], "size": it.size})
 
     @app.get("/api/v1/implicittreap/range_sum")
-    async def api_it_range_sum(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_it_range_sum(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             s = it.range_sum(lo, hi)
         except ImplicitTreapError as exc:

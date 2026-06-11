@@ -60,7 +60,7 @@ class SuffixArray:
 
     # ── substring search (binary bounds over the suffix array) ────────────────────────
     def _prefix(self, start: int, m: int) -> str:
-        return self._text[start:start + m]
+        return self._text[start : start + m]
 
     def _lower(self, p: str) -> int:
         """Leftmost SA index whose suffix prefix (truncated to len(p)) is ``>= p``."""
@@ -108,7 +108,7 @@ class SuffixArray:
         """Sorted start positions of every occurrence of ``pattern``."""
         self._check_pattern(pattern)
         with self._lock:
-            return sorted(self._sa[self._lower(pattern):self._upper(pattern)])
+            return sorted(self._sa[self._lower(pattern) : self._upper(pattern)])
 
     # ── arrays ──────────────────────────────────────────────────────────────────────────
     def suffix_array(self) -> list:

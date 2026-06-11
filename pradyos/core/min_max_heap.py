@@ -34,7 +34,7 @@ class MinMaxHeapError(Exception):
 def _kind(value: Any) -> str:
     if isinstance(value, bool):
         raise MinMaxHeapError("value must be int, float or str (not bool)")
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return "num"
     if isinstance(value, str):
         return "str"
@@ -42,7 +42,7 @@ def _kind(value: Any) -> str:
 
 
 def _is_min_level(i: int) -> bool:
-    return ((i + 1).bit_length() - 1) % 2 == 0      # level = floor(log2(i+1)); even ⇒ min level
+    return ((i + 1).bit_length() - 1) % 2 == 0  # level = floor(log2(i+1)); even ⇒ min level
 
 
 class MinMaxHeap:
@@ -50,7 +50,7 @@ class MinMaxHeap:
 
     def __init__(self) -> None:
         self._a: list = []
-        self._kind: str | None = None               # 'num' or 'str' — values must be mutually orderable
+        self._kind: str | None = None  # 'num' or 'str' — values must be mutually orderable
         self._lock = threading.Lock()
 
     # ── push (bubble up against grandparents) ────────────────────────────────────────
@@ -99,7 +99,9 @@ class MinMaxHeap:
             if self._kind is None:
                 self._kind = kind
             elif kind != self._kind:
-                raise MinMaxHeapError(f"value kind {kind!r} does not match heap kind {self._kind!r}")
+                raise MinMaxHeapError(
+                    f"value kind {kind!r} does not match heap kind {self._kind!r}"
+                )
             self._a.append(value)
             self._bubble_up(len(self._a) - 1)
 
@@ -135,12 +137,12 @@ class MinMaxHeap:
             if a[m] >= a[i]:
                 return
             a[m], a[i] = a[i], a[m]
-            if m > 2 * i + 2:                        # m is a grandchild → fix its parent, keep going
+            if m > 2 * i + 2:  # m is a grandchild → fix its parent, keep going
                 p = (m - 1) // 2
                 if a[m] > a[p]:
                     a[m], a[p] = a[p], a[m]
                 i = m
-            else:                                    # m is a direct child → done
+            else:  # m is a direct child → done
                 return
 
     def _trickle_down_max(self, i: int) -> None:
@@ -213,7 +215,7 @@ class MinMaxHeap:
             if not a:
                 raise MinMaxHeapError("extract_max on an empty heap")
             mi = self._max_index()
-            if mi == len(a) - 1:                     # max is the last slot → just pop
+            if mi == len(a) - 1:  # max is the last slot → just pop
                 v = a.pop()
             else:
                 v = a[mi]
@@ -254,5 +256,9 @@ class MinMaxHeap:
         with self._lock:
             if not self._a:
                 return {"size": 0, "min": None, "max": None, "kind": self._kind}
-            return {"size": len(self._a), "min": self._a[0],
-                    "max": self._a[self._max_index()], "kind": self._kind}
+            return {
+                "size": len(self._a),
+                "min": self._a[0],
+                "max": self._a[self._max_index()],
+                "kind": self._kind,
+            }

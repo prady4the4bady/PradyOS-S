@@ -39,9 +39,9 @@ class _Node:
 
     def __init__(self) -> None:
         self.children: dict[str, _Node] = {}
-        self.fail: "_Node | None" = None
-        self.own: list = []                  # patterns ending exactly at this node
-        self.outputs: list = []              # patterns matching here (own + via failure chain)
+        self.fail: _Node | None = None
+        self.own: list = []  # patterns ending exactly at this node
+        self.outputs: list = []  # patterns matching here (own + via failure chain)
 
 
 class AhoCorasick:
@@ -51,7 +51,7 @@ class AhoCorasick:
         self._lock = threading.Lock()
         self._root = _Node()
         self._patterns: set = set()
-        self._dirty = False                  # True when a pattern was added since the last build
+        self._dirty = False  # True when a pattern was added since the last build
 
     # ── add ──────────────────────────────────────────────────────────────────────────────
     def add(self, pattern: Any) -> bool:
@@ -99,7 +99,7 @@ class AhoCorasick:
         while q:
             u = q.popleft()
             u.outputs = list(u.own)
-            u.outputs.extend(u.fail.outputs)   # u.fail is shallower → already finalised
+            u.outputs.extend(u.fail.outputs)  # u.fail is shallower → already finalised
             for ch, v in u.children.items():
                 f = u.fail
                 while f is not root and ch not in f.children:
@@ -189,5 +189,8 @@ class AhoCorasick:
     def stats(self) -> dict:
         """Summary: ``num_patterns`` / ``num_nodes`` / ``built``."""
         with self._lock:
-            return {"num_patterns": len(self._patterns), "num_nodes": self._count_nodes(),
-                    "built": not self._dirty}
+            return {
+                "num_patterns": len(self._patterns),
+                "num_nodes": self._count_nodes(),
+                "built": not self._dirty,
+            }

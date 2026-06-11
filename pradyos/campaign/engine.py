@@ -26,16 +26,13 @@ import asyncio
 import logging
 import threading
 import time
-from pathlib import Path
 from typing import Any
 
 from pradyos.campaign.model import Campaign, CampaignNode, CampaignStatus, NodeStatus
 from pradyos.campaign.registry import CampaignRegistry
 from pradyos.core.bus import EventBus, get_bus
-from pradyos.core.ids import new_id
-from pradyos.core.types import Priority
 from pradyos.imperium.task import ImperiumTask
-from pradyos.titan_ops.rollback import RollbackEntry, RollbackRegistry
+from pradyos.titan_ops.rollback import RollbackRegistry
 
 log = logging.getLogger("pradyos.campaign.engine")
 
@@ -43,11 +40,11 @@ log = logging.getLogger("pradyos.campaign.engine")
 # Singleton
 # ---------------------------------------------------------------------------
 
-_engine: "CampaignEngine | None" = None
+_engine: CampaignEngine | None = None
 _engine_lock = threading.Lock()
 
 
-def get_engine(**kwargs: Any) -> "CampaignEngine":
+def get_engine(**kwargs: Any) -> CampaignEngine:
     global _engine
     if _engine is None:
         with _engine_lock:
@@ -70,8 +67,8 @@ class CampaignEngine:
 
     def __init__(
         self,
-        oracle: Any | None = None,       # Oracle instance (optional — stubs allowed)
-        memory: Any | None = None,       # CitadelStore / InMemoryCitadel
+        oracle: Any | None = None,  # Oracle instance (optional — stubs allowed)
+        memory: Any | None = None,  # CitadelStore / InMemoryCitadel
         rollback_registry: RollbackRegistry | None = None,
         registry: CampaignRegistry | None = None,
         bus: EventBus | None = None,
@@ -202,9 +199,7 @@ class CampaignEngine:
                 "progress": campaign.progress(),
             },
         )
-        log.info(
-            "Campaign %s finished: %s", campaign.campaign_id, campaign.status.value
-        )
+        log.info("Campaign %s finished: %s", campaign.campaign_id, campaign.status.value)
         return campaign
 
     async def rollback_campaign(self, campaign_id: str) -> dict[str, Any]:
@@ -213,7 +208,8 @@ class CampaignEngine:
         if campaign is None:
             return {"ok": False, "error": f"Campaign {campaign_id} not found"}
         execution_order = [
-            nid for nid, n in campaign.nodes.items()
+            nid
+            for nid, n in campaign.nodes.items()
             if n.status in (NodeStatus.SUCCEEDED, NodeStatus.RUNNING)
         ]
         await self._rollback_campaign(campaign, execution_order)
@@ -224,21 +220,17 @@ class CampaignEngine:
     # DAG execution
     # ------------------------------------------------------------------
 
-    async def _execute_dag(
-        self, campaign: Campaign, execution_order: list[str]
-    ) -> None:
+    async def _execute_dag(self, campaign: Campaign, execution_order: list[str]) -> None:
         """Execute nodes in dependency order. Stops on first failure."""
         pending = set(campaign.nodes.keys())
 
         while pending:
-            ready = [
-                n for n in campaign.get_ready_nodes()
-                if n.node_id in pending
-            ]
+            ready = [n for n in campaign.get_ready_nodes() if n.node_id in pending]
             if not ready:
                 # Check for deadlock (no progress possible)
                 still_pending = [
-                    n for nid, n in campaign.nodes.items()
+                    n
+                    for nid, n in campaign.nodes.items()
                     if nid in pending and n.status == NodeStatus.PENDING
                 ]
                 if still_pending:
@@ -258,7 +250,7 @@ class CampaignEngine:
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for node, result in zip(ready, results):
+            for node, result in zip(ready, results, strict=False):
                 pending.discard(node.node_id)
                 if isinstance(result, Exception):
                     log.error("Node %s exception: %s", node.node_id, result)
@@ -377,9 +369,7 @@ class CampaignEngine:
                     "error": node.error,
                 },
             )
-            log.warning(
-                "Node %s failed: %s", node.node_id, node.error
-            )
+            log.warning("Node %s failed: %s", node.node_id, node.error)
 
         self._registry.save(campaign)
 
@@ -392,8 +382,6 @@ class CampaignEngine:
         if self._oracle is None:
             return None
         try:
-            from pradyos.oracle.planner import OraclePlan  # noqa: PLC0415
-
             plan = await self._oracle.plan_task(node.task)
             return plan
         except Exception as e:  # noqa: BLE001
@@ -417,7 +405,7 @@ class CampaignEngine:
                 r = await executor.execute(instr)
                 # Register rollback
                 if instr.rollback_hook:
-                    from pradyos.titan_ops.rollback import RollbackEntry, HookKind  # noqa: PLC0415
+                    from pradyos.titan_ops.rollback import HookKind, RollbackEntry  # noqa: PLC0415
 
                     self._rollbacks.register(
                         RollbackEntry(
@@ -452,9 +440,7 @@ class CampaignEngine:
     # Rollback
     # ------------------------------------------------------------------
 
-    async def _rollback_campaign(
-        self, campaign: Campaign, execution_order: list[str]
-    ) -> None:
+    async def _rollback_campaign(self, campaign: Campaign, execution_order: list[str]) -> None:
         """Roll back all executed nodes in reverse execution order."""
         log.info(
             "Rolling back campaign %s (%d nodes)",
@@ -499,8 +485,9 @@ class CampaignEngine:
 
 def main() -> None:
     """CLI entry point: pradyos-campaign (status / list)."""
-    import click
     import json as _json
+
+    import click
 
     @click.command()
     @click.option("--list", "do_list", is_flag=True, help="List all campaigns")

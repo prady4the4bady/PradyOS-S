@@ -55,7 +55,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class MomentSketch:
@@ -120,19 +120,19 @@ class MomentSketch:
         ``((2x - (lo+hi)) / (hi-lo))ʲ`` so no re-scan of the data is needed."""
         n = self._C[0]
         lo, hi = self._min, self._max
-        raw = np.array(self._C, dtype=float) / n        # E[x^i], raw domain
-        if hi <= lo:                                     # degenerate: single value
+        raw = np.array(self._C, dtype=float) / n  # E[x^i], raw domain
+        if hi <= lo:  # degenerate: single value
             mu = np.zeros(self._k)
             mu[0] = 1.0
             return mu
         a = 2.0 / (hi - lo)
-        b = -(hi + lo) / (hi - lo)                       # scaled = a*x + b
+        b = -(hi + lo) / (hi - lo)  # scaled = a*x + b
         mu = np.zeros(self._k)
         for j in range(self._k):
             # E[(a x + b)^j] = Σ_m C(j,m) a^m b^(j-m) E[x^m]
             acc = 0.0
             for m in range(j + 1):
-                acc += _binom(j, m) * (a ** m) * (b ** (j - m)) * raw[m]
+                acc += _binom(j, m) * (a**m) * (b ** (j - m)) * raw[m]
             mu[j] = acc
         return mu
 
@@ -140,22 +140,25 @@ class MomentSketch:
         """Solve for MaxEnt multipliers; return ``(lambdas, grid, density_on_grid)``."""
         grid = np.linspace(-1.0, 1.0, self._GRID)
         # Vandermonde of powers x^0..x^(k-1) on the grid.
-        powers = np.vstack([grid ** j for j in range(self._k)])  # (k, GRID)
+        powers = np.vstack([grid**j for j in range(self._k)])  # (k, GRID)
 
         def neg_dual(lam: np.ndarray):
-            z_density = np.exp(powers.T @ lam)               # (GRID,)
+            z_density = np.exp(powers.T @ lam)  # (GRID,)
             zint = trapezoid(z_density, grid)
             if not np.isfinite(zint) or zint <= 0:
                 return 1e12, np.zeros_like(lam)
             logz = np.log(zint)
             obj = logz - lam @ mu
             # gradient_j = E_fit[x^j] - mu_j
-            fitted = np.array([trapezoid(powers[j] * z_density, grid) for j in range(self._k)]) / zint
+            fitted = (
+                np.array([trapezoid(powers[j] * z_density, grid) for j in range(self._k)]) / zint
+            )
             return obj, fitted - mu
 
         lam0 = np.zeros(self._k)
-        res = optimize.minimize(neg_dual, lam0, jac=True, method="L-BFGS-B",
-                                options={"maxiter": 500, "ftol": 1e-10})
+        res = optimize.minimize(
+            neg_dual, lam0, jac=True, method="L-BFGS-B", options={"maxiter": 500, "ftol": 1e-10}
+        )
         lam = res.x
         density = np.exp(powers.T @ lam)
         zint = trapezoid(density, grid)
@@ -174,7 +177,7 @@ class MomentSketch:
             if self._C[0] <= 0:
                 raise MomentSketchError("empty")
             lo, hi = self._min, self._max
-            if hi <= lo:                       # all identical values
+            if hi <= lo:  # all identical values
                 return float(lo)
             mu = self._empirical_scaled_moments()
             _, grid, density = self._fit_lambdas(mu)
@@ -186,7 +189,7 @@ class MomentSketch:
         return float(min(max(raw_v, lo), hi))
 
     # ── merge / lifecycle ────────────────────────────────────────────────────────────────
-    def merge(self, other: "MomentSketch") -> "MomentSketch":
+    def merge(self, other: MomentSketch) -> MomentSketch:
         """Merge ``other`` (same ``k``) in: element-wise power-sum add, min/max of bounds."""
         if not isinstance(other, MomentSketch):
             raise MomentSketchError(other)
@@ -204,7 +207,7 @@ class MomentSketch:
                 self._max = o_max if self._max is None else max(self._max, o_max)
         return self
 
-    def merge_state(self, state: dict) -> "MomentSketch":
+    def merge_state(self, state: dict) -> MomentSketch:
         """Merge a serialized state dict (``{k, moments, min_val, max_val}``) in."""
         if not isinstance(state, dict):
             raise MomentSketchError(state)
@@ -212,12 +215,12 @@ class MomentSketch:
         return self.merge(other)
 
     @classmethod
-    def from_state(cls, state: dict) -> "MomentSketch":
+    def from_state(cls, state: dict) -> MomentSketch:
         """Reconstruct a sketch from a serialized ``stats()``-style state dict."""
         if not isinstance(state, dict) or "moments" not in state:
             raise MomentSketchError(state)
         moments = state["moments"]
-        if not isinstance(moments, (list, tuple)) or len(moments) < 1:
+        if not isinstance(moments, list | tuple) or len(moments) < 1:
             raise MomentSketchError(moments)
         sk = cls(k=len(moments), seed=int(state.get("seed", 0)))
         sk._C = [float(m) for m in moments]

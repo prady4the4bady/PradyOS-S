@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class MemoryGraph:
     _NS = "memory_graph"
     _KEY = "graph_state"
 
-    def __init__(self, snapshot_store: "SnapshotStore | None" = None) -> None:
+    def __init__(self, snapshot_store: SnapshotStore | None = None) -> None:
         self._store = snapshot_store
         self._nodes: dict[str, GraphNode] = {}
         self._edges: list[GraphEdge] = []
@@ -89,8 +89,11 @@ class MemoryGraph:
                     return edge
 
             edge = GraphEdge(
-                src=src, dst=dst, relation=relation,
-                weight=weight, created_at=time.time(),
+                src=src,
+                dst=dst,
+                relation=relation,
+                weight=weight,
+                created_at=time.time(),
             )
             self._edges.append(edge)
             self._save_locked()
@@ -203,12 +206,14 @@ class MemoryGraph:
                 continue
         for e in edges_raw:
             try:
-                self._edges.append(GraphEdge(
-                    src=e["src"],
-                    dst=e["dst"],
-                    relation=e["relation"],
-                    weight=float(e.get("weight", 1.0)),
-                    created_at=float(e.get("created_at") or time.time()),
-                ))
+                self._edges.append(
+                    GraphEdge(
+                        src=e["src"],
+                        dst=e["dst"],
+                        relation=e["relation"],
+                        weight=float(e.get("weight", 1.0)),
+                        created_at=float(e.get("created_at") or time.time()),
+                    )
+                )
             except (KeyError, TypeError):
                 continue

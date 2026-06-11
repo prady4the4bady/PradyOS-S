@@ -14,7 +14,6 @@ import shlex
 import signal
 import subprocess
 import sys
-import threading
 import time
 
 # ---------------------------------------------------------------------------
@@ -62,26 +61,27 @@ def _popen_kwargs() -> dict:
         # CREATE_NEW_PROCESS_GROUP allows CTRL_BREAK_EVENT targeting
         return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
     return {"start_new_session": True}
-from dataclasses import asdict, dataclass, field
-from typing import Any
 
-from pradyos.core.audit import AuditLog, get_audit_log
-from pradyos.core.bus import EventBus, get_bus
-from pradyos.core.constitution import (
+
+from dataclasses import asdict, dataclass  # noqa: E402
+from typing import Any  # noqa: E402
+
+from pradyos.core.audit import AuditLog, get_audit_log  # noqa: E402
+from pradyos.core.bus import EventBus, get_bus  # noqa: E402
+from pradyos.core.constitution import (  # noqa: E402
     ApprovalDomain,
     Constitution,
     default_constitution,
 )
-from pradyos.core.ids import new_id
-from pradyos.core.types import ExecutionLane
-from pradyos.titan_ops.instruction import InstructionKind, TitanInstruction
-from pradyos.titan_ops.lanes import lane_for, parse_command
-from pradyos.titan_ops.rollback import RollbackEntry, RollbackRegistry
-
+from pradyos.core.types import ExecutionLane  # noqa: E402
+from pradyos.titan_ops.instruction import InstructionKind, TitanInstruction  # noqa: E402
+from pradyos.titan_ops.lanes import lane_for, parse_command  # noqa: E402
+from pradyos.titan_ops.rollback import RollbackEntry, RollbackRegistry  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Result type
 # ---------------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class ExecutionResult:
@@ -121,6 +121,7 @@ class ExecutionResult:
 # Kind-specific command builders
 # ---------------------------------------------------------------------------
 
+
 def _build_argv(instr: TitanInstruction) -> list[str]:
     """Translate the structured kind+args into an argv list."""
     if instr.kind is InstructionKind.SHELL:
@@ -151,16 +152,31 @@ def _argv_package(args: dict[str, Any]) -> list[str]:
         raise ValueError("package instruction requires args.package")
     pkgs = pkg if isinstance(pkg, list) else [pkg]
     if manager == "apt":
-        op_map = {"install": ["install", "-y"], "remove": ["remove", "-y"],
-                  "purge": ["purge", "-y"], "update": ["update"], "upgrade": ["upgrade", "-y"]}
-        return ["apt-get", *op_map.get(op, [op]), *pkgs] if op != "update" else ["apt-get", "update"]
+        op_map = {
+            "install": ["install", "-y"],
+            "remove": ["remove", "-y"],
+            "purge": ["purge", "-y"],
+            "update": ["update"],
+            "upgrade": ["upgrade", "-y"],
+        }
+        return (
+            ["apt-get", *op_map.get(op, [op]), *pkgs] if op != "update" else ["apt-get", "update"]
+        )
     if manager == "pip":
-        op_map = {"install": ["install"], "uninstall": ["uninstall", "-y"], "upgrade": ["install", "-U"]}
+        op_map = {
+            "install": ["install"],
+            "uninstall": ["uninstall", "-y"],
+            "upgrade": ["install", "-U"],
+        }
         return ["pip", *op_map.get(op, [op]), *pkgs]
     if manager == "dnf" or manager == "yum":
         return [manager, op, "-y", *pkgs]
     if manager == "pacman":
-        op_map = {"install": ["-S", "--noconfirm"], "remove": ["-R", "--noconfirm"], "update": ["-Syu", "--noconfirm"]}
+        op_map = {
+            "install": ["-S", "--noconfirm"],
+            "remove": ["-R", "--noconfirm"],
+            "update": ["-Syu", "--noconfirm"],
+        }
         return ["pacman", *op_map.get(op, [op]), *pkgs]
     raise ValueError(f"unsupported package manager: {manager!r}")
 
@@ -176,34 +192,32 @@ def _argv_file(args: dict[str, Any]) -> list[str]:
         # routes them through Popen; Python is always available as sys.executable.
         _py = sys.executable
         if op == "stat":
-            return [_py, "-c",
-                    f"import os,json; s=os.stat(r'{path}'); "
-                    f"print(json.dumps({{'size':s.st_size,'mtime':s.st_mtime}}))"]
+            return [
+                _py,
+                "-c",
+                f"import os,json; s=os.stat(r'{path}'); "
+                f"print(json.dumps({{'size':s.st_size,'mtime':s.st_mtime}}))",
+            ]
         if op == "read":
             return [_py, "-c", f"import sys; sys.stdout.write(open(r'{path}').read())"]
         if op == "list":
-            return [_py, "-c",
-                    f"import os; [print(e) for e in os.listdir(r'{path}')]"]
+            return [_py, "-c", f"import os; [print(e) for e in os.listdir(r'{path}')]"]
         if op == "remove":
             return [_py, "-c", f"import os; os.remove(r'{path}')"]
         if op == "remove_tree":
-            return [_py, "-c",
-                    f"import shutil; shutil.rmtree(r'{path}', ignore_errors=False)"]
+            return [_py, "-c", f"import shutil; shutil.rmtree(r'{path}', ignore_errors=False)"]
         if op == "mkdir":
-            return [_py, "-c",
-                    f"import os; os.makedirs(r'{path}', exist_ok=True)"]
+            return [_py, "-c", f"import os; os.makedirs(r'{path}', exist_ok=True)"]
         if op == "chmod":
             mode = args.get("mode")
             if not mode:
                 raise ValueError("file.chmod requires args.mode")
-            return [_py, "-c",
-                    f"import os; os.chmod(r'{path}', 0o{mode})"]
+            return [_py, "-c", f"import os; os.chmod(r'{path}', 0o{mode})"]
         if op == "chown":
             raise ValueError("file.chown is not supported on Windows")
         if op == "write":
             content = args.get("content", "")
-            return [_py, "-c",
-                    f"open(r'{path}','w').write({content!r})"]
+            return [_py, "-c", f"open(r'{path}','w').write({content!r})"]
         raise ValueError(f"unsupported file op: {op!r}")
     # POSIX
     if op == "stat":
@@ -243,8 +257,12 @@ def _argv_service(args: dict[str, Any]) -> list[str]:
     if _IS_WINDOWS:
         # Map to Windows Service Control Manager via sc.exe
         sc_op_map = {
-            "start": "start", "stop": "stop", "restart": None,
-            "status": "query", "enable": "config", "disable": "config",
+            "start": "start",
+            "stop": "stop",
+            "restart": None,
+            "status": "query",
+            "enable": "config",
+            "disable": "config",
         }
         if op == "restart":
             raise ValueError("service.restart on Windows requires two separate stop/start ops")
@@ -255,8 +273,17 @@ def _argv_service(args: dict[str, Any]) -> list[str]:
         if sc_op is None:
             raise ValueError(f"unsupported service op on Windows: {op!r}")
         return ["sc.exe", sc_op, unit]
-    if op in {"start", "stop", "restart", "reload", "enable", "disable",
-              "status", "mask", "unmask"}:
+    if op in {
+        "start",
+        "stop",
+        "restart",
+        "reload",
+        "enable",
+        "disable",
+        "status",
+        "mask",
+        "unmask",
+    }:
         return ["systemctl", op, unit]
     raise ValueError(f"unsupported service op: {op!r}")
 
@@ -266,19 +293,24 @@ def _argv_process(args: dict[str, Any]) -> list[str]:
     _py = sys.executable
     if _IS_WINDOWS:
         if op == "list":
-            return [_py, "-c",
-                    "import psutil; [print(p.pid, p.name(), p.status()) "
-                    "for p in psutil.process_iter(['pid','name','status'])]"]
+            return [
+                _py,
+                "-c",
+                "import psutil; [print(p.pid, p.name(), p.status()) "
+                "for p in psutil.process_iter(['pid','name','status'])]",
+            ]
         if op == "kill":
             pid = args.get("pid")
             if pid is None:
                 raise ValueError("process.kill requires args.pid")
-            return [_py, "-c",
-                    f"import os,signal; os.kill({pid}, signal.SIGTERM)"]
+            return [_py, "-c", f"import os,signal; os.kill({pid}, signal.SIGTERM)"]
         if op == "tree":
-            return [_py, "-c",
-                    "import psutil; "
-                    "[print(p.pid, p.name()) for p in psutil.process_iter(['pid','name'])]"]
+            return [
+                _py,
+                "-c",
+                "import psutil; "
+                "[print(p.pid, p.name()) for p in psutil.process_iter(['pid','name'])]",
+            ]
         raise ValueError(f"unsupported process op: {op!r}")
     if op == "list":
         return ["ps", "-eo", "pid,user,%cpu,%mem,comm,args", "--no-headers"]
@@ -297,6 +329,7 @@ def _argv_process(args: dict[str, Any]) -> list[str]:
 # ---------------------------------------------------------------------------
 # Executor
 # ---------------------------------------------------------------------------
+
 
 class TitanExecutor:
     """Synchronous subprocess executor with full audit attribution.
@@ -337,7 +370,9 @@ class TitanExecutor:
             detail={"command": rendered, "lane": instr.lane.value, "intent": instr.intent},
         )
         if decision.domain is ApprovalDomain.APPROVAL_REQUIRED:
-            return self._record_escalation(instr, argv, rendered, decision.reason, decision.matched_rule)
+            return self._record_escalation(
+                instr, argv, rendered, decision.reason, decision.matched_rule
+            )
 
         env = os.environ.copy()
         env.update(lane_cfg.extra_env)
@@ -414,7 +449,9 @@ class TitanExecutor:
 
     # ---------- audit helpers ----------
 
-    def _record(self, instr: TitanInstruction, result: ExecutionResult, decision_rule: str | None) -> None:
+    def _record(
+        self, instr: TitanInstruction, result: ExecutionResult, decision_rule: str | None
+    ) -> None:
         rec = self.audit.record(
             agent_id=instr.agent_id,
             kind="command",
@@ -447,7 +484,9 @@ class TitanExecutor:
             },
         )
 
-    def _record_error(self, instr: TitanInstruction, argv: list[str], message: str) -> ExecutionResult:
+    def _record_error(
+        self, instr: TitanInstruction, argv: list[str], message: str
+    ) -> ExecutionResult:
         now = time.time()
         result = ExecutionResult(
             instruction_id=instr.instruction_id,

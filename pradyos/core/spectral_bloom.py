@@ -56,7 +56,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_rate(x: Any) -> bool:
-    return (not isinstance(x, bool)) and isinstance(x, (int, float)) and 0.0 < float(x) < 1.0
+    return (not isinstance(x, bool)) and isinstance(x, int | float) and 0.0 < float(x) < 1.0
 
 
 class SpectralBloom:
@@ -89,10 +89,11 @@ class SpectralBloom:
 
     # ── hashing (pure) ──────────────────────────────────────────────────────────
     def _positions(self, element: Any) -> list[int]:
-        digest = hashlib.blake2b(repr((self._seed, element)).encode("utf-8"),
-                                 digest_size=16).digest()
+        digest = hashlib.blake2b(
+            repr((self._seed, element)).encode("utf-8"), digest_size=16
+        ).digest()
         h1 = int.from_bytes(digest[:8], "big")
-        h2 = int.from_bytes(digest[8:], "big") | 1        # odd → full period under double hashing
+        h2 = int.from_bytes(digest[8:], "big") | 1  # odd → full period under double hashing
         m = self._m
         return [(h1 + i * h2) % m for i in range(self._k)]
 
@@ -116,15 +117,16 @@ class SpectralBloom:
             pos = self._positions(element)
             current = min(self._counters[p] for p in pos)
             if current == 0:
-                return 0                                  # not a member — never touch counters
+                return 0  # not a member — never touch counters
             removed = min(count, current)
             for p in pos:
                 self._counters[p] = max(0, self._counters[p] - removed)
             self._num_added -= removed
             return removed
 
-    def reset(self, capacity: int | None = None, error_rate: float | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, capacity: int | None = None, error_rate: float | None = None, seed: int | None = None
+    ) -> None:
         """Clear all counters; optionally reconfigure (re-derives ``m`` and ``k``)."""
         with self._lock:
             nc = self._capacity if capacity is None else capacity

@@ -17,9 +17,10 @@ import os
 import threading
 import time
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Deque, Iterable
+from typing import Any
 
 from pradyos.core.ids import new_id
 from pradyos.core.types import AgentID
@@ -39,18 +40,16 @@ class AuditRecord:
     record_id: str = field(default_factory=lambda: new_id("au"))
     timestamp: float = field(default_factory=time.time)
     agent_id: str = "system"
-    kind: str = "event"               # 'command' | 'incident' | 'state' | 'event' | 'approval'
+    kind: str = "event"  # 'command' | 'incident' | 'state' | 'event' | 'approval'
     summary: str = ""
     detail: dict[str, Any] = field(default_factory=dict)
     exit_code: int | None = None
     rollback_hook: str | None = None  # opaque command/handler ref
-    correlation_id: str | None = None # ties records to a task / incident
+    correlation_id: str | None = None  # ties records to a task / incident
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
-        d["timestamp_iso"] = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.timestamp)
-        )
+        d["timestamp_iso"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.timestamp))
         return d
 
     def to_json(self) -> str:
@@ -69,8 +68,8 @@ class AuditLog:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
-        self._tail: Deque[AuditRecord] = deque(maxlen=tail_size)
-        self._subscribers: list[Any] = []   # callables(rec) -> None
+        self._tail: deque[AuditRecord] = deque(maxlen=tail_size)
+        self._subscribers: list[Any] = []  # callables(rec) -> None
 
     # ----- write path -----
     def record(
@@ -169,26 +168,27 @@ def reset_audit_log_for_tests(path: Path | str) -> AuditLog:
 # Phase 6 — AuditEvent / AuditCategory interface
 # ---------------------------------------------------------------------------
 
-import datetime
-from enum import Enum
+import datetime  # noqa: E402
+from enum import Enum  # noqa: E402
 
 
 class AuditCategory(str, Enum):
-    CAMPAIGN  = "CAMPAIGN"
-    WARDEN    = "WARDEN"
-    ORACLE    = "ORACLE"
+    CAMPAIGN = "CAMPAIGN"
+    WARDEN = "WARDEN"
+    ORACLE = "ORACLE"
     SOVEREIGN = "SOVEREIGN"
-    SYSTEM    = "SYSTEM"
+    SYSTEM = "SYSTEM"
 
 
 @dataclass
 class AuditEvent:
     """Structured audit event (Phase 6 interface)."""
+
     timestamp: float = field(default_factory=time.time)
-    category:  AuditCategory = AuditCategory.SYSTEM
-    actor:     str = "system"
-    action:    str = ""
-    payload:   dict[str, Any] = field(default_factory=dict)
+    category: AuditCategory = AuditCategory.SYSTEM
+    actor: str = "system"
+    action: str = ""
+    payload: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -197,9 +197,9 @@ class AuditEvent:
                 self.timestamp, tz=datetime.timezone.utc
             ).isoformat(),
             "category": self.category.value,
-            "actor":    self.actor,
-            "action":   self.action,
-            "payload":  self.payload,
+            "actor": self.actor,
+            "action": self.action,
+            "payload": self.payload,
         }
 
     def to_json(self) -> str:
@@ -216,10 +216,10 @@ _DEFAULT_AUDIT_EVENT_PATH = Path(
 )
 
 
-def _audit_log_append(self: "AuditLog", event: "AuditEvent") -> None:
+def _audit_log_append(self: AuditLog, event: AuditEvent) -> None:
     """Append an AuditEvent to the log (thread-safe)."""
     with self._lock:
-        self._tail.append(event)   # type: ignore[arg-type]
+        self._tail.append(event)  # type: ignore[arg-type]
         try:
             with self.path.open("a", encoding="utf-8") as f:
                 f.write(event.to_json() + "\n")

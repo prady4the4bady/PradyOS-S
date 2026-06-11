@@ -20,7 +20,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.frugal import FrugalQuantile, FrugalError
+from pradyos.core.frugal import FrugalError, FrugalQuantile
 
 
 def register_frugal_routes(app: Any, frugal: Any | None = None) -> Any:
@@ -40,13 +40,15 @@ def register_frugal_routes(app: Any, frugal: Any | None = None) -> Any:
             frugal.add(body["value"])
         except FrugalError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"value": body["value"], "estimate": frugal.estimate(),
-                            "count": frugal.count})
+        return JSONResponse(
+            {"value": body["value"], "estimate": frugal.estimate(), "count": frugal.count}
+        )
 
     @app.get("/api/v1/frugal/estimate")
     async def api_frugal_estimate() -> JSONResponse:
-        return JSONResponse({"estimate": frugal.estimate(), "quantile": frugal.quantile,
-                            "count": frugal.count})
+        return JSONResponse(
+            {"estimate": frugal.estimate(), "quantile": frugal.quantile, "count": frugal.count}
+        )
 
     @app.get("/api/v1/frugal/stats")
     async def api_frugal_stats() -> JSONResponse:

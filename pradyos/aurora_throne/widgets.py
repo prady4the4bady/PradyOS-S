@@ -19,22 +19,27 @@ from rich.text import Text
 
 def _bar(label: str, pct: float, width: int = 28) -> Group:
     color = "green" if pct < 70 else "yellow" if pct < 90 else "red"
-    bar = ProgressBar(total=100, completed=min(100, max(0, pct)), width=width,
-                      complete_style=color, finished_style=color)
-    return Group(Text(f"{label:<10} ", style="bold cyan"), bar,
-                 Text(f"  {pct:5.1f}%", style=color))
+    bar = ProgressBar(
+        total=100,
+        completed=min(100, max(0, pct)),
+        width=width,
+        complete_style=color,
+        finished_style=color,
+    )
+    return Group(Text(f"{label:<10} ", style="bold cyan"), bar, Text(f"  {pct:5.1f}%", style=color))
 
 
 def health_panel(snap: dict[str, Any] | None) -> Panel:
     if snap is None:
-        return Panel("WARDEN GRID telemetry not yet available…",
-                     title="EMPIRE HEALTH", border_style="dim")
+        return Panel(
+            "WARDEN GRID telemetry not yet available…", title="EMPIRE HEALTH", border_style="dim"
+        )
     rows: list[Any] = []
     rows.append(_bar("CPU", float(snap.get("cpu_percent", 0))))
     rows.append(_bar("RAM", float(snap.get("ram_percent", 0))))
     rows.append(_bar("SWAP", float(snap.get("swap_percent", 0))))
     for d in snap.get("disk", [])[:3]:
-        rows.append(_bar(f"DISK", float(d.get("percent", 0))))
+        rows.append(_bar("DISK", float(d.get("percent", 0))))
     for g in snap.get("gpus", []):
         rows.append(_bar(f"GPU{g.get('index', 0)}", float(g.get("util_percent", 0))))
 
@@ -73,9 +78,14 @@ def queue_panel(stats: dict[str, Any], records: list[dict[str, Any]]) -> Panel:
     recent.add_column("intent", overflow="fold")
     for r in records[:10]:
         state = r.get("state", "?")
-        color = {"RUNNING": "yellow", "SUCCEEDED": "green",
-                 "FAILED": "red", "ESCALATED": "magenta",
-                 "QUEUED": "cyan", "CANCELLED": "dim"}.get(state, "white")
+        color = {
+            "RUNNING": "yellow",
+            "SUCCEEDED": "green",
+            "FAILED": "red",
+            "ESCALATED": "magenta",
+            "QUEUED": "cyan",
+            "CANCELLED": "dim",
+        }.get(state, "white")
         recent.add_row(
             (r.get("task_id") or "")[:14],
             r.get("priority", ""),
@@ -84,14 +94,22 @@ def queue_panel(stats: dict[str, Any], records: list[dict[str, Any]]) -> Panel:
             r.get("intent", "") or "—",
         )
 
-    return Panel(Group(tbl, Text(""), recent), title="IMPERIUM — TASK QUEUE",
-                 border_style="blue", box=box.HEAVY)
+    return Panel(
+        Group(tbl, Text(""), recent),
+        title="IMPERIUM — TASK QUEUE",
+        border_style="blue",
+        box=box.HEAVY,
+    )
 
 
 def approvals_panel(approvals: list[dict[str, Any]]) -> Panel:
     if not approvals:
-        return Panel(Text("No proposals awaiting Sovereign approval.", style="dim"),
-                     title="SOVEREIGN APPROVALS", border_style="green", box=box.HEAVY)
+        return Panel(
+            Text("No proposals awaiting Sovereign approval.", style="dim"),
+            title="SOVEREIGN APPROVALS",
+            border_style="green",
+            box=box.HEAVY,
+        )
     body = Table(show_header=True, header_style="bold yellow", box=box.MINIMAL)
     body.add_column("id", style="dim")
     body.add_column("kind")
@@ -110,14 +128,22 @@ def approvals_panel(approvals: list[dict[str, Any]]) -> Panel:
         "Approve via: throne.approve(<task_id>)   |   Reject: throne.reject(<task_id>)",
         style="dim italic",
     )
-    return Panel(Group(body, Text(""), note), title="SOVEREIGN APPROVALS",
-                 border_style="yellow", box=box.HEAVY)
+    return Panel(
+        Group(body, Text(""), note),
+        title="SOVEREIGN APPROVALS",
+        border_style="yellow",
+        box=box.HEAVY,
+    )
 
 
 def incidents_panel(incidents: list[dict[str, Any]]) -> Panel:
     if not incidents:
-        return Panel(Text("All clear. WARDEN GRID reports no open incidents.", style="green"),
-                     title="WARDEN GRID — INCIDENTS", border_style="green", box=box.HEAVY)
+        return Panel(
+            Text("All clear. WARDEN GRID reports no open incidents.", style="green"),
+            title="WARDEN GRID — INCIDENTS",
+            border_style="green",
+            box=box.HEAVY,
+        )
     tbl = Table(show_header=True, header_style="bold red", box=box.MINIMAL_DOUBLE_HEAD)
     tbl.add_column("sev")
     tbl.add_column("component")
@@ -125,9 +151,15 @@ def incidents_panel(incidents: list[dict[str, Any]]) -> Panel:
     tbl.add_column("occ", justify="right")
     for i in incidents:
         sev = i.get("severity", "?")
-        color = {"INFO": "cyan", "WARN": "yellow", "CRIT": "red", "FATAL": "bold red"}.get(sev, "white")
-        tbl.add_row(f"[{color}]{sev}[/{color}]", i.get("component", "?"),
-                    i.get("summary", ""), str(i.get("occurrences", 1)))
+        color = {"INFO": "cyan", "WARN": "yellow", "CRIT": "red", "FATAL": "bold red"}.get(
+            sev, "white"
+        )
+        tbl.add_row(
+            f"[{color}]{sev}[/{color}]",
+            i.get("component", "?"),
+            i.get("summary", ""),
+            str(i.get("occurrences", 1)),
+        )
     return Panel(tbl, title="WARDEN GRID — INCIDENTS", border_style="red", box=box.HEAVY)
 
 
@@ -144,18 +176,18 @@ def audit_panel(records: list[dict[str, Any]]) -> Panel:
         ex_text = "—" if ex is None else str(ex)
         if isinstance(ex, int) and ex != 0:
             ex_text = f"[red]{ex}[/red]"
-        tbl.add_row(ts, r.get("agent_id", "?"), r.get("kind", "?"),
-                    ex_text, r.get("summary", ""))
-    return Panel(tbl, title="AUDIT TAIL — LAST 10 ACTIONS",
-                 border_style="magenta", box=box.HEAVY)
+        tbl.add_row(ts, r.get("agent_id", "?"), r.get("kind", "?"), ex_text, r.get("summary", ""))
+    return Panel(tbl, title="AUDIT TAIL — LAST 10 ACTIONS", border_style="magenta", box=box.HEAVY)
 
 
 def header_banner() -> Panel:
     text = Text()
     text.append("PRADY OS ", style="bold cyan")
     text.append("— SOVEREIGN EDITION", style="bold")
-    text.append("\nThe machine owns execution. The Sovereign owns strategic authorization.",
-                style="italic dim")
+    text.append(
+        "\nThe machine owns execution. The Sovereign owns strategic authorization.",
+        style="italic dim",
+    )
     return Panel(text, border_style="cyan", box=box.HEAVY)
 
 

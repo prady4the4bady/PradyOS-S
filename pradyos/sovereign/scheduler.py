@@ -16,14 +16,15 @@ import copy
 import datetime
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional
-
+from collections.abc import Callable
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Cron parser
 # ---------------------------------------------------------------------------
 
-def _parse_field(field: str, lo: int, hi: int) -> List[int]:
+
+def _parse_field(field: str, lo: int, hi: int) -> list[int]:
     """Expand a single cron field into a sorted list of matching integers.
 
     Supports:
@@ -40,13 +41,11 @@ def _parse_field(field: str, lo: int, hi: int) -> List[int]:
         return list(range(lo, hi + 1, step))
     val = int(field)
     if not (lo <= val <= hi):
-        raise ValueError(
-            f"Cron field value {val} out of range [{lo}, {hi}]"
-        )
+        raise ValueError(f"Cron field value {val} out of range [{lo}, {hi}]")
     return [val]
 
 
-def _parse_cron(cron_expr: str) -> Dict[str, List[int]]:
+def _parse_cron(cron_expr: str) -> dict[str, list[int]]:
     """Parse a 5-field cron expression and return expanded field sets.
 
     Fields: minute hour dom month dow
@@ -60,10 +59,10 @@ def _parse_cron(cron_expr: str) -> Dict[str, List[int]]:
     minute_f, hour_f, dom_f, month_f, dow_f = parts
     return {
         "minute": _parse_field(minute_f, 0, 59),
-        "hour":   _parse_field(hour_f,   0, 23),
-        "dom":    _parse_field(dom_f,    1, 31),
-        "month":  _parse_field(month_f,  1, 12),
-        "dow":    _parse_field(dow_f,    0,  6),
+        "hour": _parse_field(hour_f, 0, 23),
+        "dom": _parse_field(dom_f, 1, 31),
+        "month": _parse_field(month_f, 1, 12),
+        "dow": _parse_field(dow_f, 0, 6),
     }
 
 
@@ -86,9 +85,9 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:
     # Scan up to 366 days * 24 * 60 = 527040 minutes
     for _ in range(527040):
         if (
-            dt.month  in fields["month"]
-            and dt.day    in fields["dom"]
-            and dt.hour   in fields["hour"]
+            dt.month in fields["month"]
+            and dt.day in fields["dom"]
+            and dt.hour in fields["hour"]
             and dt.minute in fields["minute"]
             and dt.weekday() in [w % 7 for w in fields["dow"]]
             # Python weekday: Mon=0..Sun=6 but cron dow: Sun=0..Sat=6
@@ -97,9 +96,7 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:
             return dt.replace(tzinfo=datetime.timezone.utc).timestamp()
         dt += datetime.timedelta(minutes=1)
 
-    raise RuntimeError(
-        f"No matching time found for cron expression {cron_expr!r} within 1 year"
-    )
+    raise RuntimeError(f"No matching time found for cron expression {cron_expr!r} within 1 year")
 
 
 def _python_weekday_to_cron_dow(python_wd: int) -> int:
@@ -126,11 +123,11 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:  # noqa: F811 — 
     for _ in range(527040):
         cron_dow = _python_weekday_to_cron_dow(dt.weekday())
         if (
-            dt.month  in fields["month"]
-            and dt.day    in fields["dom"]
-            and dt.hour   in fields["hour"]
+            dt.month in fields["month"]
+            and dt.day in fields["dom"]
+            and dt.hour in fields["hour"]
             and dt.minute in fields["minute"]
-            and cron_dow  in fields["dow"]
+            and cron_dow in fields["dow"]
         ):
             # Return UTC unix timestamp
             epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
@@ -138,14 +135,13 @@ def next_run_after(cron_expr: str, after_ts: float) -> float:  # noqa: F811 — 
             return (aware - epoch).total_seconds()
         dt += datetime.timedelta(minutes=1)
 
-    raise RuntimeError(
-        f"No matching time found for cron expression {cron_expr!r} within 1 year"
-    )
+    raise RuntimeError(f"No matching time found for cron expression {cron_expr!r} within 1 year")
 
 
 # ---------------------------------------------------------------------------
 # SovereignScheduler
 # ---------------------------------------------------------------------------
+
 
 class SovereignScheduler:
     """Cron-style campaign scheduler for PRADY OS.
@@ -167,16 +163,16 @@ class SovereignScheduler:
         self,
         campaign_engine: Any,
         bus: Any,
-        clock: Optional[Callable[[], float]] = None,
+        clock: Callable[[], float] | None = None,
     ) -> None:
         self._campaign_engine = campaign_engine
         self._bus = bus
         self._clock: Callable[[], float] = clock if clock is not None else time.time
 
-        self._jobs: Dict[str, dict] = {}
+        self._jobs: dict[str, dict] = {}
         self._lock = threading.Lock()
 
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
     # ------------------------------------------------------------------
@@ -189,7 +185,7 @@ class SovereignScheduler:
         cron_expr: str,
         campaign_spec: dict,
         priority: int = 5,
-        sla_seconds: Optional[float] = None,
+        sla_seconds: float | None = None,
     ) -> dict:
         """Register (or overwrite) a scheduled job.
 
@@ -200,13 +196,13 @@ class SovereignScheduler:
         now = self._clock()
         next_run = next_run_after(cron_expr, now)
         job: dict = {
-            "job_id":        job_id,
-            "cron_expr":     cron_expr,
+            "job_id": job_id,
+            "cron_expr": cron_expr,
             "campaign_spec": campaign_spec,
-            "priority":      priority,
-            "sla_seconds":   sla_seconds,
-            "next_run":      next_run,
-            "enabled":       True,
+            "priority": priority,
+            "sla_seconds": sla_seconds,
+            "next_run": next_run,
+            "enabled": True,
         }
         with self._lock:
             self._jobs[job_id] = job
@@ -220,7 +216,7 @@ class SovereignScheduler:
             del self._jobs[job_id]
             return True
 
-    def get_jobs(self) -> List[dict]:
+    def get_jobs(self) -> list[dict]:
         """Return a deep copy of all registered jobs."""
         with self._lock:
             return [copy.deepcopy(j) for j in self._jobs.values()]
@@ -245,7 +241,7 @@ class SovereignScheduler:
     # Tick
     # ------------------------------------------------------------------
 
-    def tick(self) -> List[str]:
+    def tick(self) -> list[str]:
         """Check all enabled jobs; fire those whose next_run <= now.
 
         For each fired job:
@@ -256,7 +252,7 @@ class SovereignScheduler:
         Returns the list of fired job_ids (may be empty).
         """
         now = self._clock()
-        fired: List[str] = []
+        fired: list[str] = []
 
         with self._lock:
             job_ids = list(self._jobs.keys())
@@ -273,9 +269,9 @@ class SovereignScheduler:
                 # Mark as fired
                 fired.append(job_id)
                 payload = {
-                    "job_id":        job["job_id"],
+                    "job_id": job["job_id"],
                     "campaign_spec": copy.deepcopy(job["campaign_spec"]),
-                    "priority":      job["priority"],
+                    "priority": job["priority"],
                 }
                 # Advance to next run
                 job["next_run"] = next_run_after(job["cron_expr"], now)

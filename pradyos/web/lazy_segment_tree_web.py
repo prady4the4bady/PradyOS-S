@@ -54,7 +54,12 @@ def register_lazyseg_routes(app: Any, lazy_segment_tree: Any | None = None) -> A
     @app.post("/api/v1/lazysegtree/range_add")
     async def api_ls_range_add(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or "lo" not in body or "hi" not in body or "delta" not in body:
+        if (
+            not isinstance(body, dict)
+            or "lo" not in body
+            or "hi" not in body
+            or "delta" not in body
+        ):
             return JSONResponse({"error": "lo, hi and delta are required"}, status_code=422)
         try:
             lst.range_add(body["lo"], body["hi"], body["delta"])
@@ -65,7 +70,12 @@ def register_lazyseg_routes(app: Any, lazy_segment_tree: Any | None = None) -> A
     @app.post("/api/v1/lazysegtree/range_assign")
     async def api_ls_range_assign(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or "lo" not in body or "hi" not in body or "value" not in body:
+        if (
+            not isinstance(body, dict)
+            or "lo" not in body
+            or "hi" not in body
+            or "value" not in body
+        ):
             return JSONResponse({"error": "lo, hi and value are required"}, status_code=422)
         try:
             lst.range_assign(body["lo"], body["hi"], body["value"])
@@ -74,7 +84,9 @@ def register_lazyseg_routes(app: Any, lazy_segment_tree: Any | None = None) -> A
         return JSONResponse({"lo": body["lo"], "hi": body["hi"], "total": lst.stats()["total"]})
 
     @app.get("/api/v1/lazysegtree/range_sum")
-    async def api_ls_range_sum(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_ls_range_sum(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             s = lst.range_sum(lo, hi)
         except LazySegmentTreeError as exc:
@@ -82,7 +94,9 @@ def register_lazyseg_routes(app: Any, lazy_segment_tree: Any | None = None) -> A
         return JSONResponse({"lo": lo, "hi": hi, "sum": s})
 
     @app.get("/api/v1/lazysegtree/range_min")
-    async def api_ls_range_min(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_ls_range_min(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             m = lst.range_min(lo, hi)
         except LazySegmentTreeError as exc:
@@ -90,7 +104,9 @@ def register_lazyseg_routes(app: Any, lazy_segment_tree: Any | None = None) -> A
         return JSONResponse({"lo": lo, "hi": hi, "min": m})
 
     @app.get("/api/v1/lazysegtree/range_max")
-    async def api_ls_range_max(lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_ls_range_max(
+        lo: int = Query(..., ge=0), hi: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             m = lst.range_max(lo, hi)
         except LazySegmentTreeError as exc:

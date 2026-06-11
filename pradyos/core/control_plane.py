@@ -9,17 +9,17 @@ VERSION = "0.40.0"
 # Module names align with create_app() params; CorrelationEngine
 # has no introspection method — its summary will be {}.
 _INTROSPECTION = {
-    "health_scorecard":   "get_report",
-    "signal_aggregator":  "list_signals",
-    "task_scheduler":     "count",
-    "memory_store":       "count",
-    "healing_monitor":    "count",
-    "snapshot_store":     "count",
-    "reactor_engine":     "count",
-    "state_manager":      "status",
-    "watchpoint_system":  "status",
+    "health_scorecard": "get_report",
+    "signal_aggregator": "list_signals",
+    "task_scheduler": "count",
+    "memory_store": "count",
+    "healing_monitor": "count",
+    "snapshot_store": "count",
+    "reactor_engine": "count",
+    "state_manager": "status",
+    "watchpoint_system": "status",
     "correlation_engine": "_no_method",  # intentionally absent
-    "integration_bus":    "status",
+    "integration_bus": "status",
 }
 
 
@@ -40,17 +40,17 @@ class ControlPlane:
     ) -> None:
         self._start_time = time.time()
         self._modules: dict[str, Any] = {
-            "health_scorecard":   health_scorecard,
-            "signal_aggregator":  signal_aggregator,
-            "task_scheduler":     task_scheduler,
-            "memory_store":       memory_store,
-            "healing_monitor":    healing_monitor,
-            "snapshot_store":     snapshot_store,
-            "reactor_engine":     reactor_engine,
-            "state_manager":      state_manager,
-            "watchpoint_system":  watchpoint_system,
+            "health_scorecard": health_scorecard,
+            "signal_aggregator": signal_aggregator,
+            "task_scheduler": task_scheduler,
+            "memory_store": memory_store,
+            "healing_monitor": healing_monitor,
+            "snapshot_store": snapshot_store,
+            "reactor_engine": reactor_engine,
+            "state_manager": state_manager,
+            "watchpoint_system": watchpoint_system,
             "correlation_engine": correlation_engine,
-            "integration_bus":    integration_bus,
+            "integration_bus": integration_bus,
         }
 
     def uptime(self) -> float:

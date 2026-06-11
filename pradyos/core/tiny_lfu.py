@@ -36,8 +36,8 @@ import math
 import threading
 from typing import Any
 
-_MAX_COUNTER = 255          # one byte per Count-Min counter (saturating)
-_DOORKEEPER_FP = 0.01       # target doorkeeper false-positive rate at the sample size
+_MAX_COUNTER = 255  # one byte per Count-Min counter (saturating)
+_DOORKEEPER_FP = 0.01  # target doorkeeper false-positive rate at the sample size
 
 
 class TinyLFUError(Exception):
@@ -59,8 +59,9 @@ def _is_int(x: Any) -> bool:
 class TinyLFU:
     """Aging approximate-frequency sketch with a doorkeeper, for cache admission."""
 
-    def __init__(self, sample_size: int = 1000, width: int | None = None,
-                 depth: int = 4, seed: int = 0) -> None:
+    def __init__(
+        self, sample_size: int = 1000, width: int | None = None, depth: int = 4, seed: int = 0
+    ) -> None:
         if width is None:
             width = sample_size
         self._validate(sample_size, width, depth, seed)
@@ -94,8 +95,8 @@ class TinyLFU:
     def _init_state(self) -> None:
         self._counters = bytearray(self._width * self._depth)
         self._doorkeeper = bytearray((self._dk_bits + 7) // 8)
-        self._accesses = 0          # accesses since the last reset (drives aging)
-        self._total = 0             # lifetime accesses
+        self._accesses = 0  # accesses since the last reset (drives aging)
+        self._total = 0  # lifetime accesses
         self._resets = 0
 
     # ── hashing (pure) ───────────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ class TinyLFU:
         data = repr((self._seed, key)).encode("utf-8")
         d = hashlib.blake2b(data, digest_size=16).digest()
         h1 = int.from_bytes(d[:8], "big")
-        h2 = int.from_bytes(d[8:], "big") | 1       # odd → full period under mod
+        h2 = int.from_bytes(d[8:], "big") | 1  # odd → full period under mod
         return h1, h2
 
     def _sketch_indices(self, h1: int, h2: int) -> list[int]:
@@ -112,7 +113,7 @@ class TinyLFU:
 
     def _dk_positions(self, h1: int, h2: int) -> list[int]:
         m = self._dk_bits
-        off = self._depth                            # offset so dk hashes differ from sketch
+        off = self._depth  # offset so dk hashes differ from sketch
         return [(h1 + (off + j) * h2) % m for j in range(self._dk_hashes)]
 
     # ── doorkeeper helpers (no lock) ───────────────────────────────────────────────────
@@ -123,7 +124,7 @@ class TinyLFU:
     def _dk_add(self, positions: list[int]) -> None:
         dk = self._doorkeeper
         for p in positions:
-            dk[p >> 3] |= (1 << (p & 7))
+            dk[p >> 3] |= 1 << (p & 7)
 
     # ── public API ─────────────────────────────────────────────────────────────────────
     def add(self, key: Any) -> None:
@@ -147,7 +148,7 @@ class TinyLFU:
     def _age(self) -> None:
         counters = self._counters
         for i in range(len(counters)):
-            counters[i] >>= 1                        # halve every counter
+            counters[i] >>= 1  # halve every counter
         self._doorkeeper = bytearray((self._dk_bits + 7) // 8)
         self._accesses = 0
         self._resets += 1
@@ -168,8 +169,13 @@ class TinyLFU:
         True iff the candidate's estimated frequency exceeds the victim's."""
         return self.estimate(candidate) > self.estimate(victim)
 
-    def reset(self, sample_size: int | None = None, width: int | None = None,
-              depth: int | None = None, seed: int | None = None) -> None:
+    def reset(
+        self,
+        sample_size: int | None = None,
+        width: int | None = None,
+        depth: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear all state; optionally reconfigure ``sample_size`` / ``width`` / ``depth`` / ``seed``."""
         with self._lock:
             ns = self._sample_size if sample_size is None else sample_size

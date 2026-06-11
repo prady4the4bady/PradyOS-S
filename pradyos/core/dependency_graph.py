@@ -39,7 +39,7 @@ class DependencyGraph:
     """Directed dependency graph between named components (stdlib only)."""
 
     def __init__(self) -> None:
-        self._deps: dict[str, set[str]] = {}        # node -> nodes it depends on
+        self._deps: dict[str, set[str]] = {}  # node -> nodes it depends on
         self._dependents: dict[str, set[str]] = {}  # node -> nodes that depend on it
         self._lock = threading.Lock()
 
@@ -163,8 +163,7 @@ class DependencyGraph:
                 node_set.add(start)
 
             indeg: dict[str, int] = {
-                n: sum(1 for d in self._deps.get(n, set()) if d in node_set)
-                for n in node_set
+                n: sum(1 for d in self._deps.get(n, set()) if d in node_set) for n in node_set
             }
             ready = [n for n in node_set if indeg[n] == 0]
             heapq.heapify(ready)

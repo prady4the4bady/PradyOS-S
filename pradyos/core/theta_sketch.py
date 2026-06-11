@@ -57,9 +57,9 @@ class ThetaSketch:
             raise ThetaError(seed)
         self._k = k
         self._seed = seed
-        self._set: set[float] = set()        # retained distinct hashes (the k smallest)
-        self._heap: list[float] = []          # max-heap of retained hashes (stores -h)
-        self._n = 0                           # total insert calls (incl. duplicates)
+        self._set: set[float] = set()  # retained distinct hashes (the k smallest)
+        self._heap: list[float] = []  # max-heap of retained hashes (stores -h)
+        self._n = 0  # total insert calls (incl. duplicates)
         self._lock = threading.Lock()
 
     # ── hashing ───────────────────────────────────────────────────────────────────
@@ -72,12 +72,12 @@ class ThetaSketch:
         self._n += 1
         h = self._hash(element)
         if h in self._set:
-            return                            # duplicate hash → ignore
+            return  # duplicate hash → ignore
         if len(self._set) < self._k:
             self._set.add(h)
             heapq.heappush(self._heap, -h)
             return
-        if h < -self._heap[0]:                # smaller than the current max → it belongs
+        if h < -self._heap[0]:  # smaller than the current max → it belongs
             evicted = -heapq.heappushpop(self._heap, -h)
             self._set.discard(evicted)
             self._set.add(h)
@@ -89,7 +89,7 @@ class ThetaSketch:
     def _estimate_of(self, hashes: set[float]):
         m = len(hashes)
         if m < self._k:
-            return m                           # exact distinct count below threshold (int)
+            return m  # exact distinct count below threshold (int)
         return (self._k - 1) / self._theta_of(hashes)
 
     # ── mutation ─────────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ class ThetaSketch:
                 n += 1
             return n
 
-    def merge(self, other: "ThetaSketch") -> None:
+    def merge(self, other: ThetaSketch) -> None:
         """Fold ``other`` into this sketch so it estimates ``|self ∪ other|``."""
         if not isinstance(other, ThetaSketch):
             raise ThetaError(other)
@@ -145,7 +145,7 @@ class ThetaSketch:
         with self._lock:
             return self._estimate_of(self._set)
 
-    def union_estimate(self, other: "ThetaSketch") -> float:
+    def union_estimate(self, other: ThetaSketch) -> float:
         """Estimated ``|self ∪ other|`` without mutating either sketch."""
         if not isinstance(other, ThetaSketch):
             raise ThetaError(other)
@@ -153,7 +153,7 @@ class ThetaSketch:
         with self._lock:
             return self._estimate_of(self._set | o_set)
 
-    def intersection_estimate(self, other: "ThetaSketch") -> float:
+    def intersection_estimate(self, other: ThetaSketch) -> float:
         """Estimated ``|self ∩ other|`` via inclusion–exclusion (clamped at 0)."""
         if not isinstance(other, ThetaSketch):
             raise ThetaError(other)
