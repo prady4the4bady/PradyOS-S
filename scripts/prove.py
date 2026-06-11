@@ -568,6 +568,9 @@ DEFAULT_MODULES: list[str] = [
     # Agent 2 — HELIOS FORGE (build engine)
     "tests/test_helios_forge.py",
     "tests/test_helios_forge_web.py",
+    # Plane 9 — NIGHT CITADEL (self-improvement)
+    "tests/test_night_citadel.py",
+    "tests/test_night_citadel_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

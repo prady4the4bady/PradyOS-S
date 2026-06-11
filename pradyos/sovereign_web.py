@@ -79,6 +79,7 @@ from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
 from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
 from pradyos.web.morris_web import register_morris_routes  # Phase 111
+from pradyos.web.night_citadel_web import register_citadel_routes  # Plane 9 — NIGHT CITADEL
 from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 150
 from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Phase 149
 from pradyos.web.polygon_web import register_polygon_routes  # Phase 168
@@ -335,6 +336,7 @@ def create_app(
     starmap: Any | None = None,
     bastion: Any | None = None,
     helios: Any | None = None,
+    citadel: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3656,6 +3658,8 @@ def create_app(
     register_bastion_routes(app, bastion)  # Plane 7 — BASTION security shield
 
     register_helios_routes(app, helios)  # Agent 2 — HELIOS FORGE build engine
+
+    register_citadel_routes(app, citadel)  # Plane 9 — NIGHT CITADEL self-improvement
 
     return app
 
