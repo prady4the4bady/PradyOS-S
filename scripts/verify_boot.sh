@@ -40,6 +40,19 @@ die()  { echo -e "\033[1;31m[verify_boot] FAIL:\033[0m $*" >&2
 
 [ -f "$ISO" ] || die "ISO not found: $ISO (build it: sudo bash scripts/build_iso.sh)"
 command -v qemu-system-x86_64 >/dev/null || die "qemu-system-x86_64 not installed"
+command -v curl >/dev/null || die "curl not installed (needed for the host-side API probes)"
+
+# Retry a command a few times with a short backoff — the web plane can answer a
+# beat after the in-guest selftest marks PASS, so single-shot probes are flaky.
+retry() {  # retry <attempts> <sleep> <cmd...>
+    local attempts="$1" delay="$2"; shift 2
+    local i=1
+    while true; do
+        "$@" && return 0
+        [ "$i" -ge "$attempts" ] && return 1
+        i=$((i + 1)); sleep "$delay"
+    done
+}
 
 mkdir -p "$WORKDIR"; : > "$SERIAL"
 log "ISO:    $ISO"
@@ -75,14 +88,15 @@ done
 log "gate 1 OK: in-guest selftest PASS (after ~${elapsed}s)"
 
 # --- Gate 2: host-side probes through the forwarded port ---------------------
-curl -fsS --max-time 20 "$API/api/health" | grep -aq '"status"' \
-    || die "host probe: /api/health unreachable or malformed via $API"
-curl -fsS --max-time 20 -X POST "$API/api/v1/polygon/build" \
-    -H 'Content-Type: application/json' \
-    -d '{"vertices": [[0,0],[10,0],[10,10],[0,10]]}' >/dev/null \
-    || die "host probe: polygon build failed via $API"
-curl -fsS --max-time 20 "$API/api/v1/polygon/contains?x=5&y=5" | grep -aq '"contains":true' \
-    || die "host probe: polygon containment wrong via $API"
+probe_health()  { curl -fsS --max-time 20 "$API/api/health" | grep -aq '"status"'; }
+probe_build()   { curl -fsS --max-time 20 -X POST "$API/api/v1/polygon/build" \
+                    -H 'Content-Type: application/json' \
+                    -d '{"vertices": [[0,0],[10,0],[10,10],[0,10]]}' >/dev/null; }
+probe_contains(){ curl -fsS --max-time 20 "$API/api/v1/polygon/contains?x=5&y=5" \
+                    | grep -aq '"contains":true'; }
+retry 5 3 probe_health   || die "host probe: /api/health unreachable or malformed via $API"
+retry 5 3 probe_build    || die "host probe: polygon build failed via $API"
+retry 5 3 probe_contains || die "host probe: polygon containment wrong via $API"
 log "gate 2 OK: host-side API probes pass (network + HTTP path verified)"
 
 # --- Gate 3 (warn-only): login prompt on serial -------------------------------

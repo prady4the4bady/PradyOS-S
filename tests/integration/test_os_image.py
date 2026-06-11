@@ -30,7 +30,7 @@ pytestmark = pytest.mark.skipif(
     os.environ.get("PRADYOS_OS_IMAGE_TESTS") != "1"
     or not ISO.exists()
     or shutil.which("bash") is None
-    or (shutil.which("qemu-system-x86_64") is None and os.name != "nt"),
+    or shutil.which("qemu-system-x86_64") is None,
     reason=(
         "OS-image test is opt-in: build dist/pradyos-sovereign.iso "
         "(sudo bash scripts/build_iso.sh) and set PRADYOS_OS_IMAGE_TESTS=1"

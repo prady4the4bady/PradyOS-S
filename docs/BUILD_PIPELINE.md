@@ -6,7 +6,7 @@ automated integration tests verify that all core planes are built and
 functioning together. (The fast Python gates — lint, pytest, `scripts/prove.py` —
 are unchanged and live in `.github/workflows/ci.yml`.)
 
-```
+```text
  repo ──► [build_iso.(ps1|sh)] ──► debootstrap ──► chroot setup ──► squashfs ──► grub-mkrescue
                                    (cached)        venv + units                  hybrid BIOS/UEFI
                                                                                       │
@@ -145,8 +145,10 @@ Tunables: `PRADYOS_VM_PORT` (8888), `PRADYOS_VM_MEM` (3072), `PRADYOS_VM_SMP`
   intentionally **not** in `scripts/prove.py`'s module list — the 353/353
   prove gate stays pure-Python and fast.
 - `.github/workflows/os-image.yml` builds the ISO and runs the boot
-  verification on every push that touches image inputs (`scripts/*iso*`,
-  `deploy/systemd/**`, the harness), weekly as a canary, and on demand
+  verification on every push to `main` that touches the image inputs — the
+  exact path filters are `scripts/build_iso.sh`, `scripts/iso_chroot_setup.sh`,
+  `scripts/vm_selftest.sh`, `scripts/verify_boot.sh`, `deploy/systemd/**`, and
+  the workflow file itself — plus weekly as a canary and on demand
   (`workflow_dispatch`). The ISO and the serial log are uploaded as artifacts;
   the serial log is the primary debugging artifact on failure.
 

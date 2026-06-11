@@ -19,5 +19,7 @@ Environment=PRADYOS_BUS_BACKEND=redis
 Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
 EnvironmentFile=-/etc/pradyos/throne.env
 
-[Install]
-WantedBy=multi-user.target
+# No [Install] section by design: the Throne runs as root and is an interactive
+# TUI, so it must NOT be installable as a boot-time system target. Start it on
+# demand (`systemctl start pradyos-throne` or the `pradyos-throne` command), or
+# install it as a per-user unit on Sovereign login.

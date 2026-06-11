@@ -82,7 +82,14 @@ find "$WORK/src/scripts" "$WORK/src/deploy" -type f \( -name '*.sh' -o -name '*.
 # Unmount helper — chroot binds must never leak (a stale /dev bind makes
 # rm -rf eat the host's /dev).
 CHROOT_MOUNTED=0
+PIP_CACHE_MOUNTED=0
 unmount_chroot() {
+    # Unmount the pip-cache bind FIRST: if it leaks, the next run's
+    # `rm -rf "$CHROOT"` would recurse into the host's $CACHE/pip and wipe it.
+    if [ "$PIP_CACHE_MOUNTED" -eq 1 ]; then
+        umount -lf "$CHROOT/root/.cache" 2>/dev/null || true
+        PIP_CACHE_MOUNTED=0
+    fi
     [ "$CHROOT_MOUNTED" -eq 1 ] || return 0
     for m in /run /dev/pts /dev /sys /proc; do
         umount -lf "$CHROOT$m" 2>/dev/null || true
@@ -126,13 +133,21 @@ mkdir -p "$CHROOT/tmp/pradyos-iso" "$CHROOT/opt/pradyos"
 cp "$WORK/src/scripts/iso_chroot_setup.sh" "$WORK/src/scripts/vm_selftest.sh" "$CHROOT/tmp/pradyos-iso/"
 cp -a "$WORK/src" "$CHROOT/opt/pradyos/src"
 
-# Persistent pip cache across rebuilds.
+# Persistent pip cache across rebuilds. Track the bind so the EXIT trap can
+# unmount it even if the chroot step fails under set -e.
 mkdir -p "$CACHE/pip" "$CHROOT/root/.cache"
-mount --bind "$CACHE/pip" "$CHROOT/root/.cache" 2>/dev/null || true
+if mount --bind "$CACHE/pip" "$CHROOT/root/.cache" 2>/dev/null; then
+    PIP_CACHE_MOUNTED=1
+fi
 
-chroot "$CHROOT" /bin/bash /tmp/pradyos-iso/iso_chroot_setup.sh
+# PRADYOS_LAB_IMAGE (default 1) is passed through to the chroot script.
+chroot "$CHROOT" /usr/bin/env "PRADYOS_LAB_IMAGE=${PRADYOS_LAB_IMAGE:-1}" \
+    /bin/bash /tmp/pradyos-iso/iso_chroot_setup.sh
 
-umount -lf "$CHROOT/root/.cache" 2>/dev/null || true
+if [ "$PIP_CACHE_MOUNTED" -eq 1 ]; then
+    umount -lf "$CHROOT/root/.cache" 2>/dev/null || true
+    PIP_CACHE_MOUNTED=0
+fi
 rm -f "$CHROOT/usr/sbin/policy-rc.d"
 rm -rf "$CHROOT/tmp/pradyos-iso"
 unmount_chroot

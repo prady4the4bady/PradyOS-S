@@ -29,6 +29,15 @@ PORT="${PRADYOS_VM_PORT:-8000}"
 MEM="${PRADYOS_VM_MEM:-4096}"
 SMP="${PRADYOS_VM_SMP:-4}"
 
+# Validate tunables up front — bad values otherwise fail deep inside QEMU with
+# an opaque error.
+[ "$PORT" -ge 1 ] 2>/dev/null && [ "$PORT" -le 65535 ] 2>/dev/null \
+    || { echo "PRADYOS_VM_PORT must be 1-65535 (got: $PORT)" >&2; exit 2; }
+[ "$MEM" -gt 0 ] 2>/dev/null \
+    || { echo "PRADYOS_VM_MEM must be a positive integer MiB (got: $MEM)" >&2; exit 2; }
+[ "$SMP" -gt 0 ] 2>/dev/null \
+    || { echo "PRADYOS_VM_SMP must be a positive integer (got: $SMP)" >&2; exit 2; }
+
 [ -f "$ISO" ] || { echo "ISO not found: $ISO — build it first: sudo bash scripts/build_iso.sh" >&2; exit 1; }
 command -v qemu-system-x86_64 >/dev/null || { echo "qemu-system-x86_64 not installed" >&2; exit 1; }
 

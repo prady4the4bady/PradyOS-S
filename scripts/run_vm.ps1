@@ -26,7 +26,14 @@ $RepoRoot = Split-Path $PSScriptRoot -Parent
 $wslRoot = (wsl -d $Distro -u root -- wslpath -a "$($RepoRoot -replace '\\', '/')").Trim()
 if (-not $wslRoot) { throw "wslpath failed for $RepoRoot" }
 
-$guiArg = if ($Gui) { '--gui' } else { '' }
 Write-Host ">> PradyOS VM — dashboard will be at http://localhost:$Port/  (Ctrl-A X quits)" -ForegroundColor Cyan
-wsl -d $Distro -u root -- bash -c "PRADYOS_VM_PORT=$Port PRADYOS_VM_MEM=$Mem PRADYOS_VM_SMP=$Smp bash '$wslRoot/scripts/run_vm.sh' $guiArg"
+# Pass env + script path as discrete argv entries (not a bash -c string), so a
+# repo path containing a quote or space can't break the command's quoting.
+$wslArgs = @(
+    '-d', $Distro, '-u', 'root', '--',
+    'env', "PRADYOS_VM_PORT=$Port", "PRADYOS_VM_MEM=$Mem", "PRADYOS_VM_SMP=$Smp",
+    'bash', "$wslRoot/scripts/run_vm.sh"
+)
+if ($Gui) { $wslArgs += '--gui' }
+& wsl @wslArgs
 exit $LASTEXITCODE

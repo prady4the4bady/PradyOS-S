@@ -19,6 +19,9 @@ on:
       - "deploy/systemd/**"
       - ".github/workflows/os-image.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build-and-boot:
     name: Build ISO + boot verification
@@ -28,6 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # This job never pushes; don't leave the token in .git/config.
+          persist-credentials: false
 
       - name: Install image toolchain + QEMU
         run: |

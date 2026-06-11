@@ -1,4 +1,4 @@
-.PHONY: install test lint run throne titan warden imperium clean iso vm verify-os
+.PHONY: install test lint format run throne titan warden imperium clean iso vm verify-os
 
 install:
 	python3 -m pip install -e ".[dev]"

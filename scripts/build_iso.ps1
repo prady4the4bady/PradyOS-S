@@ -22,10 +22,12 @@ $ErrorActionPreference = 'Stop'
 
 $RepoRoot = Split-Path $PSScriptRoot -Parent
 
-# Make sure the distro exists (wsl -l -v output is UTF-16-ish; match loosely).
-$distros = (wsl -l -q) -join ' ' -replace "`0", ''
-if ($distros -notmatch [regex]::Escape($Distro)) {
-    throw "WSL distro '$Distro' not found. Install it:  wsl --install -d $Distro"
+# Make sure the distro exists. `wsl -l -q` emits UTF-16 with stray NULs; strip
+# them, trim, and match the EXACT name (a substring match would let 'Deb' pass
+# for 'Debian' and then fail later on `wsl -d Deb`).
+$distros = (wsl -l -q) -replace "`0", '' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+if ($distros -notcontains $Distro) {
+    throw "WSL distro '$Distro' not found. Installed: $($distros -join ', '). Install it:  wsl --install -d $Distro"
 }
 
 # Translate the repo path for WSL.

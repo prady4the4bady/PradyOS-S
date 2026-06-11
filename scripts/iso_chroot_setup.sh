@@ -6,6 +6,12 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
+# Lab image (default): set a known root password and autologin the console so a
+# developer can poke at the VM. Build with PRADYOS_LAB_IMAGE=0 for a hardened
+# image (root locked, no autologin) — the boot selftest is unaffected either way
+# (it runs as a systemd unit and probes 127.0.0.1, needing neither).
+LAB_IMAGE="${PRADYOS_LAB_IMAGE:-1}"
+
 # Stash the working resolver that build_iso.sh placed here: installing
 # systemd-resolved (below) replaces /etc/resolv.conf with a symlink to a stub
 # (/run/systemd/resolve/stub-resolv.conf) that nothing serves inside this build
@@ -36,8 +42,12 @@ cat > /etc/issue <<'ISSUE'
   PRADY OS — Sovereign Edition  \n \l
 
 ISSUE
-# Live/test image credential. Harden before any non-lab use.
-echo 'root:pradyos' | chpasswd
+# Console credential. Lab image: known root password; hardened: lock root.
+if [ "$LAB_IMAGE" = 1 ]; then
+    echo 'root:pradyos' | chpasswd
+else
+    passwd -l root
+fi
 
 echo "[chroot] pradyos service user + sovereign directories"
 useradd --system --user-group --home-dir /var/lib/pradyos --create-home \
@@ -157,17 +167,26 @@ ExecStart=
 ExecStart=/lib/systemd/systemd-networkd-wait-online --any --timeout=30
 CONF
 
-echo "[chroot] autologin consoles (lab image)"
-for getty in 'getty@tty1' 'serial-getty@ttyS0'; do
-    mkdir -p "/etc/systemd/system/${getty}.service.d"
-    cat > "/etc/systemd/system/${getty}.service.d/autologin.conf" <<'CONF'
+if [ "$LAB_IMAGE" = 1 ]; then
+    echo "[chroot] autologin consoles (lab image)"
+    for getty in 'getty@tty1' 'serial-getty@ttyS0'; do
+        mkdir -p "/etc/systemd/system/${getty}.service.d"
+        cat > "/etc/systemd/system/${getty}.service.d/autologin.conf" <<'CONF'
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
 CONF
-done
+    done
+else
+    echo "[chroot] hardened image — no console autologin"
+fi
 
 echo "[chroot] cleanup"
+# Hand /etc/resolv.conf back to systemd-resolved for the SHIPPED image. The
+# build-time static file (set before pip) must not ride along, or the booted
+# system would ignore DHCP-provided DNS and keep the build host's nameservers.
+rm -f /etc/resolv.conf /tmp/resolv.conf.build
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 apt-get clean
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
 # Each boot must mint its own machine identity.
