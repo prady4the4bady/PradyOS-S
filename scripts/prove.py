@@ -565,6 +565,9 @@ DEFAULT_MODULES: list[str] = [
     # Plane 7 — BASTION (security shield)
     "tests/test_bastion.py",
     "tests/test_bastion_web.py",
+    # Agent 2 — HELIOS FORGE (build engine)
+    "tests/test_helios_forge.py",
+    "tests/test_helios_forge_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

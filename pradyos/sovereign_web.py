@@ -58,6 +58,7 @@ from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
 from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
 from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
 from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
+from pradyos.web.helios_forge_web import register_helios_routes  # Agent 2 — HELIOS FORGE
 from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
 from pradyos.web.iblt_web import register_iblt_routes  # Phase 121
 from pradyos.web.implicit_treap_web import register_implicittreap_routes  # Phase 162
@@ -333,6 +334,7 @@ def create_app(
     quasar: Any | None = None,
     starmap: Any | None = None,
     bastion: Any | None = None,
+    helios: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3652,6 +3654,8 @@ def create_app(
     register_starmap_routes(app, starmap)  # Plane 6 — STARMAP knowledge graph
 
     register_bastion_routes(app, bastion)  # Plane 7 — BASTION security shield
+
+    register_helios_routes(app, helios)  # Agent 2 — HELIOS FORGE build engine
 
     return app
 
