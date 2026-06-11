@@ -225,8 +225,9 @@ def test_oracle_service_watchdog():
     # watchdog that never receives READY=1 stalls the boot transaction). The
     # invariant is conditional on the real Type= directive (not the word
     # "Type=notify" inside the explanatory comment).
+    service_type = _directive(content, "Type")
     has_watchdog = _directive(content, "WatchdogSec") is not None
-    if _directive(content, "Type") == "notify":
+    if service_type == "notify":
         assert has_watchdog, "Type=notify oracle.service must set WatchdogSec"
     else:
         assert not has_watchdog, \
