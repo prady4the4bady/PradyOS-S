@@ -1,0 +1,894 @@
+#!/usr/bin/env python3
+"""PRADY OS — Repository Proving Ground: local validation runner.
+
+Windows-safe pytest runner that:
+  - Detects the correct Python/pytest executable (venv-aware)
+  - Checks for common Windows environment issues before running
+  - Runs each test module independently, printing PASS/FAIL per module
+  - Prints a final summary table
+  - Exits 0 only when every module passes; 1 on any failure
+
+Usage
+-----
+    python scripts/prove.py [--module tests/test_foo.py] [--fast] [--verbose]
+
+Options
+    --module  Run only the specified module (repeatable)
+    --fast    Stop on first failure (pytest -x)
+    --verbose Show full pytest output even on pass
+    --no-color Disable color output (for CI pipes without ANSI support)
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# Test modules in the order they should be validated
+DEFAULT_MODULES: list[str] = [
+    # Phase 1
+    "tests/test_core.py",
+    "tests/test_titan_ops.py",
+    "tests/test_imperium.py",
+    "tests/test_aurora_throne.py",
+    "tests/test_proving_ground.py",
+    "tests/test_warden_grid.py",
+    "tests/test_integration.py",
+    # Phase 2
+    "tests/test_oracle.py",
+    "tests/test_memory_citadel.py",
+    "tests/test_campaign.py",
+    # Phase 3
+    "tests/test_sovereign_cli.py",
+    "tests/test_campaign_scheduler.py",
+    "tests/test_oracle_live.py",
+    # Phase 4
+    "tests/test_campaign_titan_bridge.py",
+    "tests/test_memory_feedback.py",
+    "tests/test_sovereign_web.py",
+    "tests/test_proving_ground_ci.py",
+    "tests/test_warden_phase4.py",
+    # Phase 5
+    "tests/test_snapshot.py",
+    "tests/test_healthcheck.py",
+    "tests/test_watchdog.py",
+    "tests/test_sovereign_repl.py",
+    "tests/test_campaign_analytics.py",
+    # Phase 6
+    "tests/test_audit.py",
+    "tests/test_retry.py",
+    "tests/test_metrics.py",
+    "tests/test_config.py",
+    "tests/test_campaign_archiver.py",
+    # Phase 7 — Sovereign Convergence
+    "tests/test_audit_hooks.py",
+    "tests/test_metrics_hooks.py",
+    "tests/test_retry_hooks.py",
+    "tests/test_advisor.py",
+    "tests/test_config_watcher.py",
+    "tests/test_repl_ext.py",
+    "tests/test_deploy.py",
+    # Phase 8
+    "tests/test_oracle_daemon.py",
+    "tests/test_admission_bridge.py",
+    # Phase 10
+    "tests/test_redis_bus.py",
+    # Phase 11
+    "tests/test_self_heal.py",
+    # Phase 12
+    "tests/test_dashboard.py",
+    "tests/test_dashboard_web.py",
+    # Phase 13
+    "tests/test_campaign_monitor.py",
+    "tests/test_campaign_monitor_web.py",
+    # Phase 14
+    "tests/test_policy_engine.py",
+    "tests/test_policy_web.py",
+    # Phase 15
+    "tests/test_sovereign_scheduler.py",
+    "tests/test_scheduler_web.py",
+    # Phase 16
+    "tests/test_telemetry.py",
+    "tests/test_telemetry_web.py",
+    # Phase 17
+    "tests/test_memorygraph.py",
+    "tests/test_memorygraph_web.py",
+    # Phase 18
+    "tests/test_ledger.py",
+    "tests/test_ledger_web.py",
+    # Phase 19
+    "tests/test_intent_engine.py",
+    "tests/test_intent_web.py",
+    # Phase 20
+    "tests/test_audit_ui.py",
+    "tests/test_audit_web.py",
+    # Phase 21
+    "tests/test_config_hot_reload.py",
+    "tests/test_config_reload_web.py",
+    # Phase 22
+    "tests/test_metrics_registry.py",
+    "tests/test_metrics_web.py",
+    # Phase 23
+    "tests/test_rate_limiter.py",
+    "tests/test_rate_limit_web.py",
+    # Phase 24
+    "tests/test_health_scorecard.py",
+    "tests/test_health_web.py",
+    # Phase 25
+    "tests/test_audit_replay.py",
+    "tests/test_audit_replay_web.py",
+    # Phase 26
+    "tests/test_plugin_sandbox.py",
+    "tests/test_plugin_web.py",
+    # Phase 27
+    "tests/test_bus_inspector.py",
+    "tests/test_bus_inspector_web.py",
+    # Phase 28
+    "tests/test_decision_journal.py",
+    "tests/test_decision_web.py",
+    # Phase 29
+    "tests/test_capability_registry.py",
+    "tests/test_capability_web.py",
+    # Phase 30
+    "tests/test_watchpoint.py",
+    "tests/test_watchpoint_web.py",
+    # Phase 31
+    "tests/test_signal_aggregator.py",
+    "tests/test_signal_web.py",
+    # Phase 32
+    "tests/test_snapshot_store.py",
+    "tests/test_snapshot_web.py",
+    # Phase 33
+    "tests/test_correlation_engine.py",
+    "tests/test_correlation_web.py",
+    # Phase 34
+    "tests/test_integration_bus.py",
+    "tests/test_integration_web.py",
+    # Phase 35
+    "tests/test_reactor.py",
+    "tests/test_reactor_web.py",
+    # Phase 36
+    "tests/test_state_manager.py",
+    "tests/test_state_web.py",
+    # Phase 37
+    "tests/test_healing_monitor.py",
+    "tests/test_healing_web.py",
+    # Phase 38
+    "tests/test_task_scheduler.py",
+    "tests/test_task_scheduler_web.py",
+    # Phase 39
+    "tests/test_memory_store.py",
+    "tests/test_memory_web.py",
+    # Phase 40
+    "tests/test_control_plane.py",
+    "tests/test_control_web.py",
+    # Phase 41
+    "tests/test_heartbeat.py",
+    "tests/test_heartbeat_web.py",
+    # Phase 42
+    "tests/test_cli.py",
+    "tests/test_lifespan_web.py",
+    # Phase 43
+    "tests/test_guardrail.py",
+    "tests/test_approval_web.py",
+    # Phase 44
+    "tests/test_execution_engine.py",
+    "tests/test_execution_web.py",
+    # Phase 45
+    "tests/test_reasoning_engine.py",
+    "tests/test_reasoning_web.py",
+    # Phase 46
+    "tests/test_web_agent.py",
+    "tests/test_web_agent_web.py",
+    # Phase 47
+    "tests/test_memory_graph.py",
+    "tests/test_memory_graph_web.py",
+    # Phase 48
+    "tests/test_event_store.py",
+    "tests/test_event_sourcing_web.py",
+    # Phase 49
+    "tests/test_task_queue.py",
+    "tests/test_task_queue_web.py",
+    # Phase 50
+    "tests/test_pubsub.py",
+    "tests/test_pubsub_web.py",
+    # Phase 51
+    "tests/test_statesync.py",
+    "tests/test_statesync_web.py",
+    # Phase 52
+    "tests/test_distributed_lock.py",
+    "tests/test_distributed_lock_web.py",
+    # Phase 53
+    "tests/test_circuit_breaker.py",
+    "tests/test_circuit_breaker_web.py",
+    # Phase 54
+    "tests/test_retry_policy.py",
+    "tests/test_retry_policy_web.py",
+    # Phase 55
+    "tests/test_bulkhead_pool.py",
+    "tests/test_bulkhead_web.py",
+    # Phase 56
+    "tests/test_timeout_guard.py",
+    "tests/test_timeout_web.py",
+    # Phase 57
+    "tests/test_semaphore_gate.py",
+    "tests/test_semaphore_web.py",
+    # Phase 58
+    "tests/test_event_filter.py",
+    "tests/test_filter_web.py",
+    # Phase 59
+    "tests/test_throttle_map.py",
+    "tests/test_throttle_web.py",
+    # Phase 60
+    "tests/test_pipeline_chain.py",
+    "tests/test_pipeline_web.py",
+    # Phase 61
+    "tests/test_tag_index.py",
+    "tests/test_tag_web.py",
+    # Phase 62
+    "tests/test_event_router.py",
+    "tests/test_event_router_web.py",
+    # Phase 63
+    "tests/test_aggregate_root.py",
+    "tests/test_aggregate_web.py",
+    # Phase 64
+    "tests/test_command_bus.py",
+    "tests/test_command_web.py",
+    # Phase 65
+    "tests/test_query_bus.py",
+    "tests/test_query_web.py",
+    # Phase 66
+    "tests/test_saga_orchestrator.py",
+    "tests/test_saga_web.py",
+    # Phase 67
+    "tests/test_process_manager.py",
+    "tests/test_process_web.py",
+    # Phase 68
+    "tests/test_job_scheduler.py",
+    "tests/test_job_scheduler_web.py",
+    # Phase 69
+    "tests/test_anomaly_detector.py",
+    "tests/test_anomaly_web.py",
+    # Phase 70
+    "tests/test_dependency_graph.py",
+    "tests/test_dependency_web.py",
+    # Phase 71
+    "tests/test_anomaly_watch.py",
+    "tests/test_anomaly_watch_web.py",
+    # Phase 72
+    "tests/test_bloom_filter.py",
+    "tests/test_bloom_filter_web.py",
+    # Phase 73
+    "tests/test_hash_ring.py",
+    "tests/test_hash_ring_web.py",
+    # Phase 74
+    "tests/test_hyperloglog.py",
+    "tests/test_hyperloglog_web.py",
+    # Phase 75
+    "tests/test_vectorclock.py",
+    "tests/test_vectorclock_web.py",
+    # Phase 76
+    "tests/test_countminsketch.py",
+    "tests/test_countminsketch_web.py",
+    # Phase 77
+    "tests/test_merkle_tree.py",
+    "tests/test_merkle_tree_web.py",
+    # Phase 78
+    "tests/test_skiplist.py",
+    "tests/test_skiplist_web.py",
+    # Phase 79
+    "tests/test_tdigest.py",
+    "tests/test_tdigest_web.py",
+    # Phase 80
+    "tests/test_fenwick.py",
+    "tests/test_fenwick_web.py",
+    # Phase 81
+    "tests/test_segtree.py",
+    "tests/test_segtree_web.py",
+    # Phase 82
+    "tests/test_unionfind.py",
+    "tests/test_unionfind_web.py",
+    # Phase 83
+    "tests/test_trie.py",
+    "tests/test_trie_web.py",
+    # Phase 84
+    "tests/test_lru_cache.py",
+    "tests/test_lru_web.py",
+    # Phase 85
+    "tests/test_reservoir.py",
+    "tests/test_reservoir_web.py",
+    # Phase 86
+    "tests/test_cuckoo.py",
+    "tests/test_cuckoo_web.py",
+    # Phase 87
+    "tests/test_space_saving.py",
+    "tests/test_topk_web.py",
+    # Phase 88
+    "tests/test_minhash.py",
+    "tests/test_minhash_web.py",
+    # Phase 89
+    "tests/test_simhash.py",
+    "tests/test_simhash_web.py",
+    # Phase 90
+    "tests/test_quotient.py",
+    "tests/test_quotient_web.py",
+    # Phase 91
+    "tests/test_gk_quantile.py",
+    "tests/test_gk_quantile_web.py",
+    # Phase 92
+    "tests/test_kll_sketch.py",
+    "tests/test_kll_sketch_web.py",
+    # Phase 93
+    "tests/test_theta_sketch.py",
+    "tests/test_theta_sketch_web.py",
+    # Phase 94
+    "tests/test_count_sketch.py",
+    "tests/test_count_sketch_web.py",
+    # Phase 95
+    "tests/test_lossy_count.py",
+    "tests/test_lossy_count_web.py",
+    # Phase 96
+    "tests/test_ddsketch.py",
+    "tests/test_ddsketch_web.py",
+    # Phase 97
+    "tests/test_exponential_histogram.py",
+    "tests/test_exponential_histogram_web.py",
+    # Phase 98
+    "tests/test_weighted_reservoir.py",
+    "tests/test_weighted_reservoir_web.py",
+    # Phase 99
+    "tests/test_misra_gries.py",
+    "tests/test_misra_gries_web.py",
+    # Phase 100
+    "tests/test_xor_filter.py",
+    "tests/test_xor_filter_web.py",
+    # Phase 101
+    "tests/test_ribbon.py",
+    "tests/test_ribbon_web.py",
+    # Phase 102
+    "tests/test_heavykeeper.py",
+    "tests/test_heavykeeper_web.py",
+    # Phase 103
+    "tests/test_spectral_bloom.py",
+    "tests/test_spectralbloom_web.py",
+    # Phase 104
+    "tests/test_augmented_sketch.py",
+    "tests/test_augmentedsketch_web.py",
+    # Phase 105
+    "tests/test_q_digest.py",
+    "tests/test_qdigest_web.py",
+    # Phase 106
+    "tests/test_moment_sketch.py",
+    "tests/test_moment_sketch_web.py",
+    # Phase 107
+    "tests/test_counting_bloom.py",
+    "tests/test_countingbloom_web.py",
+    # Phase 108
+    "tests/test_binary_fuse.py",
+    "tests/test_binaryfuse_web.py",
+    # Phase 109
+    "tests/test_vacuum_filter.py",
+    "tests/test_vacuum_web.py",
+    # Phase 110
+    "tests/test_stable_bloom.py",
+    "tests/test_stablebloom_web.py",
+    # Phase 111
+    "tests/test_morris_counter.py",
+    "tests/test_morris_web.py",
+    # Phase 112
+    "tests/test_linear_counter.py",
+    "tests/test_linearcounting_web.py",
+    # Phase 113
+    "tests/test_treap.py",
+    "tests/test_treap_web.py",
+    # Phase 114
+    "tests/test_bloomier.py",
+    "tests/test_bloomier_web.py",
+    # Phase 115
+    "tests/test_minhash_lsh.py",
+    "tests/test_minhashlsh_web.py",
+    # Phase 116
+    "tests/test_tiny_lfu.py",
+    "tests/test_tinylfu_web.py",
+    # Phase 117
+    "tests/test_hyper_minhash.py",
+    "tests/test_hyperminhash_web.py",
+    # Phase 118
+    "tests/test_scalable_bloom.py",
+    "tests/test_scalablebloom_web.py",
+    # Phase 119
+    "tests/test_rendezvous_hash.py",
+    "tests/test_rendezvous_web.py",
+    # Phase 120
+    "tests/test_maglev.py",
+    "tests/test_maglev_web.py",
+    # Phase 121
+    "tests/test_iblt.py",
+    "tests/test_iblt_web.py",
+    # Phase 122
+    "tests/test_bbit_minhash.py",
+    "tests/test_bbitminhash_web.py",
+    # Phase 123
+    "tests/test_cu_sketch.py",
+    "tests/test_cusketch_web.py",
+    # Phase 124
+    "tests/test_jump_hash.py",
+    "tests/test_jump_web.py",
+    # Phase 125
+    "tests/test_frugal.py",
+    "tests/test_frugal_web.py",
+    # Phase 126
+    "tests/test_simhash_lsh.py",
+    "tests/test_simhashlsh_web.py",
+    # Phase 127
+    "tests/test_random_projection.py",
+    "tests/test_randomprojection_web.py",
+    # Phase 128
+    "tests/test_golomb_coded_set.py",
+    "tests/test_gcs_web.py",
+    # Phase 129
+    "tests/test_fm_sketch.py",
+    "tests/test_fmsketch_web.py",
+    # Phase 130
+    "tests/test_ams_sketch.py",
+    "tests/test_ams_web.py",
+    # Phase 131
+    "tests/test_priority_sampling.py",
+    "tests/test_priority_sampling_web.py",
+    # Phase 132
+    "tests/test_cuckoo_hashtable.py",
+    "tests/test_cuckoohash_web.py",
+    # Phase 133
+    "tests/test_splay_tree.py",
+    "tests/test_splaytree_web.py",
+    # Phase 134
+    "tests/test_rank_select.py",
+    "tests/test_rankselect_web.py",
+    # Phase 135
+    "tests/test_wavelet_tree.py",
+    "tests/test_wavelet_web.py",
+    # Phase 136
+    "tests/test_skew_heap.py",
+    "tests/test_skewheap_web.py",
+    # Phase 137
+    "tests/test_interval_tree.py",
+    "tests/test_intervaltree_web.py",
+    # Phase 138
+    "tests/test_sparse_table.py",
+    "tests/test_sparsetable_web.py",
+    # Phase 139
+    "tests/test_kd_tree.py",
+    "tests/test_kdtree_web.py",
+    # Phase 140
+    "tests/test_radix_tree.py",
+    "tests/test_radix_tree_web.py",
+    # Phase 141
+    "tests/test_suffix_array.py",
+    "tests/test_suffix_array_web.py",
+    # Phase 142
+    "tests/test_aho_corasick.py",
+    "tests/test_aho_corasick_web.py",
+    # Phase 143
+    "tests/test_xor_trie.py",
+    "tests/test_xor_trie_web.py",
+    # Phase 144
+    "tests/test_min_max_heap.py",
+    "tests/test_min_max_heap_web.py",
+    # Phase 145
+    "tests/test_cartesian_tree.py",
+    "tests/test_cartesian_tree_web.py",
+    # Phase 146
+    "tests/test_fenwick_2d.py",
+    "tests/test_fenwick2d_web.py",
+    # Phase 147
+    "tests/test_sqrt_decomposition.py",
+    "tests/test_sqrt_decomposition_web.py",
+    # Phase 148
+    "tests/test_li_chao_tree.py",
+    "tests/test_li_chao_tree_web.py",
+    # Phase 149
+    "tests/test_persistent_segment_tree.py",
+    "tests/test_persistent_segment_tree_web.py",
+    # Phase 150
+    "tests/test_pairing_heap.py",
+    "tests/test_pairing_heap_web.py",
+    # Phase 151
+    "tests/test_suffix_automaton.py",
+    "tests/test_suffix_automaton_web.py",
+    # Phase 152
+    "tests/test_van_emde_boas.py",
+    "tests/test_van_emde_boas_web.py",
+    # Phase 153
+    "tests/test_pr_quadtree.py",
+    "tests/test_pr_quadtree_web.py",
+    # Phase 154
+    "tests/test_fibonacci_heap.py",
+    "tests/test_fibonacci_heap_web.py",
+    # Phase 155
+    "tests/test_avl_tree.py",
+    "tests/test_avl_tree_web.py",
+    # Phase 156
+    "tests/test_b_tree.py",
+    "tests/test_b_tree_web.py",
+    # Phase 157
+    "tests/test_range_tree.py",
+    "tests/test_range_tree_web.py",
+    # Phase 158
+    "tests/test_leftist_heap.py",
+    "tests/test_leftist_heap_web.py",
+    # Phase 159
+    "tests/test_scapegoat_tree.py",
+    "tests/test_scapegoat_tree_web.py",
+    # Phase 160
+    "tests/test_binomial_heap.py",
+    "tests/test_binomial_heap_web.py",
+    # Phase 161
+    "tests/test_binary_lifting.py",
+    "tests/test_binary_lifting_web.py",
+    # Phase 162
+    "tests/test_implicit_treap.py",
+    "tests/test_implicit_treap_web.py",
+    # Phase 163
+    "tests/test_lazy_segment_tree.py",
+    "tests/test_lazy_segment_tree_web.py",
+    # Phase 164
+    "tests/test_ternary_search_tree.py",
+    "tests/test_ternary_search_tree_web.py",
+    # Phase 165
+    "tests/test_heavy_light.py",
+    "tests/test_heavy_light_web.py",
+    # Phase 166
+    "tests/test_sparse_segment_tree.py",
+    "tests/test_sparse_segment_tree_web.py",
+    # Phase 167
+    "tests/test_convex_hull.py",
+    "tests/test_convex_hull_web.py",
+    # Phase 168
+    "tests/test_polygon.py",
+    "tests/test_polygon_web.py",
+    # Plane 8 — QUASAR GATE (inference router)
+    "tests/test_quasar_gate.py",
+    "tests/test_quasar_web.py",
+]
+
+# ANSI color codes — disabled on Windows if ANSI not supported
+_ANSI = sys.platform != "win32" or os.environ.get("TERM") or os.environ.get("ANSICON")
+GREEN = "\033[92m" if _ANSI else ""
+RED = "\033[91m" if _ANSI else ""
+YELLOW = "\033[93m" if _ANSI else ""
+CYAN = "\033[96m" if _ANSI else ""
+DIM = "\033[2m" if _ANSI else ""
+BOLD = "\033[1m" if _ANSI else ""
+RESET = "\033[0m" if _ANSI else ""
+
+
+# ---------------------------------------------------------------------------
+# Python / pytest detection
+# ---------------------------------------------------------------------------
+
+
+def _is_runnable(path: Path) -> bool:
+    """Return True if path exists AND can actually run on this platform.
+
+    On Linux/macOS: reject .exe files (Windows PE binaries cannot exec).
+    On Windows: existence is sufficient (the OS handles extension dispatch).
+    """
+    if not path.exists():
+        return False
+    if sys.platform == "win32":
+        return True  # Windows: existence is enough
+    if path.suffix.lower() == ".exe":
+        return False  # Windows PE on POSIX — never runnable natively
+    return os.access(path, os.X_OK)
+
+
+def find_python() -> str:
+    """Return the Python executable to use, venv-aware.
+
+    Candidate order respects the current platform: POSIX paths are tried
+    before Windows .exe paths on Linux/macOS, and vice versa on Windows.
+    """
+    is_win = sys.platform == "win32"
+
+    if is_win:
+        _rel_order = ("Scripts/python.exe", "Scripts/python", "bin/python")
+    else:
+        _rel_order = ("bin/python", "bin/python3", "Scripts/python.exe", "Scripts/python")
+
+    # 1. Active venv (set by activate scripts)
+    venv = os.environ.get("VIRTUAL_ENV")
+    if venv:
+        for rel in _rel_order:
+            c = Path(venv) / rel
+            if _is_runnable(c):
+                return str(c)
+
+    # 2. .venv or venv adjacent to project root
+    for venv_dir in (".venv", "venv", ".env", "env"):
+        venv_path = ROOT / venv_dir
+        if venv_path.is_dir():
+            for rel in _rel_order:
+                c = venv_path / rel
+                if _is_runnable(c):
+                    return str(c)
+
+    # 3. Fall back to the interpreter running this script (always correct)
+    return sys.executable
+
+
+def find_pytest(python: str) -> list[str]:
+    """Return the pytest invocation as a list of args.
+
+    Prefers ``python -m pytest`` which works regardless of PATH.
+    """
+    return [python, "-m", "pytest"]
+
+
+# ---------------------------------------------------------------------------
+# Pre-flight Windows checks
+# ---------------------------------------------------------------------------
+
+
+def preflight_checks() -> list[str]:
+    """Return a list of warning strings (empty = all clear)."""
+    warnings: list[str] = []
+
+    if sys.platform == "win32":
+        # Long path support check
+        try:
+            import winreg  # noqa: PLC0415
+
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Control\FileSystem",
+            ) as key:
+                val, _ = winreg.QueryValueEx(key, "LongPathsEnabled")
+                if val != 1:
+                    warnings.append(
+                        "Windows long path support is DISABLED. "
+                        "Enable it via Group Policy or HKLM\\SYSTEM\\...\\FileSystem\\LongPathsEnabled=1"
+                    )
+        except Exception:  # noqa: BLE001
+            pass
+
+        py_ver = sys.version_info
+        if py_ver < (3, 10):
+            warnings.append(
+                f"Python {py_ver.major}.{py_ver.minor} detected — PRADY OS requires >= 3.10"
+            )
+
+        python = find_python()
+        result = subprocess.run(
+            [python, "-c", "import pytest; print(pytest.__version__)"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            warnings.append(
+                f"pytest not importable via {python}. "
+                "Run: pip install pytest --break-system-packages"
+            )
+
+        if " " in str(ROOT):
+            warnings.append(
+                f"Project root path contains spaces: {ROOT}\n"
+                "  Some subprocesses may fail. Consider moving to a space-free path."
+            )
+
+    return warnings
+
+
+# ---------------------------------------------------------------------------
+# Module runner
+# ---------------------------------------------------------------------------
+
+
+def run_module(
+    pytest_cmd: list[str],
+    module_path: str,
+    fast: bool = False,
+    verbose: bool = False,
+    extra_args: list[str] | None = None,
+) -> tuple[bool, float, str]:
+    """Run a single test module with pytest.
+
+    Returns (passed: bool, duration_sec: float, output: str).
+    """
+    full_path = ROOT / module_path
+    if not full_path.exists():
+        return False, 0.0, f"MODULE NOT FOUND: {full_path}"
+
+    cmd = list(pytest_cmd) + ["--tb=short", "-q", "--no-header"]
+    if fast:
+        cmd.append("-x")
+    cmd.append(str(full_path))
+    if extra_args:
+        cmd.extend(extra_args)
+
+    t0 = time.monotonic()
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(ROOT),
+        )
+        duration = time.monotonic() - t0
+        output = result.stdout + result.stderr
+        passed = result.returncode == 0
+    except subprocess.TimeoutExpired:
+        duration = time.monotonic() - t0
+        output = "TIMEOUT: test module exceeded 120 s"
+        passed = False
+    except FileNotFoundError as e:
+        duration = time.monotonic() - t0
+        output = f"COMMAND NOT FOUND: {e}"
+        passed = False
+
+    return passed, duration, output
+
+
+# ---------------------------------------------------------------------------
+# Reporter
+# ---------------------------------------------------------------------------
+
+
+def _module_label(path: str) -> str:
+    return Path(path).stem
+
+
+def print_preflight(warnings: list[str]) -> None:
+    if not warnings:
+        print(f"{GREEN}✓ Pre-flight checks passed{RESET}")
+        return
+    print(f"{YELLOW}⚠ Pre-flight warnings:{RESET}")
+    for w in warnings:
+        print(f"  {YELLOW}•{RESET} {w}")
+    print()
+
+
+def print_result(label: str, passed: bool, duration: float, output: str, verbose: bool) -> None:
+    status = f"{GREEN}PASS{RESET}" if passed else f"{RED}FAIL{RESET}"
+    timing = f"{DIM}{duration:.2f}s{RESET}"
+    print(f"  {status}  {BOLD}{label:<40}{RESET}  {timing}")
+    if not passed or verbose:
+        if output.strip():
+            for line in output.splitlines()[-50:]:
+                print(f"        {DIM}{line}{RESET}")
+
+
+def print_summary(results: list[tuple[str, bool, float]]) -> None:
+    total = len(results)
+    passed = sum(1 for _, ok, _ in results if ok)
+    failed = total - passed
+    total_time = sum(d for _, _, d in results)
+
+    print()
+    print(f"{BOLD}{'─' * 60}{RESET}")
+    print(f"{BOLD}PROVING GROUND — SUMMARY{RESET}")
+    print(f"{'─' * 60}")
+    for label, ok, dur in results:
+        icon = f"{GREEN}✓{RESET}" if ok else f"{RED}✗{RESET}"
+        print(f"  {icon}  {label:<40}  {DIM}{dur:.2f}s{RESET}")
+    print(f"{'─' * 60}")
+
+    if failed == 0:
+        print(
+            f"{GREEN}{BOLD}ALL {total} MODULE(S) PASSED{RESET}  "
+            f"{DIM}({total_time:.1f}s total){RESET}"
+        )
+    else:
+        print(
+            f"{RED}{BOLD}{failed}/{total} MODULE(S) FAILED{RESET}  "
+            f"{DIM}({total_time:.1f}s total){RESET}"
+        )
+    print()
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="prove",
+        description="PRADY OS Proving Ground — local test validation runner",
+    )
+    parser.add_argument(
+        "--module",
+        "-m",
+        action="append",
+        dest="modules",
+        help="test module path to run (default: all); repeatable",
+    )
+    parser.add_argument(
+        "--fast", "-f", action="store_true", help="stop on first test failure within each module"
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="always print full pytest output (not just on failure)",
+    )
+    parser.add_argument("--no-color", action="store_true", help="disable ANSI color codes")
+    parser.add_argument(
+        "--skip-preflight", action="store_true", help="skip Windows pre-flight environment checks"
+    )
+    args = parser.parse_args(argv)
+
+    if args.no_color:
+        global GREEN, RED, YELLOW, CYAN, DIM, BOLD, RESET
+        GREEN = RED = YELLOW = CYAN = DIM = BOLD = RESET = ""
+
+    print(f"\n{BOLD}{CYAN}PRADY OS — PROVING GROUND{RESET}")
+    print(f"{DIM}Project root: {ROOT}{RESET}")
+    print()
+
+    # Pre-flight
+    if not args.skip_preflight:
+        warnings = preflight_checks()
+        print_preflight(warnings)
+    else:
+        print(f"{DIM}(pre-flight skipped){RESET}")
+
+    python = find_python()
+    pytest_cmd = find_pytest(python)
+    print(f"{DIM}Python: {python}{RESET}")
+    print(f"{DIM}Pytest: {' '.join(pytest_cmd)}{RESET}")
+    print()
+
+    modules = args.modules or DEFAULT_MODULES
+
+    # Filter to modules that exist
+    existing = []
+    skipped = []
+    for m in modules:
+        if (ROOT / m).exists():
+            existing.append(m)
+        else:
+            skipped.append(m)
+
+    if skipped:
+        print(f"{YELLOW}Skipping missing modules:{RESET}")
+        for m in skipped:
+            print(f"  {DIM}(not found) {m}{RESET}")
+        print()
+
+    if not existing:
+        print(f"{RED}No test modules found. Aborting.{RESET}")
+        return 1
+
+    print(f"Running {len(existing)} module(s)...\n")
+
+    results: list[tuple[str, bool, float]] = []
+    any_failed = False
+
+    for module in existing:
+        label = _module_label(module)
+        passed, duration, output = run_module(
+            pytest_cmd, module, fast=args.fast, verbose=args.verbose
+        )
+        print_result(label, passed, duration, output, args.verbose)
+        results.append((label, passed, duration))
+        if not passed:
+            any_failed = True
+
+    print_summary(results)
+    return 1 if any_failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
