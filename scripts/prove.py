@@ -571,6 +571,9 @@ DEFAULT_MODULES: list[str] = [
     # Plane 9 — NIGHT CITADEL (self-improvement)
     "tests/test_night_citadel.py",
     "tests/test_night_citadel_web.py",
+    # Agent 5 — SENTINEL WATCH (adversarial defense)
+    "tests/test_sentinel_watch.py",
+    "tests/test_sentinel_watch_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

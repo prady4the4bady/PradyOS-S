@@ -97,6 +97,7 @@ from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
 from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
 from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
+from pradyos.web.sentinel_watch_web import register_sentinel_routes  # Agent 5 — SENTINEL WATCH
 from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
 from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
 from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
@@ -337,6 +338,7 @@ def create_app(
     bastion: Any | None = None,
     helios: Any | None = None,
     citadel: Any | None = None,
+    sentinel: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3660,6 +3662,8 @@ def create_app(
     register_helios_routes(app, helios)  # Agent 2 — HELIOS FORGE build engine
 
     register_citadel_routes(app, citadel)  # Plane 9 — NIGHT CITADEL self-improvement
+
+    register_sentinel_routes(app, sentinel)  # Agent 5 — SENTINEL WATCH adversarial defense
 
     return app
 
