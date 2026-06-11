@@ -580,6 +580,9 @@ DEFAULT_MODULES: list[str] = [
     # Agent 4 — NEXUS WEAVE (A2A orchestration)
     "tests/test_nexus_weave.py",
     "tests/test_nexus_weave_web.py",
+    # Agent 7 — CHRONICLE SAGE (institutional memory)
+    "tests/test_chronicle_sage.py",
+    "tests/test_chronicle_sage_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

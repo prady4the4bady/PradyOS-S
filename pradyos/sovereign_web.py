@@ -42,6 +42,7 @@ from pradyos.web.binary_lifting_web import register_binarylifting_routes  # Phas
 from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
 from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
 from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
+from pradyos.web.chronicle_sage_web import register_chronicle_routes  # Agent 7 — CHRONICLE SAGE
 from pradyos.web.convex_hull_web import register_convexhull_routes  # Phase 167
 from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
 from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
@@ -343,6 +344,7 @@ def create_app(
     sentinel: Any | None = None,
     synaptic: Any | None = None,
     nexus: Any | None = None,
+    chronicle: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3672,6 +3674,8 @@ def create_app(
     register_synaptic_routes(app, synaptic)  # Agent 6 — SYNAPTIC MIND model management
 
     register_nexus_routes(app, nexus)  # Agent 4 — NEXUS WEAVE A2A orchestration
+
+    register_chronicle_routes(app, chronicle)  # Agent 7 — CHRONICLE SAGE institutional memory
 
     return app
 
