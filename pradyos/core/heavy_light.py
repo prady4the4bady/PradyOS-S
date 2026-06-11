@@ -19,10 +19,9 @@ Pure stdlib; thread-safe via a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
+import threading
 from collections import deque
 from typing import Any
-
-import threading
 
 _NEG_INF = float("-inf")
 
@@ -40,7 +39,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class HeavyLight:
@@ -59,8 +58,8 @@ class HeavyLight:
         self._size: list[int] = []
         self._head: list[int] = []
         self._pos: list[int] = []
-        self._sum: list = []        # segment tree (sum), 2*n
-        self._max: list = []        # segment tree (max), 2*n
+        self._sum: list = []  # segment tree (sum), 2*n
+        self._max: list = []  # segment tree (max), 2*n
 
     # ── build ────────────────────────────────────────────────────────────────────────────
     def build(self, parents: Any, values: Any = None) -> None:
@@ -294,5 +293,9 @@ class HeavyLight:
             if self._n == 0:
                 return {"size": 0, "total": 0, "max": None, "num_chains": 0}
             num_chains = sum(1 for v in range(self._n) if self._head[v] == v)
-            return {"size": self._n, "total": self._sum[1] if self._n else 0,
-                    "max": self._max[1], "num_chains": num_chains}
+            return {
+                "size": self._n,
+                "total": self._sum[1] if self._n else 0,
+                "max": self._max[1],
+                "num_chains": num_chains,
+            }

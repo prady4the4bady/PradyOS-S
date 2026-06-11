@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import logging
 import threading
-import time
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +120,8 @@ class CampaignRegistry:
                     self._campaigns[c.campaign_id] = c
                 except Exception as e:  # noqa: BLE001
                     log.debug("Skipping malformed campaign line: %s", e)
-            log.info("CampaignRegistry loaded %d campaigns from %s", len(self._campaigns), self._path)
+            log.info(
+                "CampaignRegistry loaded %d campaigns from %s", len(self._campaigns), self._path
+            )
         except OSError as e:
             log.debug("CampaignRegistry load skipped: %s", e)

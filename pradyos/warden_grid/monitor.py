@@ -15,9 +15,10 @@ import socket
 import sys
 import threading
 import time
-from dataclasses import asdict, dataclass, field
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Iterable
+from typing import Any
 
 import psutil
 
@@ -47,6 +48,7 @@ except Exception:  # noqa: BLE001
 # ---------------------------------------------------------------------------
 # Health snapshot
 # ---------------------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class GpuInfo:
@@ -99,6 +101,7 @@ class HealthSnapshot:
 # Monitor
 # ---------------------------------------------------------------------------
 
+
 class WardenMonitor:
     """Polls telemetry, raises incidents, serves JSON.
 
@@ -119,8 +122,7 @@ class WardenMonitor:
     ) -> None:
         self.thresholds = thresholds or Thresholds()
         self.watched_services = list(
-            watched_services
-            or os.environ.get("PRADYOS_WATCHED_SERVICES", "").split(",")
+            watched_services or os.environ.get("PRADYOS_WATCHED_SERVICES", "").split(",")
         )
         self.watched_services = [s.strip() for s in self.watched_services if s.strip()]
 
@@ -224,8 +226,12 @@ class WardenMonitor:
                         used_inodes = st.f_files - st.f_ffree
                         pct = (used_inodes / st.f_files) * 100
                         inodes.append(
-                            {"mount": part.mountpoint, "percent": pct,
-                             "total": st.f_files, "free": st.f_ffree}
+                            {
+                                "mount": part.mountpoint,
+                                "percent": pct,
+                                "total": st.f_files,
+                                "free": st.f_ffree,
+                            }
                         )
             except (OSError, PermissionError):
                 pass
@@ -282,13 +288,16 @@ class WardenMonitor:
                     temp = float(pynvml.nvmlDeviceGetTemperature(h, pynvml.NVML_TEMPERATURE_GPU))
                 except Exception:  # noqa: BLE001
                     temp = None
-                out.append(GpuInfo(
-                    index=i, name=name,
-                    util_percent=float(util.gpu),
-                    mem_used_mb=mem.used / 1_048_576,
-                    mem_total_mb=mem.total / 1_048_576,
-                    temperature_c=temp,
-                ))
+                out.append(
+                    GpuInfo(
+                        index=i,
+                        name=name,
+                        util_percent=float(util.gpu),
+                        mem_used_mb=mem.used / 1_048_576,
+                        mem_total_mb=mem.total / 1_048_576,
+                        temperature_c=temp,
+                    )
+                )
         except Exception:  # noqa: BLE001
             return []
         return out
@@ -298,10 +307,11 @@ class WardenMonitor:
             return []
         out: list[ServiceInfo] = []
         by_name: dict[str, ServiceInfo] = {
-            name: ServiceInfo(name=name, pid=None, running=False)
-            for name in self.watched_services
+            name: ServiceInfo(name=name, pid=None, running=False) for name in self.watched_services
         }
-        for proc in psutil.process_iter(attrs=["pid", "name", "cmdline", "cpu_percent", "memory_info"]):
+        for proc in psutil.process_iter(
+            attrs=["pid", "name", "cmdline", "cpu_percent", "memory_info"]
+        ):
             try:
                 info = proc.info
                 pname = info.get("name") or ""
@@ -323,36 +333,55 @@ class WardenMonitor:
     # ---------- classification ----------
     def _classify(self, snap: HealthSnapshot) -> None:
         t = self.thresholds
-        self._maybe_raise("cpu", "cpu", snap.cpu_percent, t.cpu_warn, t.cpu_crit,
-                          f"CPU {snap.cpu_percent:.1f}%")
-        self._maybe_raise("ram", "ram", snap.ram_percent, t.ram_warn, t.ram_crit,
-                          f"RAM {snap.ram_percent:.1f}%")
+        self._maybe_raise(
+            "cpu", "cpu", snap.cpu_percent, t.cpu_warn, t.cpu_crit, f"CPU {snap.cpu_percent:.1f}%"
+        )
+        self._maybe_raise(
+            "ram", "ram", snap.ram_percent, t.ram_warn, t.ram_crit, f"RAM {snap.ram_percent:.1f}%"
+        )
         if snap.load_average is not None:
             l1 = snap.load_average[0]
-            self._maybe_raise("load", "load_1m", l1, t.load_warn, t.load_crit,
-                              f"load 1m {l1:.2f}")
+            self._maybe_raise("load", "load_1m", l1, t.load_warn, t.load_crit, f"load 1m {l1:.2f}")
         for d in snap.disk:
             self._maybe_raise(
-                "disk", f"disk:{d['mount']}", d["percent"],
-                t.disk_warn, t.disk_crit, f"disk {d['mount']} {d['percent']:.1f}%",
+                "disk",
+                f"disk:{d['mount']}",
+                d["percent"],
+                t.disk_warn,
+                t.disk_crit,
+                f"disk {d['mount']} {d['percent']:.1f}%",
                 detail={"mount": d["mount"], "device": d["device"]},
             )
         for d in snap.inode:
             self._maybe_raise(
-                "inode", f"inode:{d['mount']}", d["percent"],
-                t.inode_warn, t.inode_crit, f"inode {d['mount']} {d['percent']:.1f}%",
+                "inode",
+                f"inode:{d['mount']}",
+                d["percent"],
+                t.inode_warn,
+                t.inode_crit,
+                f"inode {d['mount']} {d['percent']:.1f}%",
                 detail={"mount": d["mount"]},
             )
         for g in snap.gpus:
             self._maybe_raise(
-                "gpu", f"gpu:{g.index}", g.util_percent, t.gpu_warn, t.gpu_crit,
+                "gpu",
+                f"gpu:{g.index}",
+                g.util_percent,
+                t.gpu_warn,
+                t.gpu_crit,
                 f"GPU{g.index} {g.util_percent:.1f}%",
-                detail={"index": g.index, "name": g.name, "mem_pct": (g.mem_used_mb / g.mem_total_mb * 100) if g.mem_total_mb else 0.0},
+                detail={
+                    "index": g.index,
+                    "name": g.name,
+                    "mem_pct": (g.mem_used_mb / g.mem_total_mb * 100) if g.mem_total_mb else 0.0,
+                },
             )
         for svc in snap.services:
             if not svc.running:
                 inc, was_new = self.incidents.raise_(
-                    component="service", kind="failure", target=svc.name,
+                    component="service",
+                    kind="failure",
+                    target=svc.name,
                     severity=IncidentSeverity.CRIT,
                     summary=f"service '{svc.name}' is not running",
                     detail={"service": svc.name},
@@ -365,9 +394,16 @@ class WardenMonitor:
                 sig_ = self._service_signature(svc.name)
                 self.incidents.resolve(sig_)
 
-    def _maybe_raise(self, component: str, target: str, value: float,
-                     warn: float, crit: float, summary: str,
-                     detail: dict[str, Any] | None = None) -> None:
+    def _maybe_raise(
+        self,
+        component: str,
+        target: str,
+        value: float,
+        warn: float,
+        crit: float,
+        summary: str,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
         sev: IncidentSeverity | None = None
         if value >= crit:
             sev = IncidentSeverity.CRIT
@@ -379,14 +415,19 @@ class WardenMonitor:
         if detail:
             merged.update(detail)
         inc, was_new = self.incidents.raise_(
-            component=component, kind="threshold", severity=sev,
-            summary=summary, target=target, detail=merged,
+            component=component,
+            kind="threshold",
+            severity=sev,
+            summary=summary,
+            target=target,
+            detail=merged,
         )
         if was_new:
             self._on_new_incident(inc)
 
     def _service_signature(self, name: str) -> str:
         from pradyos.warden_grid.incidents import signature
+
         return signature("service", "failure", name)
 
     def _on_new_incident(self, inc: Incident) -> None:
@@ -427,7 +468,9 @@ class WardenMonitor:
                     self._write_json(monitor.latest_snapshot().to_dict())
                     return
                 if self.path == "/incidents":
-                    self._write_json({"open": [i.to_dict() for i in monitor.incidents.open_incidents()]})
+                    self._write_json(
+                        {"open": [i.to_dict() for i in monitor.incidents.open_incidents()]}
+                    )
                     return
                 if self.path == "/incidents/all":
                     self._write_json({"all": [i.to_dict() for i in monitor.incidents.all()]})
@@ -465,6 +508,7 @@ class WardenMonitor:
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     logging.basicConfig(

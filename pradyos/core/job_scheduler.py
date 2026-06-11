@@ -5,14 +5,15 @@ pradyos/core/scheduler.py is already occupied by Phase 38's TaskScheduler.
 The class here is named Scheduler per the Phase 68 spec; this is fine
 because it lives in a different module.
 """
+
 from __future__ import annotations
 
 import threading
 import time
 import uuid
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
 
 
 @dataclass
@@ -73,9 +74,7 @@ class Scheduler:
             job_id=str(uuid.uuid4()),
             name=name,
             run_at=float(run_at),
-            interval_seconds=(
-                float(interval_seconds) if interval_seconds is not None else None
-            ),
+            interval_seconds=(float(interval_seconds) if interval_seconds is not None else None),
             payload=dict(payload) if payload else {},
             status="pending",
             last_run_at=None,

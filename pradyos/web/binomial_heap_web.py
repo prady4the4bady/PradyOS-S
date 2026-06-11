@@ -72,8 +72,14 @@ def register_binomial_routes(app: Any, binomial_heap: Any | None = None) -> Any:
             bh.decrease_key(body["handle"], body["value"])
         except BinomialHeapError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"handle": body["handle"], "value": body["value"],
-                             "min": bh.stats()["min"], "size": bh.size})
+        return JSONResponse(
+            {
+                "handle": body["handle"],
+                "value": body["value"],
+                "min": bh.stats()["min"],
+                "size": bh.size,
+            }
+        )
 
     @app.post("/api/v1/binomial/merge")
     async def api_bh_merge(request: Request) -> JSONResponse:

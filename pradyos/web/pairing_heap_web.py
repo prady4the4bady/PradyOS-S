@@ -71,8 +71,14 @@ def register_pairingheap_routes(app: Any, pairing_heap: Any | None = None) -> An
             ph.decrease_key(body["handle"], body["value"])
         except PairingHeapError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"handle": body["handle"], "value": body["value"],
-                             "min": ph.stats()["min"], "size": ph.size})
+        return JSONResponse(
+            {
+                "handle": body["handle"],
+                "value": body["value"],
+                "min": ph.stats()["min"],
+                "size": ph.size,
+            }
+        )
 
     @app.get("/api/v1/pairingheap/stats")
     async def api_ph_stats() -> JSONResponse:

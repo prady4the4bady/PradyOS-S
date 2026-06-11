@@ -97,16 +97,16 @@ class RibbonFilter:
     def _row(self, key: Any, seed: int, m: int) -> tuple[int, int, int]:
         """The key's (start column, w-bit coefficient row, fingerprint)."""
         s = self._digest("s", key, seed) % (m - _W + 1)
-        coeff = (self._digest("c", key, seed) & _WMASK) | 1   # anchor: bit 0 set
+        coeff = (self._digest("c", key, seed) & _WMASK) | 1  # anchor: bit 0 set
         fp = self._digest("fp", key, seed) & self._mask
         return s, coeff, fp
 
     # ── build (static construction) ──────────────────────────────────────────────
     def build(self, keys: Any) -> None:
         """Construct the filter from a complete key set (replaces any prior filter)."""
-        distinct = list(dict.fromkeys(keys))          # dedup, preserve order
+        distinct = list(dict.fromkeys(keys))  # dedup, preserve order
         n = len(distinct)
-        with self._lock:                              # snapshot config for a race-free solve
+        with self._lock:  # snapshot config for a race-free solve
             seed = self._seed
 
         if n == 0:
@@ -118,7 +118,7 @@ class RibbonFilter:
             return
 
         m = int(math.ceil(n / _LOAD)) + _W
-        span = m - _W + 1                             # number of legal start columns (≥ 2)
+        span = m - _W + 1  # number of legal start columns (≥ 2)
 
         # Incremental row-echelon form: at most one pivot row per column, stored
         # relative to its pivot column (bit 0 = the pivot, always set).
@@ -134,16 +134,17 @@ class RibbonFilter:
                     # Row reduced away: consistent only if the residual is zero.
                     if rhs != 0:
                         raise RibbonFilterError(
-                            "construction failed — linearly dependent rows (retry with different seed)")
+                            "construction failed — linearly dependent rows (retry with different seed)"
+                        )
                     break
-                tz = (c & -c).bit_length() - 1        # shift to the leftmost set bit
+                tz = (c & -c).bit_length() - 1  # shift to the leftmost set bit
                 i += tz
                 c >>= tz
-                if piv_coeff[i] == 0:                 # free pivot column → install row
+                if piv_coeff[i] == 0:  # free pivot column → install row
                     piv_coeff[i] = c
                     piv_rhs[i] = rhs
                     break
-                c ^= piv_coeff[i]                     # eliminate (both have bit 0 set)
+                c ^= piv_coeff[i]  # eliminate (both have bit 0 set)
                 rhs ^= piv_rhs[i]
 
         # Back-substitution from the high column down: every Z[i+j] (j ≥ 1) is solved.
@@ -151,7 +152,7 @@ class RibbonFilter:
         for i in range(m - 1, -1, -1):
             c = piv_coeff[i]
             if c == 0:
-                continue                              # free variable → 0
+                continue  # free variable → 0
             val = piv_rhs[i]
             rest = c >> 1
             j = 1

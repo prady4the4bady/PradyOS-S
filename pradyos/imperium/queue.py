@@ -10,7 +10,7 @@ from __future__ import annotations
 import heapq
 import itertools
 import threading
-from typing import Iterator
+from collections.abc import Iterator
 
 from pradyos.core.types import Priority
 from pradyos.imperium.task import ImperiumTask, TaskRecord
@@ -40,6 +40,7 @@ class TaskQueue:
             if rec is None or rec.is_terminal:
                 return False
             from pradyos.core.types import TaskState
+
             rec.state = TaskState.CANCELLED
             return True
 
@@ -58,6 +59,7 @@ class TaskQueue:
 
     def pending_records(self) -> list[TaskRecord]:
         from pradyos.core.types import TaskState
+
         with self._lock:
             return [r for r in self._records.values() if r.state == TaskState.QUEUED]
 
@@ -79,6 +81,7 @@ class TaskQueue:
         """Pop the highest-priority QUEUED task whose dependencies are
         satisfied. ``is_satisfied(task_id) -> bool`` decides per-dep."""
         from pradyos.core.types import TaskState
+
         with self._lock:
             skipped: list[tuple[int, int, float, str]] = []
             chosen: TaskRecord | None = None
@@ -98,6 +101,7 @@ class TaskQueue:
 
     def stats(self) -> dict[str, int]:
         from pradyos.core.types import TaskState
+
         counts = {s.value: 0 for s in TaskState}
         priority_counts = {p.value: 0 for p in Priority}
         with self._lock:

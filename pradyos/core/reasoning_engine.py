@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any
-
+from dataclasses import dataclass
 
 _REQUIRED_RULE_KEYS = ("trigger", "action", "risk_level", "rationale", "preconditions")
 
@@ -64,13 +62,15 @@ class ReasoningEngine:
             if key not in rule:
                 raise ValueError(f"Rule missing required key: {key!r}")
         with self._lock:
-            self._rules.append({
-                "trigger": rule["trigger"],
-                "action": rule["action"],
-                "risk_level": rule["risk_level"],
-                "rationale": rule["rationale"],
-                "preconditions": dict(rule["preconditions"]),
-            })
+            self._rules.append(
+                {
+                    "trigger": rule["trigger"],
+                    "action": rule["action"],
+                    "risk_level": rule["risk_level"],
+                    "rationale": rule["rationale"],
+                    "preconditions": dict(rule["preconditions"]),
+                }
+            )
 
     def rule_count(self) -> int:
         with self._lock:
@@ -85,12 +85,14 @@ class ReasoningEngine:
         for r in rules_snapshot:
             if str(r["trigger"]).lower() not in goal_lower:
                 continue
-            matched.append(ReasoningStep(
-                action=r["action"],
-                risk_level=r["risk_level"],
-                rationale=r["rationale"],
-                preconditions=dict(r["preconditions"]),
-            ))
+            matched.append(
+                ReasoningStep(
+                    action=r["action"],
+                    risk_level=r["risk_level"],
+                    rationale=r["rationale"],
+                    preconditions=dict(r["preconditions"]),
+                )
+            )
 
         # Order: satisfied preconditions first, then unsatisfied;
         # preserve original order within each group.

@@ -29,10 +29,10 @@ class UnionFind:
         if not isinstance(size, int) or isinstance(size, bool) or size < 1:
             raise ValueError("size must be a positive integer")
         self._n = size
-        self._parent = list(range(size + 1))   # 1-indexed; slot 0 unused
+        self._parent = list(range(size + 1))  # 1-indexed; slot 0 unused
         self._rank = [0] * (size + 1)
-        self._comp = [1] * (size + 1)           # element count per root
-        self._count = size                       # number of disjoint sets
+        self._comp = [1] * (size + 1)  # element count per root
+        self._count = size  # number of disjoint sets
         self._largest = 1
         self._lock = threading.Lock()
 
@@ -45,7 +45,7 @@ class UnionFind:
 
     def _find_locked(self, a: int) -> int:
         while self._parent[a] != a:
-            self._parent[a] = self._parent[self._parent[a]]   # path halving
+            self._parent[a] = self._parent[self._parent[a]]  # path halving
             a = self._parent[a]
         return a
 

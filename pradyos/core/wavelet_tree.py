@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import bisect
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from pradyos.core.rank_select import RankSelect
 
@@ -45,17 +46,17 @@ class _Node:
     __slots__ = ("lo", "hi", "bitvector", "left", "right")
 
     def __init__(self, lo: int, hi: int) -> None:
-        self.lo = lo                  # alphabet id range [lo, hi)
+        self.lo = lo  # alphabet id range [lo, hi)
         self.hi = hi
         self.bitvector: RankSelect | None = None
-        self.left: "_Node | None" = None
-        self.right: "_Node | None" = None
+        self.left: _Node | None = None
+        self.right: _Node | None = None
 
 
 def _kind(symbol: Any) -> str:
     if isinstance(symbol, bool):
         raise WaveletTreeError("symbol must be int, float or str (not bool)")
-    if isinstance(symbol, (int, float)):
+    if isinstance(symbol, int | float):
         return "num"
     if isinstance(symbol, str):
         return "str"
@@ -78,13 +79,13 @@ class WaveletTree:
 
         kind: str | None = None
         for s in seq:
-            k = _kind(s)                          # validates type (raises on bool/non-orderable)
+            k = _kind(s)  # validates type (raises on bool/non-orderable)
             if kind is None:
                 kind = k
             elif k != kind:
                 raise WaveletTreeError(f"mixed symbol kinds {kind!r} and {k!r}")
 
-        symbols = sorted(set(seq))                # id i ↔ symbols[i], ascending
+        symbols = sorted(set(seq))  # id i ↔ symbols[i], ascending
         sym2id = {s: i for i, s in enumerate(symbols)}
         ids = [sym2id[s] for s in seq]
         sigma = len(symbols)
@@ -98,7 +99,7 @@ class WaveletTree:
 
     def _make(self, ids: list, lo: int, hi: int) -> _Node:
         node = _Node(lo, hi)
-        if hi - lo <= 1:                          # leaf — covers the single id `lo`
+        if hi - lo <= 1:  # leaf — covers the single id `lo`
             return node
         mid = (lo + hi) // 2
         bits = [0 if x < mid else 1 for x in ids]
@@ -130,7 +131,7 @@ class WaveletTree:
             else:
                 i = node.bitvector.rank1(i)
                 node = node.right
-        return node.lo                            # leaf id
+        return node.lo  # leaf id
 
     def _rank_id_locked(self, sym_id: int, i: int) -> int:
         node = self._root
@@ -142,7 +143,7 @@ class WaveletTree:
             else:
                 i = node.bitvector.rank1(i)
                 node = node.right
-        return i                                  # count of sym_id in [0, original_i)
+        return i  # count of sym_id in [0, original_i)
 
     def _count_less(self, node: _Node, i: int, j: int, x: int) -> int:
         """Positions in ``[i, j)`` at ``node`` whose id is ``< x``."""
@@ -150,7 +151,7 @@ class WaveletTree:
             return 0
         if x >= node.hi:
             return j - i
-        bv = node.bitvector                       # not a leaf here (lo < x < hi ⇒ hi-lo ≥ 2)
+        bv = node.bitvector  # not a leaf here (lo < x < hi ⇒ hi-lo ≥ 2)
         z_i, z_j = bv.rank0(i), bv.rank0(j)
         mid = (node.lo + node.hi) // 2
         if x <= mid:
@@ -166,7 +167,7 @@ class WaveletTree:
 
     def rank(self, symbol: Any, i: int) -> int:
         """Occurrences of ``symbol`` in ``[0, i)`` (``i`` in ``[0, n]``)."""
-        _kind(symbol)                             # validates type
+        _kind(symbol)  # validates type
         with self._lock:
             self._check_index(i, 0, self._n, "i")
             sym_id = self._sym2id.get(symbol)
@@ -194,7 +195,7 @@ class WaveletTree:
                 else:
                     path.append((node, True))
                     node = node.right
-            pos = k - 1                           # 0-indexed within the leaf
+            pos = k - 1  # 0-indexed within the leaf
             for parent, went_right in reversed(path):
                 bv = parent.bitvector
                 pos = bv.select1(pos + 1) if went_right else bv.select0(pos + 1)
@@ -203,8 +204,13 @@ class WaveletTree:
     def quantile(self, i: int, j: int, k: int) -> Any:
         """The ``k``-th smallest symbol (1-indexed) in range ``[i, j)``."""
         with self._lock:
-            if (not isinstance(i, int) or isinstance(i, bool) or not isinstance(j, int)
-                    or isinstance(j, bool) or not (0 <= i < j <= self._n)):
+            if (
+                not isinstance(i, int)
+                or isinstance(i, bool)
+                or not isinstance(j, int)
+                or isinstance(j, bool)
+                or not (0 <= i < j <= self._n)
+            ):
                 raise WaveletTreeError(f"need 0 <= i < j <= {self._n}")
             if not isinstance(k, int) or isinstance(k, bool) or not (1 <= k <= j - i):
                 raise WaveletTreeError(f"k must be an int in [1, {j - i}]")
@@ -224,19 +230,25 @@ class WaveletTree:
         """Count of positions in ``[i, j)`` whose symbol is in ``[lo, hi)`` (``hi`` exclusive)."""
         klo, khi = _kind(lo), _kind(hi)
         with self._lock:
-            if (not isinstance(i, int) or isinstance(i, bool) or not isinstance(j, int)
-                    or isinstance(j, bool) or not (0 <= i <= j <= self._n)):
+            if (
+                not isinstance(i, int)
+                or isinstance(i, bool)
+                or not isinstance(j, int)
+                or isinstance(j, bool)
+                or not (0 <= i <= j <= self._n)
+            ):
                 raise WaveletTreeError(f"need 0 <= i <= j <= {self._n}")
             if self._kind is not None and (klo != self._kind or khi != self._kind):
                 raise WaveletTreeError("bound kind does not match symbol kind")
             if self._root is None or i == j or lo >= hi:
                 return 0
-            lo_id = bisect.bisect_left(self._symbols, lo)   # first id with symbol >= lo
-            hi_id = bisect.bisect_left(self._symbols, hi)   # first id with symbol >= hi
+            lo_id = bisect.bisect_left(self._symbols, lo)  # first id with symbol >= lo
+            hi_id = bisect.bisect_left(self._symbols, hi)  # first id with symbol >= hi
             if lo_id >= hi_id:
                 return 0
-            return (self._count_less(self._root, i, j, hi_id)
-                    - self._count_less(self._root, i, j, lo_id))
+            return self._count_less(self._root, i, j, hi_id) - self._count_less(
+                self._root, i, j, lo_id
+            )
 
     def reset(self) -> None:
         """Empty the index."""

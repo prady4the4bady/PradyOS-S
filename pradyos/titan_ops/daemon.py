@@ -18,8 +18,8 @@ from typing import Any
 
 _IS_WINDOWS = sys.platform == "win32"
 
-from pradyos.titan_ops.executor import TitanExecutor
-from pradyos.titan_ops.instruction import parse_instruction
+from pradyos.titan_ops.executor import TitanExecutor  # noqa: E402
+from pradyos.titan_ops.instruction import parse_instruction  # noqa: E402
 
 log = logging.getLogger("pradyos.titan_ops")
 
@@ -167,8 +167,12 @@ class TitanDaemon:
 class TitanClient:
     """Synchronous TITAN client used by IMPERIUM and tests."""
 
-    def __init__(self, socket_path: str = DEFAULT_SOCKET,
-                 tcp_host: str = DEFAULT_TCP_HOST, tcp_port: int = DEFAULT_TCP_PORT) -> None:
+    def __init__(
+        self,
+        socket_path: str = DEFAULT_SOCKET,
+        tcp_host: str = DEFAULT_TCP_HOST,
+        tcp_port: int = DEFAULT_TCP_PORT,
+    ) -> None:
         self.socket_path = socket_path
         self.tcp_host = tcp_host
         self.tcp_port = tcp_port
@@ -188,9 +192,7 @@ class TitanClient:
                     return True
             else:
                 try:
-                    s = socket.create_connection(
-                        (self.tcp_host, self.tcp_port), timeout=0.1
-                    )
+                    s = socket.create_connection((self.tcp_host, self.tcp_port), timeout=0.1)
                     s.close()
                     return True
                 except OSError:

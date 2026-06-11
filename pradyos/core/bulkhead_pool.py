@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import Any, Callable
 
 
 class BulkheadRejectedError(RuntimeError):

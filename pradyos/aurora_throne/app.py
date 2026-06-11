@@ -36,39 +36,33 @@ from datetime import datetime
 from typing import Any
 
 # ---------------------------------------------------------------------------
+# Rich imports (for once=True / test-mode Throne shim)
+# ---------------------------------------------------------------------------
+from rich.console import Console
+from rich.layout import Layout
+
+# ---------------------------------------------------------------------------
 # Textual imports
 # ---------------------------------------------------------------------------
-
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
 from textual.css.query import NoMatches
-from textual.reactive import reactive
 from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import (
     Button,
     DataTable,
     Footer,
-    Header,
     Input,
     Label,
     ProgressBar,
     RichLog,
     Static,
-    Tab,
     TabbedContent,
     TabPane,
 )
-
-# ---------------------------------------------------------------------------
-# Rich imports (for once=True / test-mode Throne shim)
-# ---------------------------------------------------------------------------
-
-from rich.console import Console, Group
-from rich.layout import Layout
-from rich.live import Live
 
 from pradyos.aurora_throne.widgets import (
     approvals_panel,
@@ -213,6 +207,7 @@ DataTable > .datatable--cursor { background: #1a2634; }
 # Utilities
 # ---------------------------------------------------------------------------
 
+
 def _warden_get(url: str, path: str, timeout: float = 1.5) -> dict[str, Any] | None:
     full = f"{url.rstrip('/')}{path}"
     try:
@@ -238,8 +233,12 @@ def _fmt_duration(s: float) -> str:
 
 def _state_color(state: str) -> str:
     return {
-        "RUNNING": "running", "QUEUED": "queued", "SUCCEEDED": "succeeded",
-        "FAILED": "failed", "ESCALATED": "escalated", "CANCELLED": "dim",
+        "RUNNING": "running",
+        "QUEUED": "queued",
+        "SUCCEEDED": "succeeded",
+        "FAILED": "failed",
+        "ESCALATED": "escalated",
+        "CANCELLED": "dim",
     }.get(state, "")
 
 
@@ -250,6 +249,7 @@ def _sev_color(sev: str) -> str:
 # ---------------------------------------------------------------------------
 # Textual custom widgets
 # ---------------------------------------------------------------------------
+
 
 class ThroneHeader(Widget):
     DEFAULT_CSS = ""
@@ -316,7 +316,9 @@ class ApprovalCard(Widget):
         intent = self._rec.get("intent") or "—"
         rule = self._rec.get("escalation_rule") or "—"
         reason = self._rec.get("escalation_reason") or "—"
-        yield Static(f"[bold magenta]APPROVAL REQUIRED[/bold magenta]  [{tid}]", classes="card-header")
+        yield Static(
+            f"[bold magenta]APPROVAL REQUIRED[/bold magenta]  [{tid}]", classes="card-header"
+        )
         yield Static(f"[dim]kind:[/dim] {kind}   [dim]rule:[/dim] {rule}", classes="card-body")
         yield Static(f"[dim]intent:[/dim] {intent}", classes="card-body")
         yield Static(f"[dim]reason:[/dim] {reason}", classes="card-body")
@@ -339,7 +341,7 @@ class ApprovalCard(Widget):
 class CommandBar(Widget):
     """Sovereign command input — approve/reject by task ID prefix."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__()
         self._throne = throne
 
@@ -362,10 +364,11 @@ class CommandBar(Widget):
 # View panes
 # ---------------------------------------------------------------------------
 
+
 class MorningBriefPane(TabPane):
     """View 1 — WARDEN health + overnight audit summary."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__("Morning Brief", id="pane-morning")
         self._throne = throne
 
@@ -380,7 +383,9 @@ class MorningBriefPane(TabPane):
                     yield Static("[bold yellow]OPEN INCIDENTS[/bold yellow]", classes="panel-title")
                     yield Static(id="brief-incidents")
             with Vertical():
-                yield Static("[bold magenta]PENDING APPROVALS[/bold magenta]", classes="panel-title")
+                yield Static(
+                    "[bold magenta]PENDING APPROVALS[/bold magenta]", classes="panel-title"
+                )
                 yield Static(id="brief-approvals")
             with Vertical():
                 yield Static("[bold cyan]RECENT AUDIT[/bold cyan]", classes="panel-title")
@@ -395,17 +400,25 @@ class MorningBriefPane(TabPane):
         audit: list,
     ) -> None:
         hour = datetime.now().hour
-        greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
-        _upd(self, "#brief-greeting", Static,
-             f"[bold bright_cyan]{greeting}, Sovereign.[/bold bright_cyan]  "
-             f"[grey50]Empire integrity check — {datetime.now().strftime('%Y-%m-%d')}[/grey50]")
+        greeting = (
+            "Good morning" if hour < 12 else "Good afternoon" if hour < 17 else "Good evening"
+        )
+        _upd(
+            self,
+            "#brief-greeting",
+            Static,
+            f"[bold bright_cyan]{greeting}, Sovereign.[/bold bright_cyan]  "
+            f"[grey50]Empire integrity check — {datetime.now().strftime('%Y-%m-%d')}[/grey50]",
+        )
 
         if snap:
             cpu = snap.get("cpu_percent", 0)
             ram = snap.get("ram_percent", 0)
             disk_pct = snap.get("disk", [{}])[0].get("percent", 0) if snap.get("disk") else 0
+
             def _c(v: float) -> str:
                 return "crit" if v >= 90 else "warn" if v >= 70 else "ok"
+
             health_txt = (
                 f"[{_c(cpu)}]CPU {cpu:.1f}%[/{_c(cpu)}]   "
                 f"[{_c(ram)}]RAM {ram:.1f}%[/{_c(ram)}]   "
@@ -420,7 +433,9 @@ class MorningBriefPane(TabPane):
             for inc in incidents[:6]:
                 sev = inc.get("severity", "?")
                 color = _sev_color(sev)
-                lines.append(f"[{color}]{sev}[/{color}] {inc.get('component','?')} — {inc.get('summary','?')}")
+                lines.append(
+                    f"[{color}]{sev}[/{color}] {inc.get('component','?')} — {inc.get('summary','?')}"
+                )
             inc_txt = "\n".join(lines)
         else:
             inc_txt = "[green]All clear — no open incidents[/green]"
@@ -429,7 +444,8 @@ class MorningBriefPane(TabPane):
         ap_count = len(approvals)
         ap_txt = (
             f"[magenta]{ap_count} task(s) awaiting Sovereign approval — switch to Campaign View (3)[/magenta]"
-            if ap_count else "[green]No approvals pending[/green]"
+            if ap_count
+            else "[green]No approvals pending[/green]"
         )
         _upd(self, "#brief-approvals", Static, ap_txt)
 
@@ -451,13 +467,15 @@ class MorningBriefPane(TabPane):
 class ProjectDossiersPane(TabPane):
     """View 2 — all IMPERIUM tasks with status, kind, intent."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__("Project Dossiers", id="pane-dossiers")
         self._throne = throne
         self._ready = False
 
     def compose(self) -> ComposeResult:
-        yield Static("[bold cyan]PROJECT DOSSIERS — IMPERIUM TASK LEDGER[/bold cyan]", classes="panel-title")
+        yield Static(
+            "[bold cyan]PROJECT DOSSIERS — IMPERIUM TASK LEDGER[/bold cyan]", classes="panel-title"
+        )
         tbl = DataTable(id="dossiers-table", cursor_type="row")
         tbl.add_columns("task_id", "priority", "state", "kind", "intent", "attempts", "age")
         yield tbl
@@ -493,7 +511,7 @@ class ProjectDossiersPane(TabPane):
 class CampaignViewPane(TabPane):
     """View 3 — running tasks with live progress + sovereign approval interface."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__("Campaign View", id="pane-campaign")
         self._throne = throne
         self._ready = False
@@ -562,13 +580,16 @@ class CampaignViewPane(TabPane):
 class EmpireHealthPane(TabPane):
     """View 4 — CPU/RAM/Disk/GPU panels from WARDEN GRID."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__("Empire Health", id="pane-health")
         self._throne = throne
 
     def compose(self) -> ComposeResult:
         with Vertical():
-            yield Static("[bold cyan]EMPIRE HEALTH — WARDEN GRID TELEMETRY[/bold cyan]", classes="panel-title")
+            yield Static(
+                "[bold cyan]EMPIRE HEALTH — WARDEN GRID TELEMETRY[/bold cyan]",
+                classes="panel-title",
+            )
             yield Static(id="health-meta")
             with Vertical(id="health-bars"):
                 yield Static("[dim]Awaiting telemetry…[/dim]", id="health-placeholder")
@@ -640,7 +661,7 @@ class EmpireHealthPane(TabPane):
 class ArtifactGalleryPane(TabPane):
     """View 5 — audit log tail with filtering by agent_id + DLQ + completed tasks."""
 
-    def __init__(self, throne: "ThroneApp") -> None:
+    def __init__(self, throne: ThroneApp) -> None:
         super().__init__("Artifact Gallery", id="pane-gallery")
         self._throne = throne
         self._ready = False
@@ -655,7 +676,9 @@ class ArtifactGalleryPane(TabPane):
                     tbl_dlq.add_columns("task_id", "intent", "attempts", "final_error", "failed_at")
                     yield tbl_dlq
                 with Vertical():
-                    yield Static("[bold yellow]COMPLETED TASKS[/bold yellow]", classes="panel-title")
+                    yield Static(
+                        "[bold yellow]COMPLETED TASKS[/bold yellow]", classes="panel-title"
+                    )
                     tbl_done = DataTable(id="gallery-done", cursor_type="row")
                     tbl_done.add_columns("task_id", "kind", "intent", "finished_at")
                     yield tbl_done
@@ -732,6 +755,7 @@ class ArtifactGalleryPane(TabPane):
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def _upd(widget: Widget, selector: str, wtype: type, content: str) -> None:
     """Quietly update a Static widget's content; ignore NoMatches."""
     try:
@@ -743,6 +767,7 @@ def _upd(widget: Widget, selector: str, wtype: type, content: str) -> None:
 # ---------------------------------------------------------------------------
 # ThroneApp — main Textual application
 # ---------------------------------------------------------------------------
+
 
 class ThroneApp(App):
     """AURORA THRONE — Sovereign Governance Chamber (Textual cinematic UI)."""
@@ -775,7 +800,9 @@ class ThroneApp(App):
     ) -> None:
         super().__init__()
         self._imperium = imperium
-        self._warden_url = warden_url or os.environ.get("PRADYOS_WARDEN_URL", "http://127.0.0.1:9701")
+        self._warden_url = warden_url or os.environ.get(
+            "PRADYOS_WARDEN_URL", "http://127.0.0.1:9701"
+        )
         self._audit = audit or get_audit_log()
         self._checkpoint = checkpoint or CheckpointStore()
         self._refresh_interval = max(0.5, 1.0 / max(0.1, refresh_hz))
@@ -933,7 +960,9 @@ class ThroneApp(App):
             else:
                 self.notify(f"Task not found: {tid}", severity="error")
         else:
-            self.notify(f"Unknown command: {verb!r}  (a=approve, r=reject, q=quit)", severity="error")
+            self.notify(
+                f"Unknown command: {verb!r}  (a=approve, r=reject, q=quit)", severity="error"
+            )
         self.action_close_command()
 
     def _resolve_task_id(self, prefix: str) -> str | None:
@@ -952,6 +981,7 @@ class ThroneApp(App):
 # ---------------------------------------------------------------------------
 # Throne — backward-compatible Rich shim (used by tests and --once mode)
 # ---------------------------------------------------------------------------
+
 
 def _warden_get_rich(url: str, path: str, timeout: float = 1.5) -> dict[str, Any] | None:
     """Re-export of _warden_get for the Throne shim."""
@@ -979,7 +1009,9 @@ class Throne:
         refresh_hz: float = 2.0,
     ) -> None:
         self.imperium = imperium
-        self.warden_url = warden_url or os.environ.get("PRADYOS_WARDEN_URL", "http://127.0.0.1:9701")
+        self.warden_url = warden_url or os.environ.get(
+            "PRADYOS_WARDEN_URL", "http://127.0.0.1:9701"
+        )
         self.audit = audit or get_audit_log()
         self.checkpoint = checkpoint or CheckpointStore()
         self.refresh_hz = refresh_hz
@@ -1079,17 +1111,23 @@ class Throne:
 # CLI entrypoint
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="pradyos-throne",
         description="AURORA THRONE — Sovereign Governance Chamber",
     )
-    parser.add_argument("--once", action="store_true",
-                        help="render once with Rich and exit (non-interactive)")
-    parser.add_argument("--warden-url", default=None,
-                        help="WARDEN GRID base URL (default $PRADYOS_WARDEN_URL or http://127.0.0.1:9701)")
-    parser.add_argument("--refresh-hz", type=float, default=2.0,
-                        help="Display refresh rate in Hz (default 2)")
+    parser.add_argument(
+        "--once", action="store_true", help="render once with Rich and exit (non-interactive)"
+    )
+    parser.add_argument(
+        "--warden-url",
+        default=None,
+        help="WARDEN GRID base URL (default $PRADYOS_WARDEN_URL or http://127.0.0.1:9701)",
+    )
+    parser.add_argument(
+        "--refresh-hz", type=float, default=2.0, help="Display refresh rate in Hz (default 2)"
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(

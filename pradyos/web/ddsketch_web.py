@@ -45,9 +45,11 @@ def register_ddsketch_routes(app: Any, ddsketch: Any | None = None) -> Any:
         ddsketch = DDSketch(DEFAULT_ALPHA)
 
     @app.post("/api/v1/ddsketch/update")
-    async def api_dd_update(request: Request,
-                            value: float | None = Query(default=None, gt=0.0),
-                            count: int = Query(default=1, ge=1)) -> JSONResponse:
+    async def api_dd_update(
+        request: Request,
+        value: float | None = Query(default=None, gt=0.0),
+        count: int = Query(default=1, ge=1),
+    ) -> JSONResponse:
         try:
             body = await request.json()
         except Exception:
@@ -63,7 +65,7 @@ def register_ddsketch_routes(app: Any, ddsketch: Any | None = None) -> Any:
                 return JSONResponse({"error": "DDSketch requires positive values"}, status_code=422)
             return JSONResponse({"updated": len(values), "n": ddsketch.count()})
         if value is not None:
-            ddsketch.update(value, count)         # value already > 0 via Query(gt=0)
+            ddsketch.update(value, count)  # value already > 0 via Query(gt=0)
             return JSONResponse({"updated": 1, "n": ddsketch.count()})
         return JSONResponse({"error": "value or values is required"}, status_code=422)
 

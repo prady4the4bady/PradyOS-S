@@ -58,8 +58,9 @@ def register_theta_sketch_routes(app: Any, theta: Any | None = None) -> Any:
 
     @app.get("/api/v1/theta/estimate")
     async def api_theta_estimate() -> JSONResponse:
-        return JSONResponse({"estimate": theta.estimate(), "n": len(theta),
-                             "is_exact": theta.is_exact})
+        return JSONResponse(
+            {"estimate": theta.estimate(), "n": len(theta), "is_exact": theta.is_exact}
+        )
 
     @app.post("/api/v1/theta/merge")
     async def api_theta_merge(request: Request, op: str = Query("union")) -> JSONResponse:
@@ -74,9 +75,9 @@ def register_theta_sketch_routes(app: Any, theta: Any | None = None) -> Any:
         other = ThetaSketch(k=theta.k, seed=theta.seed)
         other.update_many(values)
         if op == "union":
-            theta.merge(other)                 # folds the batch in (mutating)
+            theta.merge(other)  # folds the batch in (mutating)
             return JSONResponse({"op": op, "estimate": theta.estimate(), "n": len(theta)})
-        estimate = theta.intersection_estimate(other)   # non-destructive
+        estimate = theta.intersection_estimate(other)  # non-destructive
         return JSONResponse({"op": op, "estimate": estimate})
 
     @app.get("/api/v1/theta/stats")

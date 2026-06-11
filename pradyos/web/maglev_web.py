@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.maglev import MaglevHash, MaglevError
+from pradyos.core.maglev import MaglevError, MaglevHash
 
 
 def register_maglev_routes(app: Any, maglev: Any | None = None) -> Any:
@@ -53,7 +53,9 @@ def register_maglev_routes(app: Any, maglev: Any | None = None) -> Any:
         if not isinstance(body, dict) or "node" not in body:
             return JSONResponse({"error": "node is required"}, status_code=422)
         removed = maglev.remove_node(str(body["node"]))
-        return JSONResponse({"node": str(body["node"]), "removed": removed, "num_nodes": len(maglev)})
+        return JSONResponse(
+            {"node": str(body["node"]), "removed": removed, "num_nodes": len(maglev)}
+        )
 
     @app.get("/api/v1/maglev/lookup")
     async def api_maglev_lookup(key: str) -> JSONResponse:

@@ -25,7 +25,7 @@ from pradyos.core.types import Priority, TaskState
 class ImperiumTask:
     """Specification of work to do. Submitted by an agent or the Throne."""
 
-    kind: str                                  # e.g. 'titan.shell', 'research', 'project_proposal'
+    kind: str  # e.g. 'titan.shell', 'research', 'project_proposal'
     payload: dict[str, Any] = field(default_factory=dict)
     intent: str = ""
     priority: Priority = Priority.OPERATIONAL
@@ -34,7 +34,7 @@ class ImperiumTask:
     retry_backoff_sec: float = 1.0
     submitted_by: str = "system"
     task_id: str = field(default_factory=lambda: new_id("tk"))
-    parent_id: str | None = None               # for sub-tasks (HELIOS FORGE etc.)
+    parent_id: str | None = None  # for sub-tasks (HELIOS FORGE etc.)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

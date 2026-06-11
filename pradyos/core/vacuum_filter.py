@@ -49,7 +49,8 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 _MASK64 = (1 << 64) - 1
 
@@ -114,9 +115,16 @@ def _default_hash_factory(seed: int) -> Callable[[Any], int]:
 class VacuumFilter:
     """Approximate-membership filter with deletion and non-power-of-two sizing."""
 
-    def __init__(self, capacity: int, bucket_size: int = 4, fingerprint_bits: int = 8,
-                 max_kicks: int = 500, alt_range: int | None = None, seed: int = 0,
-                 hash_fn: Callable[[Any], int] | None = None) -> None:
+    def __init__(
+        self,
+        capacity: int,
+        bucket_size: int = 4,
+        fingerprint_bits: int = 8,
+        max_kicks: int = 500,
+        alt_range: int | None = None,
+        seed: int = 0,
+        hash_fn: Callable[[Any], int] | None = None,
+    ) -> None:
         if not _is_pos_int(capacity):
             raise VacuumFilterError(capacity)
         if not _is_pos_int(bucket_size):
@@ -155,13 +163,13 @@ class VacuumFilter:
     # ── hashing helpers (no lock; pure) ──────────────────────────────────────
     def _fingerprint(self, h: int) -> int:
         fp = h & self._fp_max
-        return fp if fp != 0 else 1            # 0 is reserved for "empty"
+        return fp if fp != 0 else 1  # 0 is reserved for "empty"
 
     def _candidates(self, item: Any) -> tuple[int, int, int]:
         h = self._hash_fn(item)
         fp = self._fingerprint(h)
         i1 = (h >> self._fp_bits) % self._m
-        i2 = i1 ^ (self._hash_fn(fp) & (self._L - 1))   # alternate within the chunk
+        i2 = i1 ^ (self._hash_fn(fp) & (self._L - 1))  # alternate within the chunk
         return fp, i1, i2
 
     def _alt_index(self, index: int, fp: int) -> int:

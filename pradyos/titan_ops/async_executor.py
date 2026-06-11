@@ -24,15 +24,12 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import sys
-import threading
 from pathlib import Path
-from typing import Any
 
 from pradyos.core.audit import AuditLog, get_audit_log
 from pradyos.core.bus import EventBus, get_bus
 from pradyos.core.constitution import Constitution, default_constitution
-from pradyos.titan_ops.executor import ExecutionResult, TitanExecutor, _IS_WINDOWS
+from pradyos.titan_ops.executor import ExecutionResult, TitanExecutor
 from pradyos.titan_ops.instruction import InstructionKind, TitanInstruction
 from pradyos.titan_ops.rollback import (
     DiffCapture,
@@ -47,8 +44,14 @@ from pradyos.titan_ops.rollback import (
 # ---------------------------------------------------------------------------
 
 _DESTRUCTIVE_SHELL_PREFIXES = (
-    "rm ", "rmdir", "del ", "format ", "mkfs",
-    "dd if=", "shred", "wipe",
+    "rm ",
+    "rmdir",
+    "del ",
+    "format ",
+    "mkfs",
+    "dd if=",
+    "shred",
+    "wipe",
 )
 _DESTRUCTIVE_KINDS = {InstructionKind.PACKAGE, InstructionKind.SERVICE}
 
@@ -76,6 +79,7 @@ def _affected_paths(instr: TitanInstruction) -> list[str]:
 # ---------------------------------------------------------------------------
 # Async executor
 # ---------------------------------------------------------------------------
+
 
 class AsyncTitanExecutor:
     """Async wrapper around TitanExecutor with snapshot + diff capture."""

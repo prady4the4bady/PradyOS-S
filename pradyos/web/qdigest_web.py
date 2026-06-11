@@ -43,8 +43,7 @@ def register_qdigest_routes(app: Any, qdigest: Any | None = None) -> Any:
             qdigest.add(body["value"], count)
         except QDigestError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"value": body["value"], "count": count,
-                             "total": qdigest.total_count})
+        return JSONResponse({"value": body["value"], "count": count, "total": qdigest.total_count})
 
     @app.get("/api/v1/qdigest/quantile")
     async def api_qd_quantile(q: float = Query(gt=0.0, lt=1.0)) -> JSONResponse:
@@ -59,8 +58,11 @@ def register_qdigest_routes(app: Any, qdigest: Any | None = None) -> Any:
         body = await request.json()
         if not isinstance(body, dict) or not isinstance(body.get("values"), list):
             return JSONResponse({"error": "values list is required"}, status_code=422)
-        temp = QDigest(compression_factor=qdigest.compression_factor,
-                       value_range=qdigest.value_range, seed=qdigest.seed)
+        temp = QDigest(
+            compression_factor=qdigest.compression_factor,
+            value_range=qdigest.value_range,
+            seed=qdigest.seed,
+        )
         try:
             for v in body["values"]:
                 temp.add(v)
@@ -82,8 +84,7 @@ def register_qdigest_routes(app: Any, qdigest: Any | None = None) -> Any:
         if not isinstance(body, dict):
             body = {}
         try:
-            qdigest.reset(body.get("compression_factor"), body.get("value_range"),
-                          body.get("seed"))
+            qdigest.reset(body.get("compression_factor"), body.get("value_range"), body.get("seed"))
         except QDigestError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
         return JSONResponse(qdigest.stats())

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable, TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pradyos.core.snapshot_store import SnapshotStore
 
 
 class StateManager:
-    def __init__(self, snapshot_store: "SnapshotStore | None" = None) -> None:
+    def __init__(self, snapshot_store: SnapshotStore | None = None) -> None:
         self._store = snapshot_store
         self._hooks: list[tuple[str, Callable[[], Any]]] = []
         self._lock = threading.Lock()

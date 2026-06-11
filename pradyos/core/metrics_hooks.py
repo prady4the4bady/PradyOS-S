@@ -27,7 +27,6 @@ Windows-safe: no signals, no AF_UNIX, no fork.
 
 from __future__ import annotations
 
-import asyncio
 import functools
 import logging
 import time
@@ -63,11 +62,13 @@ METRIC_NAMES = (
 # Registry setup
 # ---------------------------------------------------------------------------
 
+
 def _ensure_metrics(registry: MetricsRegistry) -> dict[str, Any]:
     """Create metrics in the registry if they don't exist yet.
 
     Idempotent — safe to call multiple times.
     """
+
     def _counter(name: str, desc: str = "") -> Counter:
         existing = registry.get(name)
         if existing is not None and isinstance(existing, Counter):
@@ -93,16 +94,16 @@ def _ensure_metrics(registry: MetricsRegistry) -> dict[str, Any]:
         return m
 
     return {
-        "tasks_submitted":     _counter("tasks_submitted",    "Total tasks submitted to Imperium"),
-        "tasks_succeeded":     _counter("tasks_succeeded",    "Tasks completed successfully"),
-        "tasks_failed":        _counter("tasks_failed",       "Tasks that failed"),
-        "campaigns_started":   _counter("campaigns_started",  "Campaigns started"),
-        "campaigns_succeeded": _counter("campaigns_succeeded","Campaigns that succeeded"),
-        "campaigns_failed":    _counter("campaigns_failed",   "Campaigns that failed"),
-        "oracle_plans_ok":     _counter("oracle_plans_ok",    "Oracle plans produced successfully"),
-        "oracle_plans_error":  _counter("oracle_plans_error", "Oracle plans that errored"),
-        "tasks_in_flight":     _gauge("tasks_in_flight",      "Tasks currently running"),
-        "task_duration_sec":   _histogram(
+        "tasks_submitted": _counter("tasks_submitted", "Total tasks submitted to Imperium"),
+        "tasks_succeeded": _counter("tasks_succeeded", "Tasks completed successfully"),
+        "tasks_failed": _counter("tasks_failed", "Tasks that failed"),
+        "campaigns_started": _counter("campaigns_started", "Campaigns started"),
+        "campaigns_succeeded": _counter("campaigns_succeeded", "Campaigns that succeeded"),
+        "campaigns_failed": _counter("campaigns_failed", "Campaigns that failed"),
+        "oracle_plans_ok": _counter("oracle_plans_ok", "Oracle plans produced successfully"),
+        "oracle_plans_error": _counter("oracle_plans_error", "Oracle plans that errored"),
+        "tasks_in_flight": _gauge("tasks_in_flight", "Tasks currently running"),
+        "task_duration_sec": _histogram(
             "task_duration_sec",
             "Task execution duration in seconds",
             buckets=[1.0, 5.0, 15.0, 60.0, 300.0],
@@ -113,6 +114,7 @@ def _ensure_metrics(registry: MetricsRegistry) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Internal wrapping helpers
 # ---------------------------------------------------------------------------
+
 
 def _wrap_sync(obj: Any, method_name: str, before: Any, after: Any) -> None:
     original = getattr(obj, method_name)
@@ -144,6 +146,7 @@ def _wrap_sync(obj: Any, method_name: str, before: Any, after: Any) -> None:
 # ---------------------------------------------------------------------------
 # Public wiring function
 # ---------------------------------------------------------------------------
+
 
 def wire_metrics(
     imperium_kernel: Any | None = None,
@@ -181,6 +184,7 @@ def wire_metrics(
 # ---------------------------------------------------------------------------
 # Per-subsystem wiring
 # ---------------------------------------------------------------------------
+
 
 def _wire_imperium_metrics(kernel: Any | None, m: dict[str, Any]) -> None:
     if kernel is None:

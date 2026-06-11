@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 log = logging.getLogger("pradyos.oracle.client")
 
@@ -66,6 +67,7 @@ class OllamaClient:
         """Return True if Ollama is reachable, False otherwise."""
         try:
             import httpx
+
             async with httpx.AsyncClient(timeout=5.0) as cli:
                 r = await cli.get(self.base_url + "/")
                 return r.status_code < 500

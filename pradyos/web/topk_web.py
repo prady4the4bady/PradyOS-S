@@ -54,8 +54,9 @@ def register_topk_routes(app: Any, space_saving: Any | None = None) -> Any:
                 return JSONResponse({"error": "item or items is required"}, status_code=422)
         except TypeError:
             return JSONResponse({"error": "item must be hashable"}, status_code=422)
-        return JSONResponse({"inserted": added, "total": space_saving.total,
-                             "monitored": len(space_saving)})
+        return JSONResponse(
+            {"inserted": added, "total": space_saving.total, "monitored": len(space_saving)}
+        )
 
     @app.get("/api/v1/topk/query")
     async def api_topk_query(n: int | None = Query(default=None, ge=0)) -> JSONResponse:

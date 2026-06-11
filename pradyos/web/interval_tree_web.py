@@ -57,8 +57,14 @@ def register_intervaltree_routes(app: Any, interval_tree: Any | None = None) -> 
             removed = interval_tree.remove(body["low"], body["high"])
         except IntervalTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"low": body["low"], "high": body["high"],
-                             "removed": removed, "size": len(interval_tree)})
+        return JSONResponse(
+            {
+                "low": body["low"],
+                "high": body["high"],
+                "removed": removed,
+                "size": len(interval_tree),
+            }
+        )
 
     @app.get("/api/v1/intervaltree/overlap")
     async def api_iv_overlap(low: float = Query(...), high: float = Query(...)) -> JSONResponse:
@@ -66,8 +72,9 @@ def register_intervaltree_routes(app: Any, interval_tree: Any | None = None) -> 
             hits = interval_tree.overlap(low, high)
         except IntervalTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"low": low, "high": high,
-                             "intervals": [list(iv) for iv in hits], "count": len(hits)})
+        return JSONResponse(
+            {"low": low, "high": high, "intervals": [list(iv) for iv in hits], "count": len(hits)}
+        )
 
     @app.get("/api/v1/intervaltree/stab")
     async def api_iv_stab(point: float = Query(...)) -> JSONResponse:
@@ -75,8 +82,9 @@ def register_intervaltree_routes(app: Any, interval_tree: Any | None = None) -> 
             hits = interval_tree.stab(point)
         except IntervalTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"point": point, "intervals": [list(iv) for iv in hits],
-                             "count": len(hits)})
+        return JSONResponse(
+            {"point": point, "intervals": [list(iv) for iv in hits], "count": len(hits)}
+        )
 
     @app.get("/api/v1/intervaltree/stats")
     async def api_iv_stats() -> JSONResponse:

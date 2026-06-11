@@ -30,7 +30,8 @@ from __future__ import annotations
 import hashlib
 import heapq
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 _TWO64 = 1 << 64
 
@@ -52,7 +53,7 @@ def _is_pos_int(x: Any) -> bool:
 
 
 def _is_pos_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and x > 0
+    return isinstance(x, int | float) and not isinstance(x, bool) and x > 0
 
 
 class PrioritySample:
@@ -64,10 +65,10 @@ class PrioritySample:
         self._seed = seed
         self._seed_bytes = repr(seed).encode("ascii")
         self._lock = threading.Lock()
-        self._sample: dict[Any, list] = {}      # key -> [weight, priority, category]
-        self._heap: list = []                    # (priority, key) min-heap; may hold stale entries
-        self._tau = 0.0                          # (k+1)-th largest priority seen
-        self._seen = 0                           # distinct keys ever inserted
+        self._sample: dict[Any, list] = {}  # key -> [weight, priority, category]
+        self._heap: list = []  # (priority, key) min-heap; may hold stale entries
+        self._tau = 0.0  # (k+1)-th largest priority seen
+        self._seen = 0  # distinct keys ever inserted
 
     # ── validation / hashing ─────────────────────────────────────────────────────────
     @staticmethod
@@ -92,7 +93,7 @@ class PrioritySample:
     def _u(self, key: Any) -> float:
         digest = hashlib.blake2b(self._seed_bytes + self._key_bytes(key), digest_size=8).digest()
         h = int.from_bytes(digest, "big")
-        return (h + 1) / (_TWO64 + 1)            # uniform in (0, 1)
+        return (h + 1) / (_TWO64 + 1)  # uniform in (0, 1)
 
     # ── heap helpers (lazy deletion: an entry is valid iff it matches the live sample) ──
     def _purge(self) -> None:
@@ -102,7 +103,7 @@ class PrioritySample:
             entry = s.get(key)
             if entry is not None and entry[1] == pr:
                 return
-            heapq.heappop(h)                     # stale (evicted or superseded priority)
+            heapq.heappop(h)  # stale (evicted or superseded priority)
 
     # ── update ────────────────────────────────────────────────────────────────────────
     def add(self, key: Any, weight: float, category: Any = None) -> bool:
@@ -111,14 +112,14 @@ class PrioritySample:
             raise PrioritySampleError("weight must be a number > 0")
         if category is not None and not isinstance(category, str):
             raise PrioritySampleError("category must be a string or null")
-        kb_key = self._key_bytes(key)            # validates key type (raises before locking)
+        kb_key = self._key_bytes(key)  # validates key type (raises before locking)  # noqa: F841
         u = self._u(key)
         q = weight / u
         with self._lock:
             s, h = self._sample, self._heap
-            if key in s:                         # re-add: last-write-wins, membership unchanged
+            if key in s:  # re-add: last-write-wins, membership unchanged
                 s[key] = [float(weight), q, category]
-                heapq.heappush(h, (q, key))      # old entry becomes stale
+                heapq.heappush(h, (q, key))  # old entry becomes stale
                 return True
             self._seen += 1
             if len(s) < self._k:
@@ -127,7 +128,7 @@ class PrioritySample:
                 return True
             self._purge()
             min_pr, min_key = h[0]
-            if q > min_pr:                       # new item beats the weakest → evict it
+            if q > min_pr:  # new item beats the weakest → evict it
                 heapq.heappop(h)
                 del s[min_key]
                 if min_pr > self._tau:
@@ -135,7 +136,7 @@ class PrioritySample:
                 s[key] = [float(weight), q, category]
                 heapq.heappush(h, (q, key))
                 return True
-            if q > self._tau:                    # new item itself is below the bar
+            if q > self._tau:  # new item itself is below the bar
                 self._tau = q
             return False
 
@@ -143,8 +144,10 @@ class PrioritySample:
         """Observe many ``(key, weight)`` or ``(key, weight, category)`` items; returns the count."""
         parsed = []
         for it in items:
-            if not isinstance(it, (list, tuple)) or not (2 <= len(it) <= 3):
-                raise PrioritySampleError("each item must be (key, weight) or (key, weight, category)")
+            if not isinstance(it, list | tuple) or not (2 <= len(it) <= 3):
+                raise PrioritySampleError(
+                    "each item must be (key, weight) or (key, weight, category)"
+                )
             parsed.append((it[0], it[1], it[2] if len(it) == 3 else None))
         for key, weight, cat in parsed:
             self.add(key, weight, cat)
@@ -157,8 +160,13 @@ class PrioritySample:
             raise PrioritySampleError("category must be a string or null")
         with self._lock:
             tau = self._tau
-            return float(sum(max(w, tau) for w, _q, cat in self._sample.values()
-                             if category is None or cat == category))
+            return float(
+                sum(
+                    max(w, tau)
+                    for w, _q, cat in self._sample.values()
+                    if category is None or cat == category
+                )
+            )
 
     def total(self) -> float:
         """Unbiased estimate of the total weight of the whole stream."""

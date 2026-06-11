@@ -99,12 +99,14 @@ class AggregateRegistry:
             for aid in ids:
                 agg = self._aggregates[aid]
                 # Use the aggregate's own lock-safe accessors.
-                out.append({
-                    "aggregate_id": agg.aggregate_id,
-                    "version": agg.version,
-                    "event_count": agg.event_count(),
-                    "state_keys": len(agg.get_state()),
-                })
+                out.append(
+                    {
+                        "aggregate_id": agg.aggregate_id,
+                        "version": agg.version,
+                        "event_count": agg.event_count(),
+                        "state_keys": len(agg.get_state()),
+                    }
+                )
             return out
 
     def delete(self, aggregate_id: str) -> bool:

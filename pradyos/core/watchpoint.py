@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 SEVERITY_LEVELS = ["info", "warn", "critical"]
 _OPERATORS = ("gt", "lt", "gte", "lte", "eq")
@@ -100,7 +100,9 @@ class WatchpointSystem:
     def check(self, metric: str, value: float) -> list[Alert]:
         fired: list[Alert] = []
         with self._lock:
-            candidates = [wp for wp in self.watchpoints.values() if wp.metric == metric and wp.enabled]
+            candidates = [
+                wp for wp in self.watchpoints.values() if wp.metric == metric and wp.enabled
+            ]
         for wp in candidates:
             if _evaluate(wp.operator, value, wp.threshold):
                 alert = Alert(

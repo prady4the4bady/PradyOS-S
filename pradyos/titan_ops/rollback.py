@@ -13,23 +13,21 @@ from __future__ import annotations
 import difflib
 import hashlib
 import json
-import os
 import shutil
-import sys
 import tempfile
 import threading
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
 
 class HookKind(str, Enum):
-    SHELL = "shell"          # run a shell command to undo
-    SNAPSHOT = "snapshot"    # restore a directory/file from a snapshot copy
+    SHELL = "shell"  # run a shell command to undo
+    SNAPSHOT = "snapshot"  # restore a directory/file from a snapshot copy
     FILE_DIFF = "file_diff"  # apply reverse of a unified diff
-    NOOP = "noop"            # nothing to undo (read-only op)
+    NOOP = "noop"  # nothing to undo (read-only op)
 
 
 @dataclass
@@ -38,12 +36,12 @@ class StateSnapshot:
 
     snapshot_id: str
     captured_at: float
-    targets: list[str]           # paths that were snapshotted
-    snapshot_dir: str            # temp directory holding copies
+    targets: list[str]  # paths that were snapshotted
+    snapshot_dir: str  # temp directory holding copies
     hash_manifest: dict[str, str]  # path → sha256 hex
 
     @classmethod
-    def capture(cls, paths: list[str], snapshot_root: str | None = None) -> "StateSnapshot":
+    def capture(cls, paths: list[str], snapshot_root: str | None = None) -> StateSnapshot:
         snap_id = _short_id()
         snap_dir = tempfile.mkdtemp(
             prefix=f"prd-snap-{snap_id}-",
@@ -108,7 +106,7 @@ class StateSnapshot:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "StateSnapshot":
+    def from_dict(cls, d: dict[str, Any]) -> StateSnapshot:
         return cls(
             snapshot_id=d["snapshot_id"],
             captured_at=d["captured_at"],
@@ -125,18 +123,23 @@ class DiffCapture:
     path: str
     before_hash: str | None
     after_hash: str | None
-    unified_diff: str          # full unified diff text
+    unified_diff: str  # full unified diff text
     captured_at: float = field(default_factory=time.time)
 
     @classmethod
-    def compute(cls, path: str, before_content: str | None, after_content: str | None) -> "DiffCapture":
+    def compute(
+        cls, path: str, before_content: str | None, after_content: str | None
+    ) -> DiffCapture:
         before_lines = (before_content or "").splitlines(keepends=True)
         after_lines = (after_content or "").splitlines(keepends=True)
-        diff = "".join(difflib.unified_diff(
-            before_lines, after_lines,
-            fromfile=f"{path}.before",
-            tofile=f"{path}.after",
-        ))
+        diff = "".join(
+            difflib.unified_diff(
+                before_lines,
+                after_lines,
+                fromfile=f"{path}.before",
+                tofile=f"{path}.after",
+            )
+        )
         return cls(
             path=path,
             before_hash=_sha256_str(before_content or "") if before_content is not None else None,
@@ -167,7 +170,7 @@ class DiffCapture:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "DiffCapture":
+    def from_dict(cls, d: dict[str, Any]) -> DiffCapture:
         return cls(**d)
 
 
@@ -177,7 +180,7 @@ class RollbackEntry:
 
     instruction_id: str
     correlation_id: str | None
-    hook: str                       # shell command or descriptor
+    hook: str  # shell command or descriptor
     kind: HookKind = HookKind.SHELL
     detail: dict[str, Any] = field(default_factory=dict)
     snapshot: StateSnapshot | None = None
@@ -204,7 +207,7 @@ class RollbackEntry:
         return d
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "RollbackEntry":
+    def from_dict(cls, d: dict[str, Any]) -> RollbackEntry:
         return cls(
             instruction_id=d["instruction_id"],
             correlation_id=d.get("correlation_id"),
@@ -266,8 +269,13 @@ class RollbackRegistry:
         try:
             if entry.kind is HookKind.SNAPSHOT and entry.snapshot:
                 restored = entry.snapshot.restore()
-                result.update({"ok": True, "restored": restored,
-                                "detail": {"snapshot_id": entry.snapshot.snapshot_id}})
+                result.update(
+                    {
+                        "ok": True,
+                        "restored": restored,
+                        "detail": {"snapshot_id": entry.snapshot.snapshot_id},
+                    }
+                )
             elif entry.kind is HookKind.FILE_DIFF and entry.diffs:
                 for dc in entry.diffs:
                     # Write the reversed patch as the restored file content
@@ -279,12 +287,18 @@ class RollbackRegistry:
                 result["ok"] = True
             elif entry.kind is HookKind.SHELL:
                 import subprocess as _sp
-                r = _sp.run(
-                    entry.hook, shell=True, capture_output=True, text=True, timeout=30
+
+                r = _sp.run(entry.hook, shell=True, capture_output=True, text=True, timeout=30)
+                result.update(
+                    {
+                        "ok": r.returncode == 0,
+                        "detail": {
+                            "stdout": r.stdout[-500:],
+                            "stderr": r.stderr[-500:],
+                            "returncode": r.returncode,
+                        },
+                    }
                 )
-                result.update({"ok": r.returncode == 0,
-                                "detail": {"stdout": r.stdout[-500:], "stderr": r.stderr[-500:],
-                                           "returncode": r.returncode}})
             else:
                 result.update({"ok": True, "detail": {"note": "noop rollback"}})
 
@@ -306,9 +320,7 @@ class RollbackRegistry:
         try:
             self.persist_path.parent.mkdir(parents=True, exist_ok=True)
             data = [e.to_dict() for e in self._entries.values()]
-            self.persist_path.write_text(
-                json.dumps(data, indent=2), encoding="utf-8"
-            )
+            self.persist_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError:
             pass
 
@@ -329,6 +341,7 @@ class RollbackRegistry:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     if path.is_file():
@@ -342,4 +355,5 @@ def _sha256_str(s: str) -> str:
 
 def _short_id() -> str:
     import uuid
+
     return uuid.uuid4().hex[:8]

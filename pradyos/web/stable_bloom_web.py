@@ -24,7 +24,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.stable_bloom import StableBloomFilter, StableBloomError
+from pradyos.core.stable_bloom import StableBloomError, StableBloomFilter
 
 
 def register_stablebloom_routes(app: Any, stable_bloom: Any | None = None) -> Any:
@@ -61,8 +61,11 @@ def register_stablebloom_routes(app: Any, stable_bloom: Any | None = None) -> An
             body = {}
         try:
             stable_bloom.reset(
-                body.get("num_cells"), body.get("num_hashes"), body.get("max_value"),
-                body.get("decrement"), body.get("seed"),
+                body.get("num_cells"),
+                body.get("num_hashes"),
+                body.get("max_value"),
+                body.get("decrement"),
+                body.get("seed"),
             )
         except StableBloomError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)

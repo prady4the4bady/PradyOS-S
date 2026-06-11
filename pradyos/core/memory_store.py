@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pradyos.core.snapshot_store import SnapshotStore
@@ -39,7 +39,7 @@ class MemoryEntry:
 class MemoryStore:
     def __init__(
         self,
-        snapshot_store: "SnapshotStore | None" = None,
+        snapshot_store: SnapshotStore | None = None,
         snapshot_ns: str = "memory",
     ) -> None:
         self._entries: dict[str, MemoryEntry] = {}

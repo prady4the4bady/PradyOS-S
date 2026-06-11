@@ -28,15 +28,15 @@ from pradyos.core.ids import new_id
 
 log = logging.getLogger("pradyos.campaign.scheduler")
 
-_ROOT      = Path(__file__).resolve().parents[2]
-_STATE_DIR = Path(os.environ.get("PRADYOS_STATE_PATH",
-                                  str(_ROOT / "var" / "state")))
+_ROOT = Path(__file__).resolve().parents[2]
+_STATE_DIR = Path(os.environ.get("PRADYOS_STATE_PATH", str(_ROOT / "var" / "state")))
 
 POLL_INTERVAL = int(os.environ.get("PRADYOS_SCHEDULER_POLL", "60"))
 
 # ---------------------------------------------------------------------------
 # Cron parser
 # ---------------------------------------------------------------------------
+
 
 def _matches_field(field: str, value: int) -> bool:
     """Return True if cron *field* matches integer *value*.
@@ -69,9 +69,7 @@ def _next_run_after(cron: str, after: float | None = None) -> float:
     """
     fields = cron.strip().split()
     if len(fields) != 5:
-        raise ValueError(
-            f"Cron expression must have exactly 5 fields, got {len(fields)}: {cron!r}"
-        )
+        raise ValueError(f"Cron expression must have exactly 5 fields, got {len(fields)}: {cron!r}")
     f_min, f_hour, f_dom, f_month, f_dow = fields
 
     if after is None:
@@ -84,18 +82,16 @@ def _next_run_after(cron: str, after: float | None = None) -> float:
     for _ in range(max_minutes):
         t = time.localtime(candidate)
         if (
-            _matches_field(f_min,   t.tm_min)
-            and _matches_field(f_hour,  t.tm_hour)
-            and _matches_field(f_dom,   t.tm_mday)
+            _matches_field(f_min, t.tm_min)
+            and _matches_field(f_hour, t.tm_hour)
+            and _matches_field(f_dom, t.tm_mday)
             and _matches_field(f_month, t.tm_mon)
-            and _matches_field(f_dow,   t.tm_wday)
+            and _matches_field(f_dow, t.tm_wday)
         ):
             return candidate
         candidate += 60
 
-    raise ValueError(
-        f"Cannot compute next run for cron {cron!r} within 366 days"
-    )
+    raise ValueError(f"Cannot compute next run for cron {cron!r} within 366 days")
 
 
 def _should_fire(schedule: dict[str, Any], now: float) -> bool:
@@ -121,15 +117,15 @@ class CampaignScheduler:
     """
 
     def __init__(self, state_dir: Path | None = None) -> None:
-        self._state_dir   = state_dir or _STATE_DIR
+        self._state_dir = state_dir or _STATE_DIR
         self._state_dir.mkdir(parents=True, exist_ok=True)
-        self._file        = self._state_dir / "schedules.jsonl"
-        self._file_lock   = threading.Lock()
-        self._stop_event  = threading.Event()
-        self._tick_count  = 0
-        self._archiver: "Any | None" = None
+        self._file = self._state_dir / "schedules.jsonl"
+        self._file_lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._tick_count = 0
+        self._archiver: Any | None = None
 
-    def set_archiver(self, archiver: "Any") -> None:
+    def set_archiver(self, archiver: Any) -> None:
         """Attach a CampaignArchiver (optional — called by integration code)."""
         self._archiver = archiver
 
@@ -149,40 +145,41 @@ class CampaignScheduler:
 
         Raises ValueError if *cron* is invalid.
         """
-        next_run = _next_run_after(cron)   # validates cron; raises ValueError if bad
+        next_run = _next_run_after(cron)  # validates cron; raises ValueError if bad
 
         sid = new_id("sc")
         record: dict[str, Any] = {
-            "schedule_id":   sid,
-            "name":          name,
-            "cron":          cron,
-            "intent":        intent,
+            "schedule_id": sid,
+            "name": name,
+            "cron": cron,
+            "intent": intent,
             "tasks_payload": tasks_payload or [],
-            "enabled":       enabled,
-            "next_run":      next_run,
-            "last_run":      None,
-            "created_at":    time.time(),
-            "_deleted":      False,
+            "enabled": enabled,
+            "next_run": next_run,
+            "last_run": None,
+            "created_at": time.time(),
+            "_deleted": False,
         }
         self._write(record)
-        log.info("Schedule added [%s] %s (%s) next=%s",
-                 sid[:8], name, cron,
-                 time.strftime("%Y-%m-%d %H:%M", time.localtime(next_run)))
+        log.info(
+            "Schedule added [%s] %s (%s) next=%s",
+            sid[:8],
+            name,
+            cron,
+            time.strftime("%Y-%m-%d %H:%M", time.localtime(next_run)),
+        )
         return sid
 
     def remove_schedule(self, schedule_id: str) -> bool:
         """Soft-delete a schedule. Returns True if found."""
         schedules = self._load()
         # Support full ID or unique prefix
-        targets = [
-            s for s in schedules.values()
-            if s["schedule_id"].startswith(schedule_id)
-        ]
+        targets = [s for s in schedules.values() if s["schedule_id"].startswith(schedule_id)]
         if not targets:
             return False
         for s in targets:
             s["_deleted"] = True
-            s["enabled"]  = False
+            s["enabled"] = False
             self._write(s)
         return True
 
@@ -243,8 +240,7 @@ class CampaignScheduler:
         now = time.time()
         for s in self.list_schedules():
             if _should_fire(s, now):
-                log.info("Firing scheduled campaign [%s] %s",
-                         s["schedule_id"][:8], s["name"])
+                log.info("Firing scheduled campaign [%s] %s", s["schedule_id"][:8], s["name"])
                 self._fire(s, engine)
         # Run archiver pass every 10 scheduler ticks (Phase 6)
         self._tick_count += 1
@@ -270,20 +266,24 @@ class CampaignScheduler:
 
             tasks: list[Any] = []
             for tp in schedule.get("tasks_payload", []):
-                tasks.append(ImperiumTask(
-                    kind=tp.get("kind", "research"),
-                    intent=tp.get("intent", schedule["intent"]),
-                    payload=tp,
-                    submitted_by="scheduler",
-                ))
+                tasks.append(
+                    ImperiumTask(
+                        kind=tp.get("kind", "research"),
+                        intent=tp.get("intent", schedule["intent"]),
+                        payload=tp,
+                        submitted_by="scheduler",
+                    )
+                )
 
             if not tasks:
-                tasks = [ImperiumTask(
-                    kind="research",
-                    intent=schedule["intent"],
-                    payload={"intent": schedule["intent"]},
-                    submitted_by="scheduler",
-                )]
+                tasks = [
+                    ImperiumTask(
+                        kind="research",
+                        intent=schedule["intent"],
+                        payload={"intent": schedule["intent"]},
+                        submitted_by="scheduler",
+                    )
+                ]
 
             campaign = _engine.create_campaign(
                 name=schedule["name"],
@@ -296,11 +296,9 @@ class CampaignScheduler:
             def _run_campaign() -> None:
                 try:
                     asyncio.run(_engine.run_campaign(campaign))
-                    log.info("Scheduled campaign [%s] complete",
-                             campaign.campaign_id[:8])
+                    log.info("Scheduled campaign [%s] complete", campaign.campaign_id[:8])
                 except Exception as exc:
-                    log.error("Scheduled campaign [%s] failed: %s",
-                              campaign.campaign_id[:8], exc)
+                    log.error("Scheduled campaign [%s] failed: %s", campaign.campaign_id[:8], exc)
 
             t = threading.Thread(
                 target=_run_campaign,
@@ -357,13 +355,14 @@ class CampaignScheduler:
 # Entrypoint (daemon mode)
 # ---------------------------------------------------------------------------
 
+
 def main() -> int:
     logging.basicConfig(
         level=os.environ.get("PRADYOS_LOG_LEVEL", "INFO"),
         format="%(asctime)s %(levelname)s %(name)s -- %(message)s",
     )
     sched = CampaignScheduler()
-    poll  = int(os.environ.get("PRADYOS_SCHEDULER_POLL", str(POLL_INTERVAL)))
+    poll = int(os.environ.get("PRADYOS_SCHEDULER_POLL", str(POLL_INTERVAL)))
     t = sched.start_daemon(poll_interval=poll)
     log.info("CampaignScheduler daemon running (poll=%ds). Ctrl+C to stop.", poll)
     try:

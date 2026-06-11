@@ -24,8 +24,8 @@ class MerkleTree:
     """A SHA-256 Merkle tree with audit proofs (stdlib only)."""
 
     def __init__(self) -> None:
-        self._leaves: list[str] = []          # leaf hashes (hex), insertion order
-        self._levels: list[list[str]] = []    # level 0 = leaves … last = [root]
+        self._leaves: list[str] = []  # leaf hashes (hex), insertion order
+        self._levels: list[list[str]] = []  # level 0 = leaves … last = [root]
         self._dirty = True
         self._lock = threading.Lock()
 
@@ -114,7 +114,7 @@ class MerkleTree:
             except ValueError:
                 raise ValueError("item is not in the tree") from None
             path: list[dict] = []
-            for level in self._levels[:-1]:        # every level except the root
+            for level in self._levels[:-1]:  # every level except the root
                 nodes = level if len(level) % 2 == 0 else level + [level[-1]]
                 if idx % 2 == 0:
                     path.append({"hash": nodes[idx + 1], "side": "right"})

@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class QuotientError(Exception):
@@ -47,8 +48,9 @@ def _is_int(x: Any) -> bool:
 class QuotientFilter:
     """Approximate-membership filter with exact delete, duplicate counting, and merge."""
 
-    def __init__(self, q: int = 8, r: int = 8, seed: int = 0,
-                 hash_fn: Callable[[Any], int] | None = None) -> None:
+    def __init__(
+        self, q: int = 8, r: int = 8, seed: int = 0, hash_fn: Callable[[Any], int] | None = None
+    ) -> None:
         if not _is_pos_int(q) or q > 32:
             raise QuotientError(q)
         if not _is_pos_int(r) or r > 32:
@@ -59,17 +61,17 @@ class QuotientFilter:
         self._r = r
         self._seed = seed
         self._hash_fn = hash_fn
-        self._m = 1 << q                         # number of slots
+        self._m = 1 << q  # number of slots
         self._mask = self._m - 1
         self._fp_mask = (1 << (q + r)) - 1
         self._r_mask = (1 << r) - 1
-        self._occ = bytearray(self._m)           # is_occupied
-        self._cont = bytearray(self._m)          # is_continuation
-        self._shift = bytearray(self._m)         # is_shifted
-        self._rem = [0] * self._m                # stored remainders
-        self._cnt = [0] * self._m                # per-slot duplicate counts
-        self._used = 0                           # physically-occupied slots
-        self._items = 0                          # total insertions (with duplicates)
+        self._occ = bytearray(self._m)  # is_occupied
+        self._cont = bytearray(self._m)  # is_continuation
+        self._shift = bytearray(self._m)  # is_shifted
+        self._rem = [0] * self._m  # stored remainders
+        self._cnt = [0] * self._m  # per-slot duplicate counts
+        self._used = 0  # physically-occupied slots
+        self._items = 0  # total insertions (with duplicates)
         self._lock = threading.Lock()
 
     # ── fingerprint ───────────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ class QuotientFilter:
                     break
 
         if self._used >= self._m:
-            return False                         # full — cannot place a new remainder
+            return False  # full — cannot place a new remainder
 
         new_cont = 0 if new_run else (1 if s != run_start else 0)
         force_head_continuation = (not new_run) and (s == run_start)
@@ -157,8 +159,9 @@ class QuotientFilter:
         self._items += count
         return True
 
-    def _shift_insert(self, fq: int, s: int, fr: int, cont: int, count: int,
-                      force_head: bool) -> None:
+    def _shift_insert(
+        self, fq: int, s: int, fr: int, cont: int, count: int, force_head: bool
+    ) -> None:
         cur_rem, cur_cont, cur_cnt = fr, cont, count
         first = True
         while True:
@@ -173,7 +176,7 @@ class QuotientFilter:
             cur_rem, cur_cnt = old_rem, old_cnt
             cur_cont = old_cont
             if first and force_head:
-                cur_cont = 1                     # the old run head becomes a continuation
+                cur_cont = 1  # the old run head becomes a continuation
             first = False
             s = self._incr(s)
 
@@ -188,7 +191,7 @@ class QuotientFilter:
                 s = slot
                 break
             if self._rem[slot] > fr:
-                return False                     # run is sorted → fr absent
+                return False  # run is sorted → fr absent
         if s is None:
             return False
 
@@ -227,7 +230,7 @@ class QuotientFilter:
             self._rem[s] = self._rem[curr]
             self._cnt[s] = self._cnt[curr]
             if first and s_is_run_start and self._cont[curr]:
-                self._cont[s] = 0                # pulled continuation becomes the new run head
+                self._cont[s] = 0  # pulled continuation becomes the new run head
             else:
                 self._cont[s] = self._cont[curr]
             self._shift[s] = 0 if s == quotient else 1
@@ -285,7 +288,7 @@ class QuotientFilter:
                 out.append((fq, self._rem[slot], self._cnt[slot]))
         return out
 
-    def merge(self, other: "QuotientFilter") -> None:
+    def merge(self, other: QuotientFilter) -> None:
         """Fold every entry of ``other`` (same ``q``/``r``) into this filter."""
         if not isinstance(other, QuotientFilter):
             raise QuotientError(other)

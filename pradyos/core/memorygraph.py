@@ -4,25 +4,25 @@ A thread-safe, bounded knowledge graph for PRADY OS.  Stores facts,
 relationships, and inferences about campaigns, tasks, agents, and system
 state.  Queryable via Python API and exposed over HTTP in Phase 17B.
 """
+
 from __future__ import annotations
 
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class GraphNode:
     """A single vertex in the sovereign knowledge graph."""
 
-    kind: str        # e.g. "campaign", "task", "agent", "fact"
-    label: str       # human-readable name
+    kind: str  # e.g. "campaign", "task", "agent", "fact"
+    label: str  # human-readable name
     attributes: dict = field(default_factory=dict)
     node_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     created_ts: float = field(default_factory=time.time)
@@ -41,9 +41,9 @@ class GraphNode:
 class GraphEdge:
     """A directed edge connecting two nodes in the knowledge graph."""
 
-    src_id: str      # source node_id
-    dst_id: str      # destination node_id
-    relation: str    # e.g. "depends_on", "produced_by", "inferred_from"
+    src_id: str  # source node_id
+    dst_id: str  # destination node_id
+    relation: str  # e.g. "depends_on", "produced_by", "inferred_from"
     weight: float = 1.0
     attributes: dict = field(default_factory=dict)
     edge_id: str = field(default_factory=lambda: uuid.uuid4().hex)
@@ -65,6 +65,7 @@ class GraphEdge:
 # Graph
 # ---------------------------------------------------------------------------
 
+
 class SovereignMemoryGraph:
     """Bounded, thread-safe in-memory knowledge graph.
 
@@ -84,8 +85,8 @@ class SovereignMemoryGraph:
     def __init__(self, maxnodes: int = 1000, maxedges: int = 5000) -> None:
         self._maxnodes = maxnodes
         self._maxedges = maxedges
-        self._nodes: dict[str, GraphNode] = {}          # node_id → GraphNode
-        self._edges: dict[str, GraphEdge] = {}          # edge_id → GraphEdge
+        self._nodes: dict[str, GraphNode] = {}  # node_id → GraphNode
+        self._edges: dict[str, GraphEdge] = {}  # edge_id → GraphEdge
         # Reverse index: src_id → list of edges leaving that node
         self._out_edges: dict[str, list[GraphEdge]] = {}
         self._lock = threading.Lock()
@@ -98,8 +99,8 @@ class SovereignMemoryGraph:
         self,
         kind: str,
         label: str,
-        node_id: Optional[str] = None,
-        attributes: Optional[dict] = None,
+        node_id: str | None = None,
+        attributes: dict | None = None,
     ) -> GraphNode:
         """Add a node to the graph and return it.
 
@@ -124,9 +125,9 @@ class SovereignMemoryGraph:
         src_id: str,
         dst_id: str,
         relation: str,
-        edge_id: Optional[str] = None,
+        edge_id: str | None = None,
         weight: float = 1.0,
-        attributes: Optional[dict] = None,
+        attributes: dict | None = None,
     ) -> GraphEdge:
         """Add a directed edge and return it.
 
@@ -186,12 +187,12 @@ class SovereignMemoryGraph:
     # Queries
     # ------------------------------------------------------------------
 
-    def get_node(self, node_id: str) -> Optional[GraphNode]:
+    def get_node(self, node_id: str) -> GraphNode | None:
         """Return the node with the given id, or ``None``."""
         with self._lock:
             return self._nodes.get(node_id)
 
-    def get_edge(self, edge_id: str) -> Optional[GraphEdge]:
+    def get_edge(self, edge_id: str) -> GraphEdge | None:
         """Return the edge with the given id, or ``None``."""
         with self._lock:
             return self._edges.get(edge_id)
@@ -199,7 +200,7 @@ class SovereignMemoryGraph:
     def neighbours(
         self,
         node_id: str,
-        relation: Optional[str] = None,
+        relation: str | None = None,
     ) -> list[GraphNode]:
         """Return destination nodes reachable from *node_id*.
 
@@ -219,8 +220,8 @@ class SovereignMemoryGraph:
 
     def query_nodes(
         self,
-        kind: Optional[str] = None,
-        label: Optional[str] = None,
+        kind: str | None = None,
+        label: str | None = None,
     ) -> list[GraphNode]:
         """Return nodes matching all provided filters (``None`` = wildcard).
 
@@ -267,8 +268,7 @@ class SovereignMemoryGraph:
         """Remove every edge where src or dst is *node_id* (lock must be held)."""
         # Collect edge_ids to remove
         to_remove = [
-            eid for eid, e in self._edges.items()
-            if e.src_id == node_id or e.dst_id == node_id
+            eid for eid, e in self._edges.items() if e.src_id == node_id or e.dst_id == node_id
         ]
         for eid in to_remove:
             edge = self._edges.pop(eid)

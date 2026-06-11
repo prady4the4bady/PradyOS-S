@@ -32,8 +32,8 @@ import random
 import threading
 from typing import Any
 
-_C = 2.0 / 3.0          # geometric capacity decay per level
-_MIN_CAP = 2            # smallest compactor capacity
+_C = 2.0 / 3.0  # geometric capacity decay per level
+_MIN_CAP = 2  # smallest compactor capacity
 
 
 class KLLError(Exception):
@@ -53,7 +53,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class KLLSketch:
@@ -67,7 +67,7 @@ class KLLSketch:
         self._k = k
         self._seed = seed
         self._rng = random.Random(seed)
-        self._levels: list[list[float]] = [[]]   # levels[h] has weight 2**h
+        self._levels: list[list[float]] = [[]]  # levels[h] has weight 2**h
         self._n = 0
         self._lock = threading.Lock()
 
@@ -128,7 +128,7 @@ class KLLSketch:
                 self._insert_locked(x)
             return len(vals)
 
-    def merge(self, other: "KLLSketch") -> None:
+    def merge(self, other: KLLSketch) -> None:
         """Fold another KLL sketch into this one (the native KLL advantage)."""
         if not isinstance(other, KLLSketch):
             raise KLLError(other)
@@ -139,7 +139,7 @@ class KLLSketch:
             for h, level in enumerate(other_levels):
                 while h >= len(self._levels):
                     self._levels.append([])
-                self._levels[h].extend(level)          # same level ⇒ same weight 2**h
+                self._levels[h].extend(level)  # same level ⇒ same weight 2**h
             self._n += other_n
             # Re-compact bottom-up until every level is within capacity.
             changed = True

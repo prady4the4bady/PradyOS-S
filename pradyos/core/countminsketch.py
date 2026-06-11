@@ -63,13 +63,16 @@ class CountMinSketch:
         with self._lock:
             return min(self._rows[row][positions[row]] for row in range(self._depth))
 
-    def merge(self, other: "CountMinSketch") -> "CountMinSketch":
+    def merge(self, other: CountMinSketch) -> CountMinSketch:
         """Return a NEW sketch that is the element-wise sum of ``self`` and ``other``.
 
         Both must share identical ``width`` and ``depth``. Neither input is mutated.
         """
-        if (not isinstance(other, CountMinSketch)
-                or other._width != self._width or other._depth != self._depth):
+        if (
+            not isinstance(other, CountMinSketch)
+            or other._width != self._width
+            or other._depth != self._depth
+        ):
             raise ValueError("can only merge a CountMinSketch with identical width and depth")
         with self._lock:
             a_rows = [row[:] for row in self._rows]
@@ -79,8 +82,7 @@ class CountMinSketch:
             b_total = other._total
         result = CountMinSketch(self._width, self._depth)
         result._rows = [
-            [a_rows[r][c] + b_rows[r][c] for c in range(self._width)]
-            for r in range(self._depth)
+            [a_rows[r][c] + b_rows[r][c] for c in range(self._width)] for r in range(self._depth)
         ]
         result._total = a_total + b_total
         return result

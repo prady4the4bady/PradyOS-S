@@ -2,6 +2,7 @@
 
 Usage: python -m pradyos.cli [--url URL] <command> [args]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -16,6 +17,7 @@ TIMEOUT = 5.0
 
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
+
 
 def _http_get(url: str) -> dict:
     req = urllib.request.Request(url, method="GET")
@@ -55,6 +57,7 @@ def _table(rows: list[list[str]], headers: list[str]) -> str:
 
 # ── command functions ────────────────────────────────────────────────────────
 
+
 def run_status(base_url: str) -> None:
     data = _http_get(f"{base_url}/api/v1/os/control")
     print(f"os_version:     {data.get('os_version', '?')}")
@@ -83,8 +86,9 @@ def run_signals(base_url: str) -> None:
     if not signals:
         print("(no signals)")
         return
-    rows = [[s.get("name", "?"), str(s.get("count", 0)), str(s.get("latest", "-"))]
-            for s in signals]
+    rows = [
+        [s.get("name", "?"), str(s.get("count", 0)), str(s.get("latest", "-"))] for s in signals
+    ]
     print(_table(rows, ["name", "count", "latest"]))
 
 
@@ -96,8 +100,10 @@ def run_signal_detail(base_url: str, name: str, limit: int = 100) -> None:
     print(f"signal: {data.get('name', name)}")
     print(f"count:  {count}")
     if stats:
-        print(f"stats:  min={stats.get('min')} max={stats.get('max')} "
-              f"mean={stats.get('mean')} stddev={stats.get('stddev')}")
+        print(
+            f"stats:  min={stats.get('min')} max={stats.get('max')} "
+            f"mean={stats.get('mean')} stddev={stats.get('stddev')}"
+        )
     else:
         print("stats:  (none)")
     points = data.get("points", [])
@@ -136,8 +142,10 @@ def run_memory_set(
     if ttl is not None:
         body["ttl"] = ttl
     data = _http_post(f"{base_url}/api/v1/memory/{urllib.parse.quote(key)}", body)
-    print(f"stored: {data.get('key', key)} = {data.get('value', value)} "
-          f"(ttl={data.get('ttl', '-')})")
+    print(
+        f"stored: {data.get('key', key)} = {data.get('value', value)} "
+        f"(ttl={data.get('ttl', '-')})"
+    )
 
 
 def run_heartbeat(base_url: str) -> None:
@@ -169,6 +177,7 @@ def run_health(base_url: str) -> None:
 
 
 # ── arg parsing ──────────────────────────────────────────────────────────────
+
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pradyos", description="PradyOS CLI")

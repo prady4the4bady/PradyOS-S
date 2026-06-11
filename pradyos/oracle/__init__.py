@@ -13,8 +13,8 @@ Public surface:
 """
 
 from pradyos.oracle.client import OllamaClient, OllamaError
-from pradyos.oracle.planner import OraclePlanner, OraclePlan
 from pradyos.oracle.oracle import Oracle
+from pradyos.oracle.planner import OraclePlan, OraclePlanner
 
 __all__ = [
     "OllamaClient",

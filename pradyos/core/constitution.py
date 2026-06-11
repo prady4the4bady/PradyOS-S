@@ -1,13 +1,17 @@
 """Constitutional policy classifier (BASTION seed)."""
+
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+
 class ApprovalDomain(str, Enum):
     AUTONOMOUS = "AUTONOMOUS"
     APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+
 
 @dataclass(slots=True)
 class PolicyDecision:
@@ -15,6 +19,7 @@ class PolicyDecision:
     reason: str
     matched_rule: str | None = None
     suggested_narrowing: str | None = None
+
 
 @dataclass(slots=True)
 class ConstitutionalRule:
@@ -29,15 +34,20 @@ class ConstitutionalRule:
         if self.kinds and kind not in self.kinds:
             return False
         if self.pattern is not None:
-            haystack = " ".join([summary, str(detail.get("command", "")), str(detail.get("intent", ""))])
+            haystack = " ".join(
+                [summary, str(detail.get("command", "")), str(detail.get("intent", ""))]
+            )
             return bool(self.pattern.search(haystack))
         return bool(self.kinds)
+
 
 class Constitution:
     def __init__(self, rules: list[ConstitutionalRule]) -> None:
         self.rules = rules
 
-    def classify(self, kind: str, summary: str, detail: dict[str, Any] | None = None) -> PolicyDecision:
+    def classify(
+        self, kind: str, summary: str, detail: dict[str, Any] | None = None
+    ) -> PolicyDecision:
         detail = detail or {}
         for rule in self.rules:
             if rule.matches(kind, summary, detail):
@@ -52,6 +62,7 @@ class Constitution:
             reason="No constitutional rule applied — falls within Domain B autonomous execution.",
             matched_rule=None,
         )
+
 
 _DESTRUCTIVE_RE = re.compile(
     r"(?:^|[\s;|&])(rm\s+-rf?\s+/|mkfs(\.\w+)?\b|fdisk\b|dd\s+if=|shred\b|wipefs\b|"
@@ -70,45 +81,48 @@ _PRIVILEGE_RE = re.compile(
     re.IGNORECASE,
 )
 
+
 def default_constitution() -> Constitution:
-    return Constitution([
-        ConstitutionalRule(
-            name="new_project_proposal",
-            description="New project proposals cross the Sovereign boundary (Law 2).",
-            kinds=frozenset({"project_proposal"}),
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-            suggested_narrowing="Run as background research (kind='research') first.",
-        ),
-        ConstitutionalRule(
-            name="constitutional_change",
-            description="Modifications to the constitution require Sovereign approval.",
-            kinds=frozenset({"constitution_change", "policy_change"}),
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-        ),
-        ConstitutionalRule(
-            name="irreversible_destructive",
-            description="Irreversible destructive operation on high-value state.",
-            pattern=_DESTRUCTIVE_RE,
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-            suggested_narrowing="Use a snapshot/rollback-capable variant, or scope to /tmp.",
-        ),
-        ConstitutionalRule(
-            name="data_egress",
-            description="Data exfiltration crosses a trusted boundary.",
-            pattern=_EGRESS_RE,
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-            suggested_narrowing="Stage locally and request review before egress.",
-        ),
-        ConstitutionalRule(
-            name="privilege_modification",
-            description="Privilege-elevation or identity-affecting change.",
-            pattern=_PRIVILEGE_RE,
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-        ),
-        ConstitutionalRule(
-            name="strategic_initiative",
-            description="Major strategic initiative — Domain A.",
-            kinds=frozenset({"strategic_initiative", "major_shift"}),
-            decision=ApprovalDomain.APPROVAL_REQUIRED,
-        ),
-    ])
+    return Constitution(
+        [
+            ConstitutionalRule(
+                name="new_project_proposal",
+                description="New project proposals cross the Sovereign boundary (Law 2).",
+                kinds=frozenset({"project_proposal"}),
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+                suggested_narrowing="Run as background research (kind='research') first.",
+            ),
+            ConstitutionalRule(
+                name="constitutional_change",
+                description="Modifications to the constitution require Sovereign approval.",
+                kinds=frozenset({"constitution_change", "policy_change"}),
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+            ),
+            ConstitutionalRule(
+                name="irreversible_destructive",
+                description="Irreversible destructive operation on high-value state.",
+                pattern=_DESTRUCTIVE_RE,
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+                suggested_narrowing="Use a snapshot/rollback-capable variant, or scope to /tmp.",
+            ),
+            ConstitutionalRule(
+                name="data_egress",
+                description="Data exfiltration crosses a trusted boundary.",
+                pattern=_EGRESS_RE,
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+                suggested_narrowing="Stage locally and request review before egress.",
+            ),
+            ConstitutionalRule(
+                name="privilege_modification",
+                description="Privilege-elevation or identity-affecting change.",
+                pattern=_PRIVILEGE_RE,
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+            ),
+            ConstitutionalRule(
+                name="strategic_initiative",
+                description="Major strategic initiative — Domain A.",
+                kinds=frozenset({"strategic_initiative", "major_shift"}),
+                decision=ApprovalDomain.APPROVAL_REQUIRED,
+            ),
+        ]
+    )

@@ -47,8 +47,12 @@ def register_rangetree_routes(app: Any, range_tree: Any | None = None) -> Any:
         return JSONResponse(rt.stats())
 
     @app.get("/api/v1/rangetree/range_query")
-    async def api_rt_range_query(x_min: float = Query(...), y_min: float = Query(...),
-                                 x_max: float = Query(...), y_max: float = Query(...)) -> JSONResponse:
+    async def api_rt_range_query(
+        x_min: float = Query(...),
+        y_min: float = Query(...),
+        x_max: float = Query(...),
+        y_max: float = Query(...),
+    ) -> JSONResponse:
         try:
             pts = rt.range_query(x_min, y_min, x_max, y_max)
         except RangeTreeError as exc:
@@ -56,8 +60,12 @@ def register_rangetree_routes(app: Any, range_tree: Any | None = None) -> Any:
         return JSONResponse({"points": [list(p) for p in pts], "count": len(pts)})
 
     @app.get("/api/v1/rangetree/range_count")
-    async def api_rt_range_count(x_min: float = Query(...), y_min: float = Query(...),
-                                 x_max: float = Query(...), y_max: float = Query(...)) -> JSONResponse:
+    async def api_rt_range_count(
+        x_min: float = Query(...),
+        y_min: float = Query(...),
+        x_max: float = Query(...),
+        y_max: float = Query(...),
+    ) -> JSONResponse:
         try:
             c = rt.range_count(x_min, y_min, x_max, y_max)
         except RangeTreeError as exc:

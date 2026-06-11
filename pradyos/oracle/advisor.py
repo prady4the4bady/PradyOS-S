@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 log = logging.getLogger("pradyos.oracle.advisor")
@@ -29,14 +29,16 @@ __all__ = ["SovereignAdvisor", "Recommendation"]
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Recommendation:
     """A single ranked advisor recommendation."""
+
     rank: int
     title: str
     reason: str
-    confidence_pct: float          # 0–100
-    suggested_campaign_goal: str   # short imperative description for a new campaign
+    confidence_pct: float  # 0–100
+    suggested_campaign_goal: str  # short imperative description for a new campaign
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -51,6 +53,7 @@ class Recommendation:
 # ---------------------------------------------------------------------------
 # Advisor
 # ---------------------------------------------------------------------------
+
 
 class SovereignAdvisor:
     """Reads audit tail and metrics to produce ranked Recommendations.
@@ -161,93 +164,103 @@ class SovereignAdvisor:
         rate = failed / total
         if rate >= 0.5:
             confidence = min(95.0, 60.0 + rate * 35.0)
-            results.append(Recommendation(
-                rank=0,
-                title="High task failure rate detected",
-                reason=(
-                    f"{int(failed)} of {int(total)} tasks failed "
-                    f"({rate * 100:.0f}% failure rate). "
-                    "System may be misconfigured or a dependency is unavailable."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    "Run diagnostic campaign to identify and remediate root cause of task failures"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="High task failure rate detected",
+                    reason=(
+                        f"{int(failed)} of {int(total)} tasks failed "
+                        f"({rate * 100:.0f}% failure rate). "
+                        "System may be misconfigured or a dependency is unavailable."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=(
+                        "Run diagnostic campaign to identify and remediate root cause of task failures"
+                    ),
+                )
+            )
         elif rate >= 0.2:
             confidence = 40.0 + rate * 50.0
-            results.append(Recommendation(
-                rank=0,
-                title="Elevated task failure rate",
-                reason=(
-                    f"{int(failed)} of {int(total)} tasks failed "
-                    f"({rate * 100:.0f}% failure rate). "
-                    "Consider reviewing failing task configurations."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    "Audit task configurations and retry failed tasks"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="Elevated task failure rate",
+                    reason=(
+                        f"{int(failed)} of {int(total)} tasks failed "
+                        f"({rate * 100:.0f}% failure rate). "
+                        "Consider reviewing failing task configurations."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=("Audit task configurations and retry failed tasks"),
+                )
+            )
         return results
 
     def _analyze_retried_tasks(self, events: list[Any]) -> list[Recommendation]:
         """Tasks that failed but then retry-succeeded → suggest targeted re-run."""
         results: list[Recommendation] = []
         retry_events = [
-            e for e in events
+            e
+            for e in events
             if _event_action(e) == "retry:plan" or "retry" in _event_action(e).lower()
         ]
         failed_tasks = [
-            e for e in events
+            e
+            for e in events
             if _event_action(e) in ("task_failed", "task_FAILED")
-               or "task_fail" in _event_action(e).lower()
+            or "task_fail" in _event_action(e).lower()
         ]
 
         if failed_tasks:
             count = len(failed_tasks)
             confidence = min(85.0, 40.0 + count * 5.0)
-            results.append(Recommendation(
-                rank=0,
-                title=f"Re-run {count} failed task(s)",
-                reason=(
-                    f"{count} task failure event(s) recorded in the audit tail. "
-                    "Re-running failed tasks may succeed if transient failures have cleared."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    f"Re-submit and execute {count} previously failed task(s)"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title=f"Re-run {count} failed task(s)",
+                    reason=(
+                        f"{count} task failure event(s) recorded in the audit tail. "
+                        "Re-running failed tasks may succeed if transient failures have cleared."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=(
+                        f"Re-submit and execute {count} previously failed task(s)"
+                    ),
+                )
+            )
 
         if retry_events:
             confidence = min(70.0, 30.0 + len(retry_events) * 8.0)
-            results.append(Recommendation(
-                rank=0,
-                title="Retry activity detected — review retry policies",
-                reason=(
-                    f"{len(retry_events)} retry event(s) found in audit. "
-                    "Frequent retries indicate intermittent failures; "
-                    "consider increasing circuit breaker thresholds or fixing root cause."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    "Review and tune retry policies for high-retry subsystems"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="Retry activity detected — review retry policies",
+                    reason=(
+                        f"{len(retry_events)} retry event(s) found in audit. "
+                        "Frequent retries indicate intermittent failures; "
+                        "consider increasing circuit breaker thresholds or fixing root cause."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=(
+                        "Review and tune retry policies for high-retry subsystems"
+                    ),
+                )
+            )
         return results
 
     def _analyze_idle(self, events: list[Any]) -> list[Recommendation]:
         """Long idle period → suggest maintenance."""
         results: list[Recommendation] = []
         if not events:
-            results.append(Recommendation(
-                rank=0,
-                title="No recent activity — system appears idle",
-                reason="No audit events found. System may be idle or audit log is empty.",
-                confidence_pct=30.0,
-                suggested_campaign_goal="Run maintenance health-check campaign",
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="No recent activity — system appears idle",
+                    reason="No audit events found. System may be idle or audit log is empty.",
+                    confidence_pct=30.0,
+                    suggested_campaign_goal="Run maintenance health-check campaign",
+                )
+            )
             return results
 
         now = time.time()
@@ -259,18 +272,20 @@ class SovereignAdvisor:
 
         if idle_sec > 3600:  # 1 hour
             confidence = min(75.0, 30.0 + (idle_sec / 3600) * 5.0)
-            results.append(Recommendation(
-                rank=0,
-                title="System idle for extended period",
-                reason=(
-                    f"No activity for {idle_sec / 3600:.1f} hour(s). "
-                    "Consider running maintenance checks."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    "Run system maintenance and health-validation campaign"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="System idle for extended period",
+                    reason=(
+                        f"No activity for {idle_sec / 3600:.1f} hour(s). "
+                        "Consider running maintenance checks."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=(
+                        "Run system maintenance and health-validation campaign"
+                    ),
+                )
+            )
         return results
 
     def _analyze_oracle_health(
@@ -282,35 +297,39 @@ class SovereignAdvisor:
         err_count = _metric_value(snap, "oracle_plans_error")
 
         if err_count > 0 and ok_count == 0:
-            results.append(Recommendation(
-                rank=0,
-                title="Oracle planner unreachable",
-                reason=(
-                    f"{int(err_count)} Oracle plan error(s) with 0 successes. "
-                    "Ollama service may be offline or misconfigured."
-                ),
-                confidence_pct=88.0,
-                suggested_campaign_goal=(
-                    "Restart Oracle/Ollama service and verify connectivity"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="Oracle planner unreachable",
+                    reason=(
+                        f"{int(err_count)} Oracle plan error(s) with 0 successes. "
+                        "Ollama service may be offline or misconfigured."
+                    ),
+                    confidence_pct=88.0,
+                    suggested_campaign_goal=(
+                        "Restart Oracle/Ollama service and verify connectivity"
+                    ),
+                )
+            )
         elif err_count > 0:
             err_rate = err_count / (ok_count + err_count)
             if err_rate > 0.3:
                 confidence = min(80.0, 50.0 + err_rate * 40.0)
-                results.append(Recommendation(
-                    rank=0,
-                    title="Oracle planner experiencing elevated errors",
-                    reason=(
-                        f"{int(err_count)} plan error(s), {int(ok_count)} success(es) "
-                        f"({err_rate * 100:.0f}% error rate). "
-                        "Oracle may be degraded."
-                    ),
-                    confidence_pct=confidence,
-                    suggested_campaign_goal=(
-                        "Investigate and stabilise Oracle planner connectivity"
-                    ),
-                ))
+                results.append(
+                    Recommendation(
+                        rank=0,
+                        title="Oracle planner experiencing elevated errors",
+                        reason=(
+                            f"{int(err_count)} plan error(s), {int(ok_count)} success(es) "
+                            f"({err_rate * 100:.0f}% error rate). "
+                            "Oracle may be degraded."
+                        ),
+                        confidence_pct=confidence,
+                        suggested_campaign_goal=(
+                            "Investigate and stabilise Oracle planner connectivity"
+                        ),
+                    )
+                )
         return results
 
     def _analyze_campaign_patterns(
@@ -323,46 +342,51 @@ class SovereignAdvisor:
 
         # Campaigns that succeeded
         succeeded = [
-            c for c in campaigns
+            c
+            for c in campaigns
             if str(getattr(getattr(c, "status", None), "value", "")).lower() == "succeeded"
         ]
         failed = [
-            c for c in campaigns
-            if str(getattr(getattr(c, "status", None), "value", "")).lower() in ("failed", "rolled_back")
+            c
+            for c in campaigns
+            if str(getattr(getattr(c, "status", None), "value", "")).lower()
+            in ("failed", "rolled_back")
         ]
 
         if failed:
             count = len(failed)
             confidence = min(78.0, 35.0 + count * 10.0)
-            names = ", ".join(
-                getattr(c, "name", "?") for c in failed[:3]
+            names = ", ".join(getattr(c, "name", "?") for c in failed[:3])
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title=f"{count} failed campaign(s) may be retryable",
+                    reason=(
+                        f"Campaigns [{names}] ended in failure. "
+                        "Retrying after fixing underlying issues may succeed."
+                    ),
+                    confidence_pct=confidence,
+                    suggested_campaign_goal=(
+                        f"Re-execute {count} previously failed campaign(s) after root-cause fix"
+                    ),
+                )
             )
-            results.append(Recommendation(
-                rank=0,
-                title=f"{count} failed campaign(s) may be retryable",
-                reason=(
-                    f"Campaigns [{names}] ended in failure. "
-                    "Retrying after fixing underlying issues may succeed."
-                ),
-                confidence_pct=confidence,
-                suggested_campaign_goal=(
-                    f"Re-execute {count} previously failed campaign(s) after root-cause fix"
-                ),
-            ))
 
         if len(succeeded) > 3:
-            results.append(Recommendation(
-                rank=0,
-                title="System stable — consider expanding automation",
-                reason=(
-                    f"{len(succeeded)} campaigns succeeded recently. "
-                    "System is healthy; a good time to plan new automation campaigns."
-                ),
-                confidence_pct=45.0,
-                suggested_campaign_goal=(
-                    "Design and launch next automation campaign for new system goal"
-                ),
-            ))
+            results.append(
+                Recommendation(
+                    rank=0,
+                    title="System stable — consider expanding automation",
+                    reason=(
+                        f"{len(succeeded)} campaigns succeeded recently. "
+                        "System is healthy; a good time to plan new automation campaigns."
+                    ),
+                    confidence_pct=45.0,
+                    suggested_campaign_goal=(
+                        "Design and launch next automation campaign for new system goal"
+                    ),
+                )
+            )
 
         return results
 
@@ -370,6 +394,7 @@ class SovereignAdvisor:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _metric_value(snap: dict[str, Any], name: str) -> float:
     """Extract the numeric value from a metrics snapshot entry."""

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -174,8 +173,9 @@ class ReplExtMixin:
 
     def _config_show(self) -> None:
         try:
-            from pradyos.core.config import get_config
             import dataclasses
+
+            from pradyos.core.config import get_config
 
             cfg = get_config()
             table = Table(title="Current Config", show_lines=False)
@@ -197,7 +197,8 @@ class ReplExtMixin:
 
         # Trigger a reload so get_config() picks up the new env value
         try:
-            from pradyos.core.config import reset_config_for_tests, get_config
+            from pradyos.core.config import get_config, reset_config_for_tests
+
             reset_config_for_tests()
             cfg = get_config()
             _console.print(f"[dim]Config reloaded. {key} → {getattr(cfg, key, '?')}[/dim]")
@@ -234,8 +235,9 @@ class ReplExtMixin:
             date_str = date_arg
 
         try:
-            from pradyos.campaign.archiver import CampaignArchiver
             import json
+
+            from pradyos.campaign.archiver import CampaignArchiver
 
             archiver = CampaignArchiver()
             archive_file = archiver._archive_dir / f"campaigns_{date_str}.jsonl"
@@ -276,9 +278,7 @@ class ReplExtMixin:
             _console.print(f"[red]archive error: {exc}[/red]")
 
     def help_archive(self) -> None:
-        _console.print(
-            "  archive list [YYYYMMDD]  — list archived campaigns for a date"
-        )
+        _console.print("  archive list [YYYYMMDD]  — list archived campaigns for a date")
 
     # ------------------------------------------------------------------
     # do_recommend (mixin version — delegates to SovereignAdvisor)
@@ -294,9 +294,9 @@ class ReplExtMixin:
         except ValueError:
             n = 5
         try:
-            from pradyos.oracle.advisor import SovereignAdvisor
             from pradyos.core.audit import get_audit_log
             from pradyos.core.metrics import get_registry
+            from pradyos.oracle.advisor import SovereignAdvisor
 
             advisor = SovereignAdvisor(
                 audit_log=get_audit_log(),
@@ -330,8 +330,10 @@ class ReplExtMixin:
 # Formatting helpers
 # ---------------------------------------------------------------------------
 
+
 def _fmt_ts(ts: float) -> str:
     import datetime
+
     try:
         dt = datetime.datetime.fromtimestamp(float(ts), tz=datetime.timezone.utc)
         return dt.strftime("%H:%M:%S")

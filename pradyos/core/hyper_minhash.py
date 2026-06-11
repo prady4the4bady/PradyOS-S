@@ -72,12 +72,12 @@ class HyperMinHash:
         self._r = r
         self._seed = seed
         self._m = 1 << p
-        self._w = 64 - p                 # bits available for rank + mantissa
+        self._w = 64 - p  # bits available for rank + mantissa
         self._lock = threading.Lock()
         self._init_state()
 
     def _init_state(self) -> None:
-        self._ranks = bytearray(self._m)         # 0 == empty bucket
+        self._ranks = bytearray(self._m)  # 0 == empty bucket
         self._mantissas = bytearray(self._m)
 
     # ── hashing (pure) ───────────────────────────────────────────────────────────────
@@ -87,10 +87,10 @@ class HyperMinHash:
 
     def _bucket_rank_mantissa(self, element: Any) -> tuple[int, int, int]:
         h = self._hash64(element)
-        bucket = h >> self._w                    # top p bits
-        rest = h & ((1 << self._w) - 1)          # low w bits
-        lz = self._w - rest.bit_length()         # leading zeros within w bits
-        rank = lz + 1                            # 1..w+1 (w+1 only when rest == 0)
+        bucket = h >> self._w  # top p bits
+        rest = h & ((1 << self._w) - 1)  # low w bits
+        lz = self._w - rest.bit_length()  # leading zeros within w bits
+        rank = lz + 1  # 1..w+1 (w+1 only when rest == 0)
         mantissa = rest & ((1 << self._r) - 1)
         return bucket, rank, mantissa
 
@@ -128,22 +128,22 @@ class HyperMinHash:
         inv_sum = 0.0
         zeros = 0
         for reg in ranks:
-            inv_sum += 2.0 ** (-reg)             # empty (reg 0) contributes 1.0
+            inv_sum += 2.0 ** (-reg)  # empty (reg 0) contributes 1.0
             if reg == 0:
                 zeros += 1
         estimate = _alpha(m) * m * m / inv_sum
-        if estimate <= 2.5 * m and zeros > 0:    # small-range linear-counting correction
+        if estimate <= 2.5 * m and zeros > 0:  # small-range linear-counting correction
             return m * math.log(m / zeros)
         return estimate
 
     # ── similarity ─────────────────────────────────────────────────────────────────────
-    def _check_compatible(self, other: "HyperMinHash") -> None:
+    def _check_compatible(self, other: HyperMinHash) -> None:
         if not isinstance(other, HyperMinHash):
             raise HyperMinHashError("other must be a HyperMinHash")
         if other._p != self._p or other._r != self._r or other._seed != self._seed:
             raise HyperMinHashError("incompatible sketches (p / r / seed differ)")
 
-    def jaccard(self, other: "HyperMinHash") -> float:
+    def jaccard(self, other: HyperMinHash) -> float:
         """Estimated Jaccard similarity with ``other`` (collision-corrected agreement)."""
         self._check_compatible(other)
         with self._lock, other._lock:
@@ -181,7 +181,7 @@ class HyperMinHash:
             est = (agree_rate - c) / (1.0 - c)
             return min(1.0, max(0.0, est))
 
-    def merge(self, other: "HyperMinHash") -> "HyperMinHash":
+    def merge(self, other: HyperMinHash) -> HyperMinHash:
         """Return a new sketch for the union (bucketwise max rank / min mantissa)."""
         self._check_compatible(other)
         out = HyperMinHash(p=self._p, r=self._r, seed=self._seed)
@@ -193,16 +193,16 @@ class HyperMinHash:
                     out._ranks[i], out._mantissas[i] = ra[i], ma[i]
                 elif rb[i] > ra[i]:
                     out._ranks[i], out._mantissas[i] = rb[i], mb[i]
-                elif ra[i] > 0:                  # equal rank → keep min mantissa
+                elif ra[i] > 0:  # equal rank → keep min mantissa
                     out._ranks[i] = ra[i]
                     out._mantissas[i] = ma[i] if ma[i] <= mb[i] else mb[i]
         return out
 
-    def union_cardinality(self, other: "HyperMinHash") -> float:
+    def union_cardinality(self, other: HyperMinHash) -> float:
         """Estimated cardinality of the union."""
         return self.merge(other).cardinality()
 
-    def intersection_cardinality(self, other: "HyperMinHash") -> float:
+    def intersection_cardinality(self, other: HyperMinHash) -> float:
         """Estimated cardinality of the intersection (Jaccard × union)."""
         return self.jaccard(other) * self.union_cardinality(other)
 

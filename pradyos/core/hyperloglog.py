@@ -22,7 +22,7 @@ from __future__ import annotations
 import hashlib
 import math
 import threading
-from typing import Iterable
+from collections.abc import Iterable
 
 _MASK64 = (1 << 64) - 1
 
@@ -57,9 +57,9 @@ class HyperLogLog:
     def add(self, item) -> None:
         """Record an observation of ``item``."""
         h = self._hash64(item) & _MASK64
-        idx = h >> (64 - self._p)                 # top p bits → register
+        idx = h >> (64 - self._p)  # top p bits → register
         bits = 64 - self._p
-        w = h & ((1 << bits) - 1)                 # remaining bits
+        w = h & ((1 << bits) - 1)  # remaining bits
         rank = (bits + 1) if w == 0 else (bits - w.bit_length() + 1)
         with self._lock:
             if rank > self._registers[idx]:
@@ -69,7 +69,7 @@ class HyperLogLog:
         for item in items:
             self.add(item)
 
-    def merge(self, other: "HyperLogLog") -> None:
+    def merge(self, other: HyperLogLog) -> None:
         """Absorb ``other`` (register-wise max). Both must share precision."""
         if not isinstance(other, HyperLogLog) or other._p != self._p:
             raise ValueError("can only merge a HyperLogLog of the same precision")
@@ -92,7 +92,7 @@ class HyperLogLog:
         sum_inv = 0.0
         zeros = 0
         for r in regs:
-            sum_inv += 1.0 / (1 << r)   # 2 ** (-r)
+            sum_inv += 1.0 / (1 << r)  # 2 ** (-r)
             if r == 0:
                 zeros += 1
         estimate = self._alpha * m * m / sum_inv

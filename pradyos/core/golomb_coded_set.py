@@ -31,7 +31,8 @@ from __future__ import annotations
 import hashlib
 import math
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 _LN2 = math.log(2.0)
 
@@ -127,8 +128,7 @@ class _BitReader:
 class GolombCodedSet:
     """Compressed static set-membership structure (Golomb–Rice gap coding)."""
 
-    def __init__(self, items: Iterable[Any] | None = None, p: float = 0.01,
-                 seed: int = 0) -> None:
+    def __init__(self, items: Iterable[Any] | None = None, p: float = 0.01, seed: int = 0) -> None:
         self._validate(p, seed)
         self._p = float(p)
         self._seed = seed
@@ -139,7 +139,7 @@ class GolombCodedSet:
     # ── validation / hashing ─────────────────────────────────────────────────────────
     @staticmethod
     def _validate(p: Any, seed: Any) -> None:
-        if not isinstance(p, (int, float)) or isinstance(p, bool):
+        if not isinstance(p, int | float) or isinstance(p, bool):
             raise GolombCodedSetError("p must be a number")
         if not (0.0 < float(p) < 1.0):
             raise GolombCodedSetError("p must be in (0, 1)")
@@ -184,7 +184,7 @@ class GolombCodedSet:
         writer = _BitWriter()
         prev = -1
         for fp in fingerprints:
-            gap = fp - prev          # ≥ 1 (fingerprints are strictly increasing)
+            gap = fp - prev  # ≥ 1 (fingerprints are strictly increasing)
             prev = fp
             self._encode_gap(writer, gap, golomb_m)
         payload, total_bits = writer.finish()

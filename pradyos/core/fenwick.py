@@ -16,7 +16,6 @@ non-reentrant ``threading.Lock``.
 
 from __future__ import annotations
 
-
 import threading
 
 
@@ -25,7 +24,7 @@ def _is_int(x) -> bool:
 
 
 def _is_number(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class FenwickTree:
@@ -35,7 +34,7 @@ class FenwickTree:
         if not _is_int(size) or size < 1:
             raise ValueError("size must be a positive integer")
         self._size = size
-        self._tree = [0] * (size + 1)   # 1-indexed; slot 0 unused
+        self._tree = [0] * (size + 1)  # 1-indexed; slot 0 unused
         self._lock = threading.Lock()
 
     # ── internal (assume lock held) ──────────────────────────────────────────

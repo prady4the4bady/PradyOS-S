@@ -68,7 +68,9 @@ def register_lru_routes(app: Any, cache: Any | None = None) -> Any:
         try:
             value = cache.get(key)
         except CacheMissError:
-            return JSONResponse({"key": key, "found": False, "error": "cache miss"}, status_code=404)
+            return JSONResponse(
+                {"key": key, "found": False, "error": "cache miss"}, status_code=404
+            )
         except ValueError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
         return JSONResponse({"key": key, "value": value, "found": True})
@@ -76,7 +78,9 @@ def register_lru_routes(app: Any, cache: Any | None = None) -> Any:
     @app.delete("/api/v1/lru/{key}")
     async def api_lru_delete(key: str) -> JSONResponse:
         if not cache.delete(key):
-            return JSONResponse({"key": key, "deleted": False, "error": "cache miss"}, status_code=404)
+            return JSONResponse(
+                {"key": key, "deleted": False, "error": "cache miss"}, status_code=404
+            )
         return JSONResponse({"key": key, "deleted": True, "size": len(cache)})
 
     return cache

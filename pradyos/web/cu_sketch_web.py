@@ -44,8 +44,9 @@ def register_cusketch_routes(app: Any, cu_sketch: Any | None = None) -> Any:
             cu_sketch.add(item, body.get("amount", 1))
         except CUSketchError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"item": item, "estimate": cu_sketch.estimate(item),
-                            "total": cu_sketch.total})
+        return JSONResponse(
+            {"item": item, "estimate": cu_sketch.estimate(item), "total": cu_sketch.total}
+        )
 
     @app.get("/api/v1/cusketch/estimate")
     async def api_cu_estimate(item: str) -> JSONResponse:

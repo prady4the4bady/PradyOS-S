@@ -18,9 +18,8 @@ once). Pure stdlib; thread-safe via a single ``threading.Lock``; deterministic; 
 from __future__ import annotations
 
 import math
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class ConvexHullError(Exception):
@@ -32,7 +31,7 @@ class ConvexHullError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _cross(o, a, b):
@@ -45,8 +44,8 @@ class ConvexHull:
 
     def __init__(self, points: Any = None) -> None:
         self._lock = threading.Lock()
-        self._points: list = []      # unique input points, sorted
-        self._hull: list = []        # hull vertices, CCW
+        self._points: list = []  # unique input points, sorted
+        self._hull: list = []  # hull vertices, CCW
         if points is not None:
             self.build(points)
 
@@ -59,7 +58,9 @@ class ConvexHull:
             raise ConvexHullError("points must be iterable") from exc
         cleaned = []
         for p in raw:
-            if not (isinstance(p, (list, tuple)) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])):
+            if not (
+                isinstance(p, list | tuple) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])
+            ):
                 raise ConvexHullError("each point must be an (x, y) pair of numbers")
             cleaned.append((p[0], p[1]))
         pts = sorted(set(cleaned))
@@ -71,7 +72,7 @@ class ConvexHull:
     def _monotone_chain(pts: list) -> list:
         n = len(pts)
         if n <= 2:
-            return pts[:]                       # 0, 1, or 2 points: hull is the points themselves
+            return pts[:]  # 0, 1, or 2 points: hull is the points themselves
         lower = []
         for p in pts:
             while len(lower) >= 2 and _cross(lower[-2], lower[-1], p) <= 0:
@@ -82,7 +83,7 @@ class ConvexHull:
             while len(upper) >= 2 and _cross(upper[-2], upper[-1], p) <= 0:
                 upper.pop()
             upper.append(p)
-        return lower[:-1] + upper[:-1]          # CCW; drop shared endpoints
+        return lower[:-1] + upper[:-1]  # CCW; drop shared endpoints
 
     # ── queries ──────────────────────────────────────────────────────────────────────────
     def hull(self) -> list:
@@ -131,8 +132,9 @@ class ConvexHull:
                 a, b = h[0], h[1]
                 if _cross(a, b, p) != 0:
                     return False
-                return (min(a[0], b[0]) <= x <= max(a[0], b[0])
-                        and min(a[1], b[1]) <= y <= max(a[1], b[1]))
+                return min(a[0], b[0]) <= x <= max(a[0], b[0]) and min(a[1], b[1]) <= y <= max(
+                    a[1], b[1]
+                )
             # convex polygon (CCW): inside-or-on iff left of / on every edge
             for i in range(len(h)):
                 if _cross(h[i], h[(i + 1) % len(h)], p) < 0:
@@ -179,5 +181,9 @@ class ConvexHull:
                 per = math.dist(h[0], h[1])
             else:
                 per = sum(math.dist(h[i], h[(i + 1) % len(h)]) for i in range(len(h)))
-            return {"num_points": len(self._points), "num_hull_points": len(h),
-                    "area": area, "perimeter": per}
+            return {
+                "num_points": len(self._points),
+                "num_hull_points": len(h),
+                "area": area,
+                "perimeter": per,
+            }

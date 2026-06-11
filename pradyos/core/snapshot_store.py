@@ -40,7 +40,7 @@ class SnapshotStore:
         if self._base_dir is None:
             return
         for jsonl_file in sorted(self._base_dir.glob("*.jsonl")):
-            namespace = jsonl_file.stem
+            namespace = jsonl_file.stem  # noqa: F841
             with jsonl_file.open(encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
@@ -108,12 +108,14 @@ class SnapshotStore:
                 if not versions:
                     continue
                 latest_ver = max(versions.keys())
-                result.append({
-                    "key": key,
-                    "versions": len(versions),
-                    "latest_version": latest_ver,
-                    "latest_saved_at": versions[latest_ver].saved_at,
-                })
+                result.append(
+                    {
+                        "key": key,
+                        "versions": len(versions),
+                        "latest_version": latest_ver,
+                        "latest_saved_at": versions[latest_ver].saved_at,
+                    }
+                )
             return result
 
     def delete(self, namespace: str, key: str) -> bool:
@@ -131,8 +133,4 @@ class SnapshotStore:
                 if namespace not in self._store:
                     return 0
                 return sum(len(v) for v in self._store[namespace].values())
-            return sum(
-                len(v)
-                for ns_data in self._store.values()
-                for v in ns_data.values()
-            )
+            return sum(len(v) for ns_data in self._store.values() for v in ns_data.values())

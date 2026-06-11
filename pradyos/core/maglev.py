@@ -71,7 +71,7 @@ class MaglevHash:
             raise MaglevError(table_size)
         if not _is_int(seed):
             raise MaglevError(seed)
-        self._table_size = _next_prime(table_size)   # M must be prime
+        self._table_size = _next_prime(table_size)  # M must be prime
         self._seed = seed
         self._lock = threading.Lock()
         self._nodes: list[Any] = []
@@ -96,12 +96,14 @@ class MaglevHash:
 
     def _key_slot(self, key: Any) -> int:
         data = repr((self._seed, "key", key)).encode("utf-8")
-        return int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), "big") % self._table_size
+        return (
+            int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), "big") % self._table_size
+        )
 
     # ── table population (Maglev permutation fill) ──────────────────────────────────
     def _build_locked(self) -> None:
         m = self._table_size
-        nodes = sorted(self._nodes, key=str)          # deterministic, order-independent
+        nodes = sorted(self._nodes, key=str)  # deterministic, order-independent
         self._nodes = nodes
         n = len(nodes)
         if n == 0:

@@ -4,8 +4,9 @@ import collections
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pradyos.core.health_scorecard import HealthScorecard
@@ -60,7 +61,7 @@ def _scores_by_name(report) -> dict[str, float]:
 class HealingMonitor:
     def __init__(
         self,
-        health_scorecard: "HealthScorecard | None" = None,
+        health_scorecard: HealthScorecard | None = None,
         max_log: int = 500,
     ) -> None:
         self._scorecard = health_scorecard

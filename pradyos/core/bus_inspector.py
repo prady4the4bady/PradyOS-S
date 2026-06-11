@@ -1,4 +1,5 @@
 """Phase 27: Sovereign Event Bus Inspector — live diagnostic ring buffer."""
+
 from __future__ import annotations
 
 import threading
@@ -10,6 +11,7 @@ from dataclasses import dataclass
 @dataclass
 class BusEvent:
     """A single recorded event on the bus."""
+
     topic: str
     payload: dict
     timestamp: float

@@ -3,8 +3,9 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Callable, TYPE_CHECKING
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pradyos.core.snapshot_store import SnapshotStore
@@ -33,7 +34,7 @@ class Event:
 class EventStore:
     _NS = "event_store"
 
-    def __init__(self, snapshot_store: "SnapshotStore | None" = None) -> None:
+    def __init__(self, snapshot_store: SnapshotStore | None = None) -> None:
         self._store = snapshot_store
         self._streams: dict[str, list[Event]] = {}
         self._lock = threading.Lock()
@@ -126,14 +127,16 @@ class EventStore:
             restored: list[Event] = []
             for ev in events_raw:
                 try:
-                    restored.append(Event(
-                        id=ev["id"],
-                        stream=ev["stream"],
-                        event_type=ev["event_type"],
-                        payload=dict(ev.get("payload") or {}),
-                        sequence=int(ev["sequence"]),
-                        occurred_at=float(ev["occurred_at"]),
-                    ))
+                    restored.append(
+                        Event(
+                            id=ev["id"],
+                            stream=ev["stream"],
+                            event_type=ev["event_type"],
+                            payload=dict(ev.get("payload") or {}),
+                            sequence=int(ev["sequence"]),
+                            occurred_at=float(ev["occurred_at"]),
+                        )
+                    )
                 except (KeyError, TypeError, ValueError):
                     continue
             if restored:

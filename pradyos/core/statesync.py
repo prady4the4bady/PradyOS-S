@@ -3,11 +3,11 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pradyos.core.pubsub import PubSubBroker
+    pass
 
 
 _SYNC_FLAG = "__synced__"
@@ -118,6 +118,7 @@ class StateSyncManager:
     def _make_forwarder(self, session: SyncSession, topic: str, target_broker: Any):
         """Build a callback that forwards messages to target_broker on `topic`,
         with cycle detection via the _SYNC_FLAG sentinel key."""
+
         def _cb(message: dict) -> None:
             # Cycle guard: already a syncing-message → do not re-forward.
             if isinstance(message, dict) and message.get(_SYNC_FLAG):
@@ -132,6 +133,7 @@ class StateSyncManager:
             except Exception:
                 # Broker hiccups never crash the sync callback.
                 pass
+
         return _cb
 
     def stop_session(self, session_id: str) -> bool:

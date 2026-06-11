@@ -61,10 +61,14 @@ def register_simhash_routes(app: Any, simhash: Any | None = None) -> Any:
         dist = simhash.hamming(a, b)
         if dist is None:
             return JSONResponse({"error": "unknown document"}, status_code=404)
-        return JSONResponse({
-            "a": a, "b": b, "hamming": dist,
-            "near_duplicate": dist <= NEAR_DUPLICATE_HAMMING,
-        })
+        return JSONResponse(
+            {
+                "a": a,
+                "b": b,
+                "hamming": dist,
+                "near_duplicate": dist <= NEAR_DUPLICATE_HAMMING,
+            }
+        )
 
     @app.get("/api/v1/simhash/stats")
     async def api_simhash_stats() -> JSONResponse:

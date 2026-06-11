@@ -17,9 +17,8 @@ single lock; the recursive helpers are lock-free. Pure stdlib; deterministic.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class AVLTreeError(Exception):
@@ -31,7 +30,7 @@ class AVLTreeError(Exception):
 
 
 def _orderable(key: Any) -> bool:
-    return isinstance(key, (int, float, str)) and not isinstance(key, bool)
+    return isinstance(key, int | float | str) and not isinstance(key, bool)
 
 
 class _AVLNode:
@@ -39,12 +38,12 @@ class _AVLNode:
 
     def __init__(self, key: Any) -> None:
         self.key = key
-        self.left: Optional[_AVLNode] = None
-        self.right: Optional[_AVLNode] = None
+        self.left: _AVLNode | None = None
+        self.right: _AVLNode | None = None
         self.height = 1
 
 
-def _h(node: Optional[_AVLNode]) -> int:
+def _h(node: _AVLNode | None) -> int:
     return node.height if node is not None else 0
 
 
@@ -77,12 +76,12 @@ def _rotate_left(x: _AVLNode) -> _AVLNode:
 def _rebalance(node: _AVLNode) -> _AVLNode:
     _update(node)
     bf = _bf(node)
-    if bf > 1:                                  # left-heavy
-        if _bf(node.left) < 0:                  # left-right
+    if bf > 1:  # left-heavy
+        if _bf(node.left) < 0:  # left-right
             node.left = _rotate_left(node.left)
         return _rotate_right(node)
-    if bf < -1:                                 # right-heavy
-        if _bf(node.right) > 0:                 # right-left
+    if bf < -1:  # right-heavy
+        if _bf(node.right) > 0:  # right-left
             node.right = _rotate_right(node.right)
         return _rotate_left(node)
     return node
@@ -93,11 +92,11 @@ class AVLTree:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._root: Optional[_AVLNode] = None
+        self._root: _AVLNode | None = None
         self._size = 0
 
     # ── insert ───────────────────────────────────────────────────────────────────────────
-    def _insert(self, node: Optional[_AVLNode], key: Any) -> tuple:
+    def _insert(self, node: _AVLNode | None, key: Any) -> tuple:
         if node is None:
             return _AVLNode(key), True
         if key == node.key:
@@ -129,7 +128,7 @@ class AVLTree:
             node = node.left
         return node
 
-    def _delete(self, node: Optional[_AVLNode], key: Any) -> tuple:
+    def _delete(self, node: _AVLNode | None, key: Any) -> tuple:
         if node is None:
             return None, False
         if key < node.key:
@@ -178,7 +177,7 @@ class AVLTree:
                 raise AVLTreeError("keys must be mutually comparable") from exc
             return False
 
-    def successor(self, key: Any) -> Optional[Any]:
+    def successor(self, key: Any) -> Any | None:
         """Smallest key strictly greater than ``key`` (key need not be present), or None."""
         if not _orderable(key):
             raise AVLTreeError("key must be an int, float, or str")
@@ -196,7 +195,7 @@ class AVLTree:
                 raise AVLTreeError("keys must be mutually comparable") from exc
             return succ
 
-    def predecessor(self, key: Any) -> Optional[Any]:
+    def predecessor(self, key: Any) -> Any | None:
         """Largest key strictly less than ``key`` (key need not be present), or None."""
         if not _orderable(key):
             raise AVLTreeError("key must be an int, float, or str")
@@ -214,14 +213,14 @@ class AVLTree:
                 raise AVLTreeError("keys must be mutually comparable") from exc
             return pred
 
-    def minimum(self) -> Optional[Any]:
+    def minimum(self) -> Any | None:
         """Smallest key, or None if empty."""
         with self._lock:
             if self._root is None:
                 return None
             return self._min_node(self._root).key
 
-    def maximum(self) -> Optional[Any]:
+    def maximum(self) -> Any | None:
         """Largest key, or None if empty."""
         with self._lock:
             node = self._root

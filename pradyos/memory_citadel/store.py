@@ -28,11 +28,11 @@ _VALID_AGENTS = frozenset({"oracle", "imperium", "titan", "campaign", "system"})
 # Singleton
 # ---------------------------------------------------------------------------
 
-_singleton: "CitadelStore | None" = None
+_singleton: CitadelStore | None = None
 _singleton_lock = threading.Lock()
 
 
-def get_citadel(persist_dir: Path | None = None) -> "CitadelStore":
+def get_citadel(persist_dir: Path | None = None) -> CitadelStore:
     """Return the process-level CitadelStore singleton."""
     global _singleton
     if _singleton is None:
@@ -68,7 +68,7 @@ class CitadelStore:
             persist_dir = Path(__file__).parent.parent.parent / "var" / "memory"
         self._persist_dir: Path = persist_dir
         self._lock = threading.Lock()
-        self._client: Any = None          # chromadb.PersistentClient
+        self._client: Any = None  # chromadb.PersistentClient
         self._collections: dict[str, Any] = {}
         self._chroma_available: bool | None = None  # None = not yet checked
 
@@ -76,7 +76,7 @@ class CitadelStore:
     # Sync API
     # ------------------------------------------------------------------
 
-    def store(self, agent_id: str, record: "MemoryRecord | dict[str, Any]") -> str | None:
+    def store(self, agent_id: str, record: MemoryRecord | dict[str, Any]) -> str | None:
         """Persist a memory record. Returns record_id or None on failure."""
         rec = _ensure_record(agent_id, record)
         if rec is None:
@@ -152,9 +152,7 @@ class CitadelStore:
     # Async API (wrappers for ORACLE async paths)
     # ------------------------------------------------------------------
 
-    async def store_async(
-        self, agent_id: str, record: "MemoryRecord | dict[str, Any]"
-    ) -> str | None:
+    async def store_async(self, agent_id: str, record: MemoryRecord | dict[str, Any]) -> str | None:
         import asyncio
 
         loop = asyncio.get_event_loop()
@@ -200,9 +198,7 @@ class CitadelStore:
                 import chromadb
 
                 self._persist_dir.mkdir(parents=True, exist_ok=True)
-                self._client = chromadb.PersistentClient(
-                    path=str(self._persist_dir)
-                )
+                self._client = chromadb.PersistentClient(path=str(self._persist_dir))
                 log.info("Memory Citadel online at %s", self._persist_dir)
             except Exception as e:  # noqa: BLE001
                 log.error("ChromaDB init failed: %s", e)
@@ -236,9 +232,7 @@ class CitadelStore:
 # ---------------------------------------------------------------------------
 
 
-def _ensure_record(
-    agent_id: str, record: "MemoryRecord | dict[str, Any]"
-) -> "MemoryRecord | None":
+def _ensure_record(agent_id: str, record: MemoryRecord | dict[str, Any]) -> MemoryRecord | None:
     if isinstance(record, MemoryRecord):
         rec = record
     elif isinstance(record, dict):
@@ -268,7 +262,7 @@ def _format_results(results: Any) -> list[dict[str, Any]]:
     distances = (results.get("distances") or [[]])[0]
 
     out: list[dict[str, Any]] = []
-    for doc, meta, dist in zip(docs, metas, distances):
+    for doc, meta, dist in zip(docs, metas, distances, strict=False):
         out.append(
             {
                 "summary": doc,

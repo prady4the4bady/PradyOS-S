@@ -32,10 +32,10 @@ from typing import Any
 
 from pradyos.core.bus import EventBus, get_bus
 
-
 # ---------------------------------------------------------------------------
 # CampaignMonitorSnapshot
 # ---------------------------------------------------------------------------
+
 
 @dataclasses.dataclass
 class CampaignMonitorSnapshot:
@@ -70,6 +70,7 @@ class CampaignMonitorSnapshot:
 # CampaignMonitor
 # ---------------------------------------------------------------------------
 
+
 class CampaignMonitor:
     """Live campaign monitor — injected dependencies, no singletons.
 
@@ -90,7 +91,7 @@ class CampaignMonitor:
     """
 
     AGENT_ID = "aurora_throne.campaign_monitor"
-    _BUS_TOPIC = "*"               # wildcard — receive every published event
+    _BUS_TOPIC = "*"  # wildcard — receive every published event
     _TIMELINE_MAXLEN = 100
     _TITAN_FEED_MAXLEN = 50
 
@@ -149,21 +150,25 @@ class CampaignMonitor:
     def _on_campaign_event(self, topic: str, payload: dict) -> None:
         """Append a campaign.* event to the step_timeline ring buffer."""
         ts = time.time()
-        self._step_timeline.append({
-            "campaign_id": payload.get("campaign_id", ""),
-            "step": payload.get("step", topic),
-            "status": payload.get("status", ""),
-            "ts": ts,
-        })
+        self._step_timeline.append(
+            {
+                "campaign_id": payload.get("campaign_id", ""),
+                "step": payload.get("step", topic),
+                "status": payload.get("status", ""),
+                "ts": ts,
+            }
+        )
 
     def _on_titan_event(self, topic: str, payload: dict) -> None:
         """Append a titan.* event to the titan_ops_feed ring buffer."""
         ts = time.time()
-        self._titan_ops_feed.append({
-            "topic": topic,
-            "payload": payload,
-            "ts": ts,
-        })
+        self._titan_ops_feed.append(
+            {
+                "topic": topic,
+                "payload": payload,
+                "ts": ts,
+            }
+        )
 
     # ------------------------------------------------------------------
     # Internals

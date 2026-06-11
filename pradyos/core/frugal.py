@@ -42,7 +42,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class FrugalQuantile:
@@ -63,9 +63,9 @@ class FrugalQuantile:
             raise FrugalError(seed)
 
     def _init_state(self) -> None:
-        self._m = 0.0          # estimate
-        self._step = 1.0       # adaptive step
-        self._sign = 1         # last move direction (+1 up, -1 down)
+        self._m = 0.0  # estimate
+        self._step = 1.0  # adaptive step
+        self._sign = 1  # last move direction (+1 up, -1 down)
         self._count = 0
         self._rng = random.Random(self._seed)
 
@@ -78,7 +78,7 @@ class FrugalQuantile:
         with self._lock:
             self._count += 1
             if self._count == 1:
-                self._m = x                    # seed the estimate with the first sample
+                self._m = x  # seed the estimate with the first sample
                 return
             q, rand = self._q, self._rng.random()
             if x > self._m and rand > 1.0 - q:

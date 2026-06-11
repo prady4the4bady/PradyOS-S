@@ -37,9 +37,9 @@ from pradyos.core.bus import EventBus, get_bus
 from pradyos.core.constitution import ApprovalDomain
 from pradyos.core.types import ExecutionLane, TaskState
 from pradyos.imperium.checkpoint import CheckpointStore
-from pradyos.imperium.dag import DependencyGraph, is_satisfied_factory
-from pradyos.imperium.policy_engine import PolicyEngine, PolicyViolationError
+from pradyos.imperium.dag import DependencyGraph
 from pradyos.imperium.policy import PolicyCore
+from pradyos.imperium.policy_engine import PolicyEngine, PolicyViolationError
 from pradyos.imperium.queue import TaskQueue
 from pradyos.imperium.recovery import RecoveryCore
 from pradyos.imperium.scheduler import SchedulerCore
@@ -59,9 +59,11 @@ _DEFAULT_STATE_DIR = Path(
 _DECISIONS_FILE = _DEFAULT_STATE_DIR / "sovereign_decisions.jsonl"
 
 # Kinds that bypass the ORACLE intercept (always concrete or always escalate)
-_ORACLE_BYPASS_KINDS = frozenset({
-    "project_proposal",
-})
+_ORACLE_BYPASS_KINDS = frozenset(
+    {
+        "project_proposal",
+    }
+)
 
 
 class Imperium:
@@ -146,15 +148,19 @@ class Imperium:
 
     def submit(self, task: ImperiumTask) -> TaskRecord:
         from pradyos.imperium.dag import CycleDetected
+
         try:
             rec = self.scheduler.submit(task)
         except CycleDetected as e:
-            rec = TaskRecord(spec=task, state=TaskState.FAILED, last_error=str(e),
-                             finished_at=time.time())
+            rec = TaskRecord(
+                spec=task, state=TaskState.FAILED, last_error=str(e), finished_at=time.time()
+            )
             self.state.write(rec)
             self.audit.record(
-                agent_id=task.submitted_by, kind="state",
-                summary=f"task rejected: {e}", detail=rec.to_dict(),
+                agent_id=task.submitted_by,
+                kind="state",
+                summary=f"task rejected: {e}",
+                detail=rec.to_dict(),
                 correlation_id=task.task_id,
             )
             return rec
@@ -178,7 +184,8 @@ class Imperium:
             self._approvals[task_id] = {"approved": True, "by": approver, "at": time.time()}
         self.state.mark_approved(rec, approver)
         self.audit.record(
-            agent_id=approver, kind="approval",
+            agent_id=approver,
+            kind="approval",
             summary=f"APPROVED: {rec.spec.intent or rec.spec.kind}",
             detail={"task_id": task_id, "by": approver},
             correlation_id=task_id,
@@ -195,7 +202,8 @@ class Imperium:
             self._approvals[task_id] = {"approved": False, "by": approver, "at": time.time()}
         self.state.mark_rejected(rec, approver, reason)
         self.audit.record(
-            agent_id=approver, kind="approval",
+            agent_id=approver,
+            kind="approval",
             summary=f"REJECTED: {rec.spec.intent or rec.spec.kind}",
             detail={"task_id": task_id, "by": approver, "reason": reason},
             correlation_id=task_id,
@@ -284,7 +292,8 @@ class Imperium:
         except Exception as e:
             log.warning(
                 "ORACLE unavailable for %s: %s — falling back to direct dispatch",
-                task.task_id[:8], e,
+                task.task_id[:8],
+                e,
             )
             return False
 
@@ -292,7 +301,8 @@ class Imperium:
         if not plan_result.get("ok") and not plan_result.get("escalate"):
             log.info(
                 "ORACLE failed for %s: %s — direct dispatch fallback",
-                task.task_id[:8], plan_result.get("error", "unknown"),
+                task.task_id[:8],
+                plan_result.get("error", "unknown"),
             )
             return False
 
@@ -300,34 +310,46 @@ class Imperium:
         plan_dict: dict[str, Any] = plan_result.get("plan") or {}
         if self._memory is not None and plan_dict:
             try:
-                self._memory.store("oracle", {
-                    "task_id": task.task_id,
-                    "intent": task.intent or task.kind,
-                    "summary": f"Plan for: {task.intent or task.kind}",
-                    "outcome": "planned",
-                })
+                self._memory.store(
+                    "oracle",
+                    {
+                        "task_id": task.task_id,
+                        "intent": task.intent or task.kind,
+                        "summary": f"Plan for: {task.intent or task.kind}",
+                        "outcome": "planned",
+                    },
+                )
             except Exception as e:
                 log.debug("Memory Citadel store failed (non-fatal): %s", e)
 
-        self.bus.publish("oracle.plan_stored", {
-            "task_id": task.task_id,
-            "intent": task.intent,
-            "step_count": len(plan_dict.get("steps", [])),
-        })
+        self.bus.publish(
+            "oracle.plan_stored",
+            {
+                "task_id": task.task_id,
+                "intent": task.intent,
+                "step_count": len(plan_dict.get("steps", [])),
+            },
+        )
 
         # 3. Escalation
         if plan_result.get("escalate"):
             reason = plan_result.get("escalation_reason") or "ORACLE constitutional block"
             self.state.mark_escalated(rec, reason, "oracle_constitutional")
             self.audit.record(
-                agent_id=self.AGENT_ID, kind="approval",
+                agent_id=self.AGENT_ID,
+                kind="approval",
                 summary=f"ORACLE ESCALATION: {task.intent or task.kind}",
                 detail={"task_id": task.task_id, "reason": reason},
                 correlation_id=task.task_id,
             )
-            self.bus.publish("oracle.task_escalated", {
-                "task_id": task.task_id, "intent": task.intent, "reason": reason,
-            })
+            self.bus.publish(
+                "oracle.task_escalated",
+                {
+                    "task_id": task.task_id,
+                    "intent": task.intent,
+                    "reason": reason,
+                },
+            )
             log.info("ORACLE escalated %s: %s", task.task_id[:8], reason)
             return True
 
@@ -336,10 +358,14 @@ class Imperium:
         self.state.mark_running(rec)
 
         if not steps:
-            self.state.mark_succeeded(rec, {
-                "ok": True, "source": "oracle",
-                "note": "ORACLE produced empty plan — treated as success",
-            })
+            self.state.mark_succeeded(
+                rec,
+                {
+                    "ok": True,
+                    "source": "oracle",
+                    "note": "ORACLE produced empty plan — treated as success",
+                },
+            )
             self._tick.set()
             self._store_oracle_outcome(task, "success")
             return True
@@ -381,9 +407,14 @@ class Imperium:
 
         # 5. Final state transition
         if last_result.get("ok"):
-            self.state.mark_succeeded(rec, {
-                **last_result, "source": "oracle", "step_count": len(steps),
-            })
+            self.state.mark_succeeded(
+                rec,
+                {
+                    **last_result,
+                    "source": "oracle",
+                    "step_count": len(steps),
+                },
+            )
             self._tick.set()
             self._store_oracle_outcome(task, "success")
         else:
@@ -397,12 +428,15 @@ class Imperium:
         if self._memory is None:
             return
         try:
-            self._memory.store("oracle", {
-                "task_id": task.task_id,
-                "intent": task.intent or task.kind,
-                "summary": f"Outcome for: {task.intent or task.kind}",
-                "outcome": outcome,
-            })
+            self._memory.store(
+                "oracle",
+                {
+                    "task_id": task.task_id,
+                    "intent": task.intent or task.kind,
+                    "summary": f"Outcome for: {task.intent or task.kind}",
+                    "outcome": outcome,
+                },
+            )
         except Exception as e:
             log.debug("Memory Citadel outcome store failed (non-fatal): %s", e)
 
@@ -490,10 +524,15 @@ class Imperium:
         if decision.domain is ApprovalDomain.APPROVAL_REQUIRED:
             self.state.mark_escalated(rec, decision.reason, decision.matched_rule)
             self.audit.record(
-                agent_id=self.AGENT_ID, kind="approval",
+                agent_id=self.AGENT_ID,
+                kind="approval",
                 summary=f"AWAITING SOVEREIGN APPROVAL: {rec.spec.intent or rec.spec.kind}",
-                detail={"task_id": rec.spec.task_id, "reason": decision.reason,
-                        "rule": decision.matched_rule, "spec": rec.spec.to_dict()},
+                detail={
+                    "task_id": rec.spec.task_id,
+                    "reason": decision.reason,
+                    "rule": decision.matched_rule,
+                    "spec": rec.spec.to_dict(),
+                },
                 correlation_id=rec.spec.task_id,
             )
             return
@@ -519,12 +558,19 @@ class Imperium:
 
         rec.last_result = result
         if result.get("escalate"):
-            self.state.mark_escalated(rec, result.get("reason", "handler escalated"), result.get("rule"))
+            self.state.mark_escalated(
+                rec, result.get("reason", "handler escalated"), result.get("rule")
+            )
             self.audit.record(
-                agent_id=self.AGENT_ID, kind="approval",
+                agent_id=self.AGENT_ID,
+                kind="approval",
                 summary=f"AWAITING SOVEREIGN APPROVAL: {rec.spec.intent or rec.spec.kind}",
-                detail={"task_id": rec.spec.task_id, "reason": result.get("reason"),
-                        "rule": result.get("rule"), "spec": rec.spec.to_dict()},
+                detail={
+                    "task_id": rec.spec.task_id,
+                    "reason": result.get("reason"),
+                    "rule": result.get("rule"),
+                    "spec": rec.spec.to_dict(),
+                },
                 correlation_id=rec.spec.task_id,
             )
             return
@@ -545,6 +591,7 @@ class Imperium:
         scheduler registry; raises :exc:`TaskNotFound` otherwise.
         """
         from pradyos.imperium.exceptions import TaskNotFound
+
         rec = self.scheduler.get(task_id)
         if rec is None:
             raise TaskNotFound(f"task {task_id!r} not found in IMPERIUM registry")
@@ -556,7 +603,7 @@ class Imperium:
             correlation_id=task_id,
         )
 
-    def _self_heal_hook(self, rec: "TaskRecord", error: str) -> None:
+    def _self_heal_hook(self, rec: TaskRecord, error: str) -> None:
         """Callback wired into RecoveryCore.on_exhausted (Phase 11).
 
         Fires after a task is dead-lettered (retries exhausted).  Delegates
@@ -566,13 +613,12 @@ class Imperium:
         """
         if self._self_heal_engine is not None:
             try:
-                self._self_heal_engine.heal(
-                    rec.spec.task_id, reason="retry_budget_exhausted"
-                )
+                self._self_heal_engine.heal(rec.spec.task_id, reason="retry_budget_exhausted")
             except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "SelfHealEngine.heal raised for %s: %s",
-                    rec.spec.task_id[:8], exc,
+                    rec.spec.task_id[:8],
+                    exc,
                 )
 
     # ---------- default handlers ----------
@@ -606,8 +652,11 @@ class Imperium:
                     return {"ok": False, "error": resp.get("error", "titan error")}
                 result = resp.get("result", {})
                 if result.get("escalated"):
-                    return {"escalate": True, "reason": result.get("escalation_reason"),
-                            "rule": "titan_constitutional"}
+                    return {
+                        "escalate": True,
+                        "reason": result.get("escalation_reason"),
+                        "rule": "titan_constitutional",
+                    }
                 return {
                     "ok": result.get("succeeded", False),
                     "exit_code": result.get("exit_code"),
@@ -618,8 +667,7 @@ class Imperium:
 
             return handler
 
-        for k in ("titan.shell", "titan.package", "titan.file",
-                  "titan.service", "titan.process"):
+        for k in ("titan.shell", "titan.package", "titan.file", "titan.service", "titan.process"):
             self.register_handler(k, _titan_dispatch(k))
 
         def _research(task: ImperiumTask) -> dict[str, Any]:
@@ -650,8 +698,9 @@ def main() -> int:
     )
     kern = Imperium()
     kern.start()
-    log.info("IMPERIUM running (ORACLE: %s). Ctrl+C to stop.",
-             "wired" if kern._oracle else "offline")
+    log.info(
+        "IMPERIUM running (ORACLE: %s). Ctrl+C to stop.", "wired" if kern._oracle else "offline"
+    )
     try:
         while True:
             time.sleep(3600)

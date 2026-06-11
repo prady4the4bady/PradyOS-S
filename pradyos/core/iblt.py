@@ -51,8 +51,9 @@ def _is_int(x: Any) -> bool:
 
 
 def _fold(value: Any, salt: bytes) -> int:
-    return int.from_bytes(hashlib.blake2b(repr(value).encode("utf-8"),
-                                          digest_size=8, salt=salt).digest(), "big")
+    return int.from_bytes(
+        hashlib.blake2b(repr(value).encode("utf-8"), digest_size=8, salt=salt).digest(), "big"
+    )
 
 
 class InvertibleBloomLookupTable:
@@ -88,16 +89,18 @@ class InvertibleBloomLookupTable:
     def _key_hash(self, kid: int) -> int:
         # secondary hash of the (already-folded) key id, salted by seed.
         salt = (self._seed & _MASK64).to_bytes(8, "big")
-        return int.from_bytes(hashlib.blake2b(kid.to_bytes(8, "big"),
-                                              digest_size=8, salt=salt).digest(), "big")
+        return int.from_bytes(
+            hashlib.blake2b(kid.to_bytes(8, "big"), digest_size=8, salt=salt).digest(), "big"
+        )
 
     def _cells(self, kid: int) -> list[int]:
         """The ``k`` partitioned cell indices for a folded key id (one per sub-table)."""
         cells = []
         for i in range(self._k):
             salt = (self._seed + i + 1 & _MASK64).to_bytes(8, "big")
-            h = int.from_bytes(hashlib.blake2b(kid.to_bytes(8, "big"),
-                                               digest_size=8, salt=salt).digest(), "big")
+            h = int.from_bytes(
+                hashlib.blake2b(kid.to_bytes(8, "big"), digest_size=8, salt=salt).digest(), "big"
+            )
             cells.append(i * self._sub + (h % self._sub))
         return cells
 
@@ -138,12 +141,12 @@ class InvertibleBloomLookupTable:
         kh = self._key_hash(kid)
         for c in self._cells(kid):
             if self._count[c] == 0 and self._key_sum[c] == 0 and self._khash_sum[c] == 0:
-                return default                                   # empty cell ⇒ key absent
+                return default  # empty cell ⇒ key absent
             if self._count[c] == 1 and self._key_sum[c] == kid and self._khash_sum[c] == kh:
-                return self._val_reg.get(self._val_sum[c], default)   # found
+                return self._val_reg.get(self._val_sum[c], default)  # found
             if self._count[c] == 1 and self._key_sum[c] != kid:
-                return default                                   # a different single key ⇒ absent
-        return default                                           # overloaded ⇒ best-effort absent
+                return default  # a different single key ⇒ absent
+        return default  # overloaded ⇒ best-effort absent
 
     def get(self, key: Any, default: Any = None) -> Any:
         """Return the value for ``key`` (decoded from a pure cell), else ``default``."""
@@ -193,8 +196,10 @@ class InvertibleBloomLookupTable:
             for cc in self._cells(kid):
                 if is_pure(cc):
                     queue.append(cc)
-        complete = all(count[c] == 0 and key_sum[c] == 0 and val_sum[c] == 0
-                       and khash_sum[c] == 0 for c in range(m))
+        complete = all(
+            count[c] == 0 and key_sum[c] == 0 and val_sum[c] == 0 and khash_sum[c] == 0
+            for c in range(m)
+        )
         return results, complete
 
     def list_entries(self) -> list[tuple[Any, Any]]:
@@ -203,8 +208,10 @@ class InvertibleBloomLookupTable:
             decoded, complete = self._peel()
             if not complete:
                 raise IBLTError("could not fully decode (overloaded)")
-            return [(self._key_reg.get(kid, kid), self._val_reg.get(vid, vid))
-                    for _sign, kid, vid in decoded]
+            return [
+                (self._key_reg.get(kid, kid), self._val_reg.get(vid, vid))
+                for _sign, kid, vid in decoded
+            ]
 
     def is_listable(self) -> bool:
         """True iff :meth:`list_entries` would fully decode at the current load."""
@@ -212,13 +219,13 @@ class InvertibleBloomLookupTable:
             return self._peel()[1]
 
     # ── set reconciliation ──────────────────────────────────────────────────────────
-    def _check_compatible(self, other: "InvertibleBloomLookupTable") -> None:
+    def _check_compatible(self, other: InvertibleBloomLookupTable) -> None:
         if not isinstance(other, InvertibleBloomLookupTable):
             raise IBLTError("other must be an IBLT")
         if other._m != self._m or other._k != self._k or other._seed != self._seed:
             raise IBLTError("incompatible IBLTs (cells / hashes / seed differ)")
 
-    def subtract(self, other: "InvertibleBloomLookupTable") -> "InvertibleBloomLookupTable":
+    def subtract(self, other: InvertibleBloomLookupTable) -> InvertibleBloomLookupTable:
         """Return ``self − other`` cellwise — an IBLT of the symmetric difference."""
         self._check_compatible(other)
         out = InvertibleBloomLookupTable(num_cells=self._m, num_hashes=self._k, seed=self._seed)

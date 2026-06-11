@@ -52,7 +52,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class MorrisCounter:
@@ -73,8 +73,8 @@ class MorrisCounter:
             raise MorrisCounterError(seed)
 
     def _init_state(self) -> None:
-        self._c = 0                     # the compact exponent register
-        self._increments = 0            # exact tally (auxiliary — for accuracy reporting only)
+        self._c = 0  # the compact exponent register
+        self._increments = 0  # exact tally (auxiliary — for accuracy reporting only)
         self._rng = random.Random(self._seed)
 
     # ── public API ─────────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ class MorrisCounter:
             return self._estimate_locked()
 
     def _estimate_locked(self) -> float:
-        return (self._base ** self._c - 1.0) / (self._base - 1.0)
+        return (self._base**self._c - 1.0) / (self._base - 1.0)
 
     def relative_error(self) -> float:
         """``|estimate − increments| / increments`` (0.0 before any increment)."""

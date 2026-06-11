@@ -120,10 +120,16 @@ def main(argv: list[str] | None = None) -> int:
         prog="pradyos",
         description="PRADY OS — boot all Phase 0 planes in one process.",
     )
-    parser.add_argument("--headless", action="store_true",
-                        help="do not render the Throne; run all daemons in background")
-    parser.add_argument("--once", action="store_true",
-                        help="render the Throne once and exit (dev/CI only, uses Rich fallback)")
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="do not render the Throne; run all daemons in background",
+    )
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="render the Throne once and exit (dev/CI only, uses Rich fallback)",
+    )
     args = parser.parse_args(argv)
     return boot(headless=args.headless, throne_once=args.once)
 

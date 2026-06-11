@@ -19,9 +19,8 @@ thread-safe via a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 _NULL = -1
 
@@ -39,7 +38,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class PairingHeap:
@@ -201,5 +200,8 @@ class PairingHeap:
     def stats(self) -> dict:
         """Summary: ``size`` / ``nodes`` (handles allocated) / ``min`` (None if empty)."""
         with self._lock:
-            return {"size": self._size, "nodes": len(self._val),
-                    "min": None if self._root == _NULL else self._val[self._root]}
+            return {
+                "size": self._size,
+                "nodes": len(self._val),
+                "min": None if self._root == _NULL else self._val[self._root],
+            }

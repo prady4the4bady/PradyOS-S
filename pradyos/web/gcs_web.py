@@ -41,7 +41,7 @@ def register_gcs_routes(app: Any, gcs: Any | None = None) -> Any:
             return JSONResponse({"error": "items list is required"}, status_code=422)
         try:
             if "p" in body or "seed" in body:
-                gcs.reset(body.get("p"), body.get("seed"))   # reconfigure (validates) + clear
+                gcs.reset(body.get("p"), body.get("seed"))  # reconfigure (validates) + clear
             gcs.build(body["items"])
         except GolombCodedSetError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)

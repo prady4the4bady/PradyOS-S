@@ -73,7 +73,7 @@ class CUSketch:
         data = repr((self._seed, item)).encode("utf-8")
         digest = hashlib.blake2b(data, digest_size=16).digest()
         h1 = int.from_bytes(digest[:8], "big")
-        h2 = int.from_bytes(digest[8:], "big") | 1     # odd → full period under mod w
+        h2 = int.from_bytes(digest[8:], "big") | 1  # odd → full period under mod w
         w = self._w
         return [r * w + ((h1 + r * h2) % w) for r in range(self._d)]
 
@@ -88,7 +88,7 @@ class CUSketch:
             est = min(counters[c] for c in cells)
             target = est + amount
             for c in cells:
-                if counters[c] < target:        # raise only the lagging counters
+                if counters[c] < target:  # raise only the lagging counters
                     counters[c] = target
             self._total += amount
 
@@ -98,8 +98,9 @@ class CUSketch:
             counters = self._counters
             return min(counters[c] for c in self._indices(item))
 
-    def reset(self, width: int | None = None, depth: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, width: int | None = None, depth: int | None = None, seed: int | None = None
+    ) -> None:
         """Clear all counters; optionally reconfigure ``width`` / ``depth`` / ``seed``."""
         with self._lock:
             nw = self._w if width is None else width

@@ -63,14 +63,23 @@ def _is_int(x: Any) -> bool:
 class StableBloomFilter:
     """Streaming Bloom filter that forgets — stable FP rate, bounded FN rate."""
 
-    def __init__(self, num_cells: int = 10000, num_hashes: int = 5, max_value: int = 3,
-                 decrement: int | None = None, seed: int = 0) -> None:
+    def __init__(
+        self,
+        num_cells: int = 10000,
+        num_hashes: int = 5,
+        max_value: int = 3,
+        decrement: int | None = None,
+        seed: int = 0,
+    ) -> None:
         self._validate(num_cells, num_hashes, max_value, decrement, seed)
         self._m = num_cells
         self._k = num_hashes
         self._max = max_value
-        self._p = self._default_decrement(num_hashes, max_value, num_cells) \
-            if decrement is None else decrement
+        self._p = (
+            self._default_decrement(num_hashes, max_value, num_cells)
+            if decrement is None
+            else decrement
+        )
         self._seed = seed
         self._lock = threading.Lock()
         self._init_state()
@@ -81,8 +90,9 @@ class StableBloomFilter:
         return max(1, min(num_hashes * max_value, num_cells))
 
     @staticmethod
-    def _validate(num_cells: Any, num_hashes: Any, max_value: Any,
-                  decrement: Any, seed: Any) -> None:
+    def _validate(
+        num_cells: Any, num_hashes: Any, max_value: Any, decrement: Any, seed: Any
+    ) -> None:
         if not _is_pos_int(num_cells):
             raise StableBloomError(num_cells)
         if not _is_pos_int(num_hashes):
@@ -147,9 +157,14 @@ class StableBloomFilter:
         nonzero = sum(1 for c in self._cells if c > 0)
         return round(nonzero / self._m, 6)
 
-    def reset(self, num_cells: int | None = None, num_hashes: int | None = None,
-              max_value: int | None = None, decrement: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self,
+        num_cells: int | None = None,
+        num_hashes: int | None = None,
+        max_value: int | None = None,
+        decrement: int | None = None,
+        seed: int | None = None,
+    ) -> None:
         """Clear all cells; optionally reconfigure. Re-seeds the eviction RNG."""
         with self._lock:
             nc = self._m if num_cells is None else num_cells

@@ -37,19 +37,19 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _ROOT = Path(__file__).resolve().parents[2]
-_STATE_DIR = Path(os.environ.get("PRADYOS_STATE_PATH",
-                                  str(_ROOT / "var" / "state")))
+_STATE_DIR = Path(os.environ.get("PRADYOS_STATE_PATH", str(_ROOT / "var" / "state")))
 
-_CHECKPOINT   = _STATE_DIR / "imperium_tasks.jsonl"
-_DECISIONS    = _STATE_DIR / "sovereign_decisions.jsonl"
-_SCHEDULES    = _STATE_DIR / "schedules.jsonl"
+_CHECKPOINT = _STATE_DIR / "imperium_tasks.jsonl"
+_DECISIONS = _STATE_DIR / "sovereign_decisions.jsonl"
+_SCHEDULES = _STATE_DIR / "schedules.jsonl"
 
-_WARDEN_HOST  = os.environ.get("PRADYOS_WARDEN_HOST", "localhost")
-_WARDEN_PORT  = int(os.environ.get("PRADYOS_WARDEN_PORT", "8765"))
+_WARDEN_HOST = os.environ.get("PRADYOS_WARDEN_HOST", "localhost")
+_WARDEN_PORT = int(os.environ.get("PRADYOS_WARDEN_PORT", "8765"))
 
 # ---------------------------------------------------------------------------
 # Checkpoint reader
 # ---------------------------------------------------------------------------
+
 
 def _load_checkpoint() -> dict[str, dict[str, Any]]:
     latest: dict[str, dict[str, Any]] = {}
@@ -75,9 +75,11 @@ def _load_checkpoint() -> dict[str, dict[str, Any]]:
 # WARDEN GRID HTTP
 # ---------------------------------------------------------------------------
 
+
 def _warden_health() -> dict[str, Any] | None:
     try:
         import urllib.request
+
         url = f"http://{_WARDEN_HOST}:{_WARDEN_PORT}/health"
         with urllib.request.urlopen(url, timeout=2) as resp:
             return json.loads(resp.read())
@@ -89,6 +91,7 @@ def _warden_health() -> dict[str, Any] | None:
 # Decisions writer
 # ---------------------------------------------------------------------------
 
+
 def _write_decision(decision: dict[str, Any]) -> None:
     _STATE_DIR.mkdir(parents=True, exist_ok=True)
     decision["at"] = time.time()
@@ -99,6 +102,7 @@ def _write_decision(decision: dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 # Task-ID prefix resolver
 # ---------------------------------------------------------------------------
+
 
 def _resolve_task_id(raw: str, tasks: dict[str, Any]) -> str | None:
     if raw in tasks:
@@ -112,6 +116,7 @@ def _resolve_task_id(raw: str, tasks: dict[str, Any]) -> str | None:
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
+
 
 def cmd_status(args: argparse.Namespace) -> int:
     print("PRADY OS -- SOVEREIGN STATUS")
@@ -158,8 +163,10 @@ def cmd_approve(args: argparse.Namespace) -> int:
 
     rec = tasks[task_id]
     if rec["state"] != "ESCALATED":
-        print(f"WARNING: task {task_id[:8]} is in state {rec['state']}, not ESCALATED.",
-              file=sys.stderr)
+        print(
+            f"WARNING: task {task_id[:8]} is in state {rec['state']}, not ESCALATED.",
+            file=sys.stderr,
+        )
 
     approver = getattr(args, "approver", "sovereign")
     _write_decision({"action": "approve", "task_id": task_id, "approver": approver})
@@ -176,10 +183,11 @@ def cmd_reject(args: argparse.Namespace) -> int:
         return 1
 
     rec = tasks[task_id]
-    reason  = getattr(args, "reason", "")
+    reason = getattr(args, "reason", "")
     approver = getattr(args, "approver", "sovereign")
-    _write_decision({"action": "reject", "task_id": task_id,
-                     "approver": approver, "reason": reason})
+    _write_decision(
+        {"action": "reject", "task_id": task_id, "approver": approver, "reason": reason}
+    )
     print(f"REJECTED  [{task_id[:8]}]  {rec.get('intent') or rec['kind']}  (by {approver})")
     if reason:
         print(f"  Reason: {reason}")
@@ -188,9 +196,10 @@ def cmd_reject(args: argparse.Namespace) -> int:
 
 def cmd_run_campaign(args: argparse.Namespace) -> int:
     import asyncio
+
     try:
-        from pradyos.campaign.registry import CampaignRegistry
         from pradyos.campaign.engine import CampaignEngine
+        from pradyos.campaign.registry import CampaignRegistry
     except ImportError as e:
         print(f"ERROR: campaign engine unavailable: {e}", file=sys.stderr)
         return 1
@@ -240,10 +249,10 @@ def cmd_list_campaigns(args: argparse.Namespace) -> int:
     print(f"{'ID':10}  {'NAME':30}  {'STATUS':15}  {'PROGRESS':10}")
     print("-" * 72)
     for c in sorted(campaigns, key=lambda x: x.created_at, reverse=True):
-        cid   = c.campaign_id[:8]
-        prog  = c.progress()
+        cid = c.campaign_id[:8]
+        prog = c.progress()
         total = sum(prog.values())
-        pstr  = f"{prog.get('succeeded', 0)}/{total}"
+        pstr = f"{prog.get('succeeded', 0)}/{total}"
         print(f"{cid:10}  {c.name[:30]:30}  {c.status.value:15}  {pstr:10}")
     return 0
 
@@ -256,7 +265,7 @@ def cmd_schedule(args: argparse.Namespace) -> int:
         return 1
 
     sched = CampaignScheduler(state_dir=_SCHEDULES.parent)
-    sub   = args.schedule_cmd
+    sub = args.schedule_cmd
 
     if sub == "list":
         schedules = sched.list_schedules()
@@ -266,10 +275,10 @@ def cmd_schedule(args: argparse.Namespace) -> int:
         print(f"{'ID':10}  {'NAME':25}  {'CRON':15}  {'LAST RUN':20}  EN")
         print("-" * 80)
         for s in schedules:
-            sid   = s["schedule_id"][:8]
-            lr    = s.get("last_run")
+            sid = s["schedule_id"][:8]
+            lr = s.get("last_run")
             lrstr = time.strftime("%Y-%m-%d %H:%M", time.localtime(lr)) if lr else "never"
-            en    = "yes" if s.get("enabled", True) else "no"
+            en = "yes" if s.get("enabled", True) else "no"
             print(f"{sid:10}  {s['name'][:25]:25}  {s['cron']:15}  {lrstr:20}  {en}")
         return 0
 
@@ -310,6 +319,7 @@ def cmd_schedule(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -360,12 +370,10 @@ def build_parser() -> argparse.ArgumentParser:
     sc_sub.add_parser("list", help="List all schedules")
 
     p_add = sc_sub.add_parser("add", help="Add a cron schedule")
-    p_add.add_argument("--name",   required=True, help="Human-readable name")
-    p_add.add_argument("--cron",   required=True,
-                       help="5-field cron expression (e.g. '0 6 * * *')")
+    p_add.add_argument("--name", required=True, help="Human-readable name")
+    p_add.add_argument("--cron", required=True, help="5-field cron expression (e.g. '0 6 * * *')")
     p_add.add_argument("--intent", required=True, help="Campaign intent description")
-    p_add.add_argument("--tasks",  default=None,
-                       help="JSON list of task payloads (optional)")
+    p_add.add_argument("--tasks", default=None, help="JSON list of task payloads (optional)")
 
     p_rm = sc_sub.add_parser("remove", help="Remove a schedule")
     p_rm.add_argument("schedule_id", help="Schedule ID or unique prefix")
@@ -377,7 +385,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args   = parser.parse_args(argv)
+    args = parser.parse_args(argv)
     return args.func(args)
 
 

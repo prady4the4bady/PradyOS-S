@@ -36,8 +36,9 @@ def register_jump_routes(app: Any, jump_hash: Any | None = None) -> Any:
 
     @app.get("/api/v1/jump/assign")
     async def api_jump_assign(key: str) -> JSONResponse:
-        return JSONResponse({"key": key, "bucket": jump_hash.assign(key),
-                            "num_buckets": jump_hash.num_buckets})
+        return JSONResponse(
+            {"key": key, "bucket": jump_hash.assign(key), "num_buckets": jump_hash.num_buckets}
+        )
 
     @app.post("/api/v1/jump/buckets")
     async def api_jump_set_buckets(request: Request) -> JSONResponse:

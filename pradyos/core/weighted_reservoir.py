@@ -45,7 +45,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class WeightedReservoir:
@@ -59,9 +59,9 @@ class WeightedReservoir:
         self._k = k
         self._seed = seed
         self._rng = random.Random(seed)
-        self._heap: list[tuple] = []          # min-heap of (key, counter, item)
-        self._counter = 0                     # tiebreaker so items are never compared
-        self._n = 0                           # total items seen
+        self._heap: list[tuple] = []  # min-heap of (key, counter, item)
+        self._counter = 0  # tiebreaker so items are never compared
+        self._n = 0  # total items seen
         self._lock = threading.Lock()
 
     # ── internal (run under the lock; never re-acquire) ──────────────────────────

@@ -3,8 +3,8 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 
 @dataclass
@@ -115,8 +115,7 @@ class PubSubBroker:
                 if topic not in self._topics:
                     return []
                 sub_ids = list(self._topic_subs.get(topic, []))
-                return [self._subscriptions[sid] for sid in sub_ids
-                        if sid in self._subscriptions]
+                return [self._subscriptions[sid] for sid in sub_ids if sid in self._subscriptions]
             return list(self._subscriptions.values())
 
     def count_subscribers(self, topic: str) -> int:

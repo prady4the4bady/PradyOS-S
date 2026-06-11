@@ -21,9 +21,8 @@ from typing import Any
 
 from pradyos.core.audit import AuditLog, get_audit_log
 from pradyos.core.bus import EventBus, get_bus
-from pradyos.core.types import TaskState
 from pradyos.imperium.state_core import StateCore
-from pradyos.imperium.task import ImperiumTask, TaskRecord
+from pradyos.imperium.task import TaskRecord
 from pradyos.titan_ops.rollback import RollbackRegistry
 
 log = logging.getLogger("pradyos.imperium.recovery")
@@ -107,6 +106,7 @@ class RecoveryCore:
         try:
             from pradyos.titan_ops.executor import TitanExecutor
             from pradyos.titan_ops.instruction import InstructionKind, TitanInstruction
+
             ex = TitanExecutor(audit=self.audit, bus=self.bus)
             heal_instr = TitanInstruction(
                 agent_id="imperium.recovery",
@@ -121,8 +121,7 @@ class RecoveryCore:
                     agent_id="imperium.recovery",
                     kind="recovery",
                     summary=f"self-heal succeeded for {rec.spec.task_id}",
-                    detail={"heal_command": heal_cmd,
-                            "stdout_tail": result.stdout[-500:]},
+                    detail={"heal_command": heal_cmd, "stdout_tail": result.stdout[-500:]},
                     correlation_id=rec.spec.task_id,
                 )
                 return True
@@ -134,8 +133,13 @@ class RecoveryCore:
 
     def _schedule_retry(self, rec: TaskRecord) -> None:
         backoff = min(rec.spec.retry_backoff_sec * (2 ** max(0, rec.attempts - 1)), 30.0)
-        log.info("retry %d/%d for %s in %.1fs",
-                 rec.attempts, rec.spec.max_retries, rec.spec.task_id, backoff)
+        log.info(
+            "retry %d/%d for %s in %.1fs",
+            rec.attempts,
+            rec.spec.max_retries,
+            rec.spec.task_id,
+            backoff,
+        )
         if backoff > 0:
             time.sleep(backoff)
         self.state.mark_queued(rec, reason=f"retry {rec.attempts}/{rec.spec.max_retries}")
@@ -163,6 +167,7 @@ class RecoveryCore:
         try:
             from pradyos.titan_ops.executor import TitanExecutor
             from pradyos.titan_ops.instruction import InstructionKind, TitanInstruction
+
             ex = TitanExecutor(audit=self.audit, bus=self.bus)
             rb_instr = TitanInstruction(
                 agent_id="imperium.recovery",

@@ -7,7 +7,7 @@ with full stdout/stderr capture and audit attribution.
 It must feel like root-level competence with constitutional discipline.
 """
 
-from pradyos.titan_ops.executor import TitanExecutor, ExecutionResult
+from pradyos.titan_ops.executor import ExecutionResult, TitanExecutor
 from pradyos.titan_ops.instruction import (
     InstructionKind,
     TitanInstruction,

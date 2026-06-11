@@ -3,25 +3,25 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pradyos.core.signal_aggregator import SignalAggregator, SignalPoint
-    from pradyos.core.watchpoint import WatchpointSystem
-    from pradyos.core.decision_journal import DecisionJournal
     from pradyos.core.bus_inspector import BusInspector
     from pradyos.core.capability_registry import CapabilityRegistry
+    from pradyos.core.decision_journal import DecisionJournal
     from pradyos.core.health_scorecard import HealthScorecard
     from pradyos.core.reactor import ReactorEngine
+    from pradyos.core.signal_aggregator import SignalAggregator, SignalPoint
+    from pradyos.core.watchpoint import WatchpointSystem
 
 
 class SovereignBus:
     def __init__(
         self,
-        signal_aggregator: "SignalAggregator | None" = None,
-        watchpoint_system: "WatchpointSystem | None" = None,
-        decision_journal: "DecisionJournal | None" = None,
-        bus_inspector: "BusInspector | None" = None,
-        capability_registry: "CapabilityRegistry | None" = None,
-        health_scorecard: "HealthScorecard | None" = None,
-        reactor_engine: "ReactorEngine | None" = None,
+        signal_aggregator: SignalAggregator | None = None,
+        watchpoint_system: WatchpointSystem | None = None,
+        decision_journal: DecisionJournal | None = None,
+        bus_inspector: BusInspector | None = None,
+        capability_registry: CapabilityRegistry | None = None,
+        health_scorecard: HealthScorecard | None = None,
+        reactor_engine: ReactorEngine | None = None,
     ) -> None:
         self._signal_aggregator = signal_aggregator
         self._watchpoint_system = watchpoint_system
@@ -37,8 +37,8 @@ class SovereignBus:
         self,
         name: str,
         value: float,
-        timestamp: "float | None" = None,
-    ) -> "SignalPoint | None":
+        timestamp: float | None = None,
+    ) -> SignalPoint | None:
         pt = None
         if self._signal_aggregator is not None:
             pt = self._signal_aggregator.record(name, value, timestamp)
@@ -64,7 +64,7 @@ class SovereignBus:
 
     # ── WIRE 2 ────────────────────────────────────────────────────────────────
 
-    def record_bus_event(self, topic: str, payload: "dict | None" = None) -> None:
+    def record_bus_event(self, topic: str, payload: dict | None = None) -> None:
         if self._bus_inspector is not None:
             self._bus_inspector.record(topic, payload or {})
         if self._signal_aggregator is not None:

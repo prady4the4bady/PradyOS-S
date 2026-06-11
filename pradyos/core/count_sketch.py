@@ -29,7 +29,8 @@ from __future__ import annotations
 import hashlib
 import statistics
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class CountSketchError(Exception):
@@ -51,9 +52,14 @@ def _is_int(x: Any) -> bool:
 class CountSketch:
     """Unbiased frequency sketch via signed hashes and a median estimator."""
 
-    def __init__(self, depth: int = 5, width: int = 2048, seed: int = 0,
-                 bucket_fn: Callable[[int, Any], int] | None = None,
-                 sign_fn: Callable[[int, Any], int] | None = None) -> None:
+    def __init__(
+        self,
+        depth: int = 5,
+        width: int = 2048,
+        seed: int = 0,
+        bucket_fn: Callable[[int, Any], int] | None = None,
+        sign_fn: Callable[[int, Any], int] | None = None,
+    ) -> None:
         if not _is_pos_int(depth):
             raise CountSketchError(depth)
         if not _is_pos_int(width):
@@ -76,19 +82,27 @@ class CountSketch:
         return int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), "big")
 
     def _bucket(self, i: int, element: Any) -> int:
-        raw = self._bucket_fn(i, element) if self._bucket_fn is not None \
+        raw = (
+            self._bucket_fn(i, element)
+            if self._bucket_fn is not None
             else self._digest("bucket", i, element)
+        )
         return raw % self._width
 
     def _sign(self, i: int, element: Any) -> int:
-        raw = self._sign_fn(i, element) if self._sign_fn is not None \
+        raw = (
+            self._sign_fn(i, element)
+            if self._sign_fn is not None
             else self._digest("sign", i, element)
+        )
         return 1 if raw % 2 == 0 else -1
 
     # ── internal (run under the lock; never re-acquire) ──────────────────────────
     def _estimate_locked(self, element: Any) -> int:
-        readings = [self._table[i][self._bucket(i, element)] * self._sign(i, element)
-                    for i in range(self._depth)]
+        readings = [
+            self._table[i][self._bucket(i, element)] * self._sign(i, element)
+            for i in range(self._depth)
+        ]
         return int(statistics.median(readings))
 
     # ── mutation ─────────────────────────────────────────────────────────────────
@@ -102,8 +116,9 @@ class CountSketch:
             self._total += count
             self._seen.add(element)
 
-    def reset(self, depth: int | None = None, width: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, depth: int | None = None, width: int | None = None, seed: int | None = None
+    ) -> None:
         """Clear the table and tracking dict; optionally reconfigure."""
         with self._lock:
             if depth is not None:
@@ -130,7 +145,7 @@ class CountSketch:
 
     def heavy_hitters(self, threshold: float) -> list[dict]:
         """Elements whose estimate exceeds ``threshold · total_count``, highest first."""
-        if not isinstance(threshold, (int, float)) or isinstance(threshold, bool):
+        if not isinstance(threshold, int | float) or isinstance(threshold, bool):
             raise CountSketchError(threshold)
         with self._lock:
             cutoff = threshold * self._total

@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.bloomier import BloomierFilter, BloomierError
+from pradyos.core.bloomier import BloomierError, BloomierFilter
 
 
 def register_bloomier_routes(app: Any, bloomier: Any | None = None) -> Any:

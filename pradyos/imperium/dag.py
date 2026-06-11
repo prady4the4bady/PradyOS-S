@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 from collections import defaultdict, deque
-from typing import Iterable
+from collections.abc import Iterable
 
 from pradyos.core.types import TaskState
 from pradyos.imperium.task import TaskRecord
@@ -30,9 +30,7 @@ class DependencyGraph:
                 if parent == task_id:
                     raise CycleDetected(f"self-dependency on {task_id!r}")
                 if self._would_cycle(parent, task_id):
-                    raise CycleDetected(
-                        f"adding {parent}→{task_id} would form a cycle"
-                    )
+                    raise CycleDetected(f"adding {parent}→{task_id} would form a cycle")
                 self._edges[parent].add(task_id)
                 self._reverse[task_id].add(parent)
 
@@ -54,7 +52,9 @@ class DependencyGraph:
     def topological_order(self) -> list[str]:
         with self._lock:
             indeg: dict[str, int] = defaultdict(int)
-            nodes = set(self._edges) | {n for s in self._edges.values() for n in s} | set(self._reverse)
+            nodes = (
+                set(self._edges) | {n for s in self._edges.values() for n in s} | set(self._reverse)
+            )
             for n in nodes:
                 indeg[n] = len(self._reverse.get(n, set()))
             q = deque([n for n in nodes if indeg[n] == 0])

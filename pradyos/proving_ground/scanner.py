@@ -18,7 +18,6 @@ Severity levels:
 from __future__ import annotations
 
 import ast
-import os
 import re
 from pathlib import Path
 from typing import Any
@@ -33,11 +32,17 @@ from pradyos.proving_ground.verdict import ConstitutionScan
 _REGEX_PATTERNS: list[tuple[re.Pattern, str, str]] = [
     # Hard violations
     (re.compile(r"\bos\.system\s*\(", re.I), "HARD", "os.system() bypasses TITAN OPS"),
-    (re.compile(r"\bsubprocess\.(call|run|Popen|check_output|check_call)\s*\(", re.I),
-     "HARD", "raw subprocess call bypasses TITAN OPS"),
+    (
+        re.compile(r"\bsubprocess\.(call|run|Popen|check_output|check_call)\s*\(", re.I),
+        "HARD",
+        "raw subprocess call bypasses TITAN OPS",
+    ),
     (re.compile(r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"), "HARD", "private key literal"),
-    (re.compile(r"(?i)(password|passwd|secret|token)\s*=\s*['\"][^'\"]{6,}['\"]"),
-     "SOFT", "hard-coded credential literal"),
+    (
+        re.compile(r"(?i)(password|passwd|secret|token)\s*=\s*['\"][^'\"]{6,}['\"]"),
+        "SOFT",
+        "hard-coded credential literal",
+    ),
     # Soft violations
     (re.compile(r"\beval\s*\("), "SOFT", "eval() call detected"),
     (re.compile(r"\bexec\s*\("), "SOFT", "exec() call detected"),
@@ -52,21 +57,31 @@ _REGEX_PATTERNS: list[tuple[re.Pattern, str, str]] = [
 
 # AST-based: dangerous top-level imports
 _BLOCKED_IMPORTS: set[str] = {
-    "ctypes", "cffi",          # native FFI — can bypass anything
-    "winreg", "wincon",        # Windows registry direct writes
-    "resource",                # POSIX resource limits manipulation
+    "ctypes",
+    "cffi",  # native FFI — can bypass anything
+    "winreg",
+    "wincon",  # Windows registry direct writes
+    "resource",  # POSIX resource limits manipulation
 }
 
 _WARN_IMPORTS: set[str] = {
-    "socket", "ssl", "http", "urllib", "requests", "httpx", "aiohttp",
-    "paramiko", "fabric",      # SSH libraries
-    "docker",                  # Docker SDK direct
+    "socket",
+    "ssl",
+    "http",
+    "urllib",
+    "requests",
+    "httpx",
+    "aiohttp",
+    "paramiko",
+    "fabric",  # SSH libraries
+    "docker",  # Docker SDK direct
 }
 
 
 # ---------------------------------------------------------------------------
 # Scanner
 # ---------------------------------------------------------------------------
+
 
 def scan_directory(workspace: str, max_files: int = 500) -> ConstitutionScan:
     """Walk ``workspace`` and scan every .py file for constitutional patterns.
@@ -110,36 +125,43 @@ def scan_directory(workspace: str, max_files: int = 500) -> ConstitutionScan:
         try:
             tree = ast.parse(source, filename=rel)
         except SyntaxError as e:
-            result.warnings.append({
-                "file": rel,
-                "label": f"syntax error: {e}",
-                "severity": "WARN",
-                "line": e.lineno,
-            })
+            result.warnings.append(
+                {
+                    "file": rel,
+                    "label": f"syntax error: {e}",
+                    "severity": "WARN",
+                    "line": e.lineno,
+                }
+            )
             continue
 
         for node in ast.walk(tree):
-            if isinstance(node, (ast.Import, ast.ImportFrom)):
+            if isinstance(node, ast.Import | ast.ImportFrom):
                 names = (
-                    [node.module or ""] if isinstance(node, ast.ImportFrom)
+                    [node.module or ""]
+                    if isinstance(node, ast.ImportFrom)
                     else [alias.name for alias in node.names]
                 )
                 for name in names:
                     top = name.split(".")[0]
                     if top in _BLOCKED_IMPORTS:
-                        result.violations.append({
-                            "file": rel,
-                            "line": node.lineno,
-                            "label": f"blocked import: {top!r}",
-                            "severity": "SOFT",
-                        })
+                        result.violations.append(
+                            {
+                                "file": rel,
+                                "line": node.lineno,
+                                "label": f"blocked import: {top!r}",
+                                "severity": "SOFT",
+                            }
+                        )
                     elif top in _WARN_IMPORTS:
-                        result.warnings.append({
-                            "file": rel,
-                            "line": node.lineno,
-                            "label": f"network import without ORACLE routing: {top!r}",
-                            "severity": "WARN",
-                        })
+                        result.warnings.append(
+                            {
+                                "file": rel,
+                                "line": node.lineno,
+                                "label": f"network import without ORACLE routing: {top!r}",
+                                "severity": "WARN",
+                            }
+                        )
 
     return result
 
@@ -198,6 +220,7 @@ def scan_dependencies(workspace: str) -> tuple[str, int, list[dict[str, Any]]]:
     if pkgjson.exists():
         manager = "npm"
         import json
+
         try:
             data = json.loads(pkgjson.read_text(errors="replace"))
             deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}

@@ -21,9 +21,8 @@ Pure stdlib; deterministic.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class VanEmdeBoasError(Exception):
@@ -54,20 +53,20 @@ class _VEBNode:
 
     def __init__(self, u: int) -> None:
         self.u = u
-        self.min: Optional[int] = None
-        self.max: Optional[int] = None
+        self.min: int | None = None
+        self.max: int | None = None
         if u <= 2:
             self.lb = 0
             self.lower = 0
             self.upper = 0
-            self.summary: Optional[_VEBNode] = None
+            self.summary: _VEBNode | None = None
             self.clusters = None
         else:
-            k = u.bit_length() - 1            # u == 2**k
+            k = u.bit_length() - 1  # u == 2**k
             self.lb = k // 2
-            self.lower = 1 << self.lb         # cluster universe
-            self.upper = u >> self.lb         # number of clusters = summary universe
-            self.summary = None               # created lazily
+            self.lower = 1 << self.lb  # cluster universe
+            self.upper = u >> self.lb  # number of clusters = summary universe
+            self.summary = None  # created lazily
             self.clusters: dict[int, _VEBNode] = {}
 
     def high(self, x: int) -> int:
@@ -79,14 +78,14 @@ class _VEBNode:
     def index(self, h: int, l: int) -> int:
         return (h << self.lb) | l
 
-    def _cluster(self, h: int) -> "_VEBNode":
+    def _cluster(self, h: int) -> _VEBNode:
         c = self.clusters.get(h)
         if c is None:
             c = _VEBNode(self.lower)
             self.clusters[h] = c
         return c
 
-    def _summary(self) -> "_VEBNode":
+    def _summary(self) -> _VEBNode:
         if self.summary is None:
             self.summary = _VEBNode(self.upper)
         return self.summary
@@ -115,7 +114,7 @@ class _VEBNode:
                 else:
                     self.max = x
                 return True
-            return False                                  # both already present
+            return False  # both already present
 
         if self.min is None:
             self.min = self.max = x
@@ -123,7 +122,7 @@ class _VEBNode:
         if x == self.min:
             return False
         if x < self.min:
-            self.min, x = x, self.min                     # push old min down (new in clusters)
+            self.min, x = x, self.min  # push old min down (new in clusters)
         elif x == self.max:
             return False
 
@@ -132,7 +131,7 @@ class _VEBNode:
         c = self._cluster(h)
         if c.min is None:
             self._summary().insert(h)
-            c.min = c.max = l                             # O(1) empty insert
+            c.min = c.max = l  # O(1) empty insert
             newly = True
         else:
             newly = c.insert(l)
@@ -146,11 +145,11 @@ class _VEBNode:
             self.min = self.max = None
             return
         if self.u == 2:
-            self.min = self.max = 1 - x                   # two present → leave the other
+            self.min = self.max = 1 - x  # two present → leave the other
             return
 
         if x == self.min:
-            fc = self.summary.min                         # summary non-None (≥2 elements)
+            fc = self.summary.min  # summary non-None (≥2 elements)
             x = self.index(fc, self.clusters[fc].min)
             self.min = x
 
@@ -158,7 +157,7 @@ class _VEBNode:
         l = self.low(x)
         c = self.clusters[h]
         c.delete(l)
-        if c.min is None:                                 # cluster emptied
+        if c.min is None:  # cluster emptied
             self.summary.delete(h)
             del self.clusters[h]
             if x == self.max:
@@ -171,7 +170,7 @@ class _VEBNode:
             self.max = self.index(h, c.max)
 
     # ── successor / predecessor ──────────────────────────────────────────────────────────
-    def successor(self, x: int) -> Optional[int]:
+    def successor(self, x: int) -> int | None:
         if self.u == 2:
             if x == 0 and self.max == 1:
                 return 1
@@ -189,7 +188,7 @@ class _VEBNode:
             return None
         return self.index(sc, self.clusters[sc].min)
 
-    def predecessor(self, x: int) -> Optional[int]:
+    def predecessor(self, x: int) -> int | None:
         if self.u == 2:
             if x == 1 and self.min == 0:
                 return 0
@@ -205,7 +204,7 @@ class _VEBNode:
         pc = self.summary.predecessor(h) if self.summary is not None else None
         if pc is None:
             if self.min is not None and x > self.min:
-                return self.min                          # min lives outside any cluster
+                return self.min  # min lives outside any cluster
             return None
         return self.index(pc, self.clusters[pc].max)
 
@@ -254,23 +253,23 @@ class VanEmdeBoas:
         with self._lock:
             return self._root.member(x)
 
-    def minimum(self) -> Optional[int]:
+    def minimum(self) -> int | None:
         """Smallest element, or None if empty."""
         with self._lock:
             return self._root.min
 
-    def maximum(self) -> Optional[int]:
+    def maximum(self) -> int | None:
         """Largest element, or None if empty."""
         with self._lock:
             return self._root.max
 
-    def successor(self, x: int) -> Optional[int]:
+    def successor(self, x: int) -> int | None:
         """Smallest element strictly greater than ``x``, or None."""
         self._check(x)
         with self._lock:
             return self._root.successor(x)
 
-    def predecessor(self, x: int) -> Optional[int]:
+    def predecessor(self, x: int) -> int | None:
         """Largest element strictly less than ``x``, or None."""
         self._check(x)
         with self._lock:
@@ -301,5 +300,9 @@ class VanEmdeBoas:
     def stats(self) -> dict:
         """Summary: ``size`` / ``universe`` / ``min`` / ``max``."""
         with self._lock:
-            return {"size": self._size, "universe": self._u,
-                    "min": self._root.min, "max": self._root.max}
+            return {
+                "size": self._size,
+                "universe": self._u,
+                "min": self._root.min,
+                "max": self._root.max,
+            }

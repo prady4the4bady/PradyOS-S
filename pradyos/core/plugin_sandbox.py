@@ -5,6 +5,7 @@ Phase 26 — Sovereign Plugin Sandbox
 Lightweight plugin loader with manifest validation and hot-reload.
 All methods are thread-safe via a single threading.Lock.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -32,10 +33,10 @@ class LoadedPlugin:
     """Represents a plugin file that has been processed by the sandbox."""
 
     manifest: PluginManifest
-    path: str         # absolute path to the .py file
+    path: str  # absolute path to the .py file
     loaded_at: float  # time.time() when last loaded
-    status: str       # "active" | "error"
-    error: str | None # error message if status == "error"
+    status: str  # "active" | "error"
+    error: str | None  # error message if status == "error"
 
     def to_dict(self) -> dict:
         return {
@@ -51,9 +52,7 @@ class PluginSandbox:
     """Discover, load, and manage Python plugins from a directory."""
 
     def __init__(self, plugin_dir: str | Path | None = None) -> None:
-        self.plugin_dir: Path = (
-            Path(plugin_dir) if plugin_dir is not None else Path("plugins")
-        )
+        self.plugin_dir: Path = Path(plugin_dir) if plugin_dir is not None else Path("plugins")
         self.plugins: dict[str, LoadedPlugin] = {}
         self._lock = threading.Lock()
 
@@ -91,9 +90,7 @@ class PluginSandbox:
         ts = time.time()
 
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"_pradyos_plugin_{abs_path}", abs_path
-            )
+            spec = importlib.util.spec_from_file_location(f"_pradyos_plugin_{abs_path}", abs_path)
             if spec is None or spec.loader is None:
                 raise ImportError(f"Cannot create module spec for {abs_path}")
 

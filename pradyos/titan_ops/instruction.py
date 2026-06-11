@@ -80,7 +80,7 @@ class TitanInstruction:
 
 def parse_instruction(payload: dict[str, Any] | str | bytes) -> TitanInstruction:
     """Parse a wire-format instruction. Raises ``ValueError`` on schema breach."""
-    if isinstance(payload, (str, bytes)):
+    if isinstance(payload, str | bytes):
         payload = json.loads(payload)
     if not isinstance(payload, dict):
         raise ValueError("instruction payload must be a JSON object")

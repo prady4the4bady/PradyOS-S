@@ -18,6 +18,7 @@ class AdmissionStatus(str, Enum):
 @dataclass
 class TestRun:
     """Result of running a test suite command."""
+
     command: str
     exit_code: int | None
     stdout_tail: str
@@ -44,6 +45,7 @@ class TestRun:
 @dataclass
 class ConstitutionScan:
     """Result of scanning source files for constitutional violations."""
+
     violations: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[dict[str, Any]] = field(default_factory=list)
     scanned_files: int = 0
@@ -64,6 +66,7 @@ class ConstitutionScan:
 @dataclass
 class DependencyAudit:
     """Result of scanning declared dependencies."""
+
     flagged: list[dict[str, Any]] = field(default_factory=list)
     total_deps: int = 0
     manager: str = "unknown"
@@ -86,8 +89,8 @@ class AdmissionVerdict:
     """Final verdict produced by the Proving Ground pipeline."""
 
     repo_url: str
-    repo_ref: str                    # branch / tag / commit
-    workspace: str                   # temp dir used
+    repo_ref: str  # branch / tag / commit
+    workspace: str  # temp dir used
     status: AdmissionStatus = AdmissionStatus.PENDING
     test_run: TestRun | None = None
     constitution_scan: ConstitutionScan | None = None
@@ -110,7 +113,9 @@ class AdmissionVerdict:
             "workspace": self.workspace,
             "status": self.status.value,
             "test_run": self.test_run.to_dict() if self.test_run else None,
-            "constitution_scan": self.constitution_scan.to_dict() if self.constitution_scan else None,
+            "constitution_scan": self.constitution_scan.to_dict()
+            if self.constitution_scan
+            else None,
             "dependency_audit": self.dependency_audit.to_dict() if self.dependency_audit else None,
             "reason": self.reason,
             "started_at": self.started_at,

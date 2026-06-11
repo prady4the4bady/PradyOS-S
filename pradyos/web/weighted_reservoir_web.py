@@ -39,11 +39,13 @@ def register_weighted_reservoir_routes(app: Any, reservoir: Any | None = None) -
         reservoir = WeightedReservoir(DEFAULT_K)
 
     @app.post("/api/v1/sample/update")
-    async def api_sample_update(item: str,
-                                weight: float = Query(default=1.0, gt=0.0)) -> JSONResponse:
+    async def api_sample_update(
+        item: str, weight: float = Query(default=1.0, gt=0.0)
+    ) -> JSONResponse:
         reservoir.update(str(item), weight)
-        return JSONResponse({"item": str(item), "weight": weight,
-                             "n": reservoir.n, "size": reservoir.size})
+        return JSONResponse(
+            {"item": str(item), "weight": weight, "n": reservoir.n, "size": reservoir.size}
+        )
 
     @app.get("/api/v1/sample/sample")
     async def api_sample_sample() -> JSONResponse:

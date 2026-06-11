@@ -44,8 +44,13 @@ def register_prioritysample_routes(app: Any, priority_sample: Any | None = None)
             sampled = priority_sample.add(body["key"], body["weight"], body.get("category"))
         except PrioritySampleError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"key": body["key"], "sampled": sampled,
-                             "total_estimate": priority_sample.stats()["total_estimate"]})
+        return JSONResponse(
+            {
+                "key": body["key"],
+                "sampled": sampled,
+                "total_estimate": priority_sample.stats()["total_estimate"],
+            }
+        )
 
     @app.post("/api/v1/prioritysample/add_many")
     async def api_ps_add_many(request: Request) -> JSONResponse:
@@ -56,8 +61,9 @@ def register_prioritysample_routes(app: Any, priority_sample: Any | None = None)
             added = priority_sample.add_many(body["items"])
         except PrioritySampleError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"added": added,
-                             "total_estimate": priority_sample.stats()["total_estimate"]})
+        return JSONResponse(
+            {"added": added, "total_estimate": priority_sample.stats()["total_estimate"]}
+        )
 
     @app.get("/api/v1/prioritysample/estimate")
     async def api_ps_estimate(category: str | None = None) -> JSONResponse:

@@ -9,7 +9,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pradyos.core.approval_queue import ApprovalEntry, ApprovalQueue
+    from pradyos.core.approval_queue import ApprovalQueue
     from pradyos.core.decision_journal import DecisionJournal
 
 
@@ -51,8 +51,8 @@ class ExecutionEngine:
     def __init__(
         self,
         allowlist: list[str] | None = None,
-        approval_queue: "ApprovalQueue | None" = None,
-        decision_journal: "DecisionJournal | None" = None,
+        approval_queue: ApprovalQueue | None = None,
+        decision_journal: DecisionJournal | None = None,
         timeout: float = 30.0,
     ) -> None:
         self._allowlist: set[str] = set(allowlist or [])
@@ -70,26 +70,38 @@ class ExecutionEngine:
         # ── Hard rule 1: status check ────────────────────────────────────────
         if entry.status == ApprovalStatus.REJECTED:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.REJECTED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error="Action was rejected",
             )
         if entry.status == ApprovalStatus.EXPIRED:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.EXPIRED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error="Action expired before execution",
             )
         if entry.status != ApprovalStatus.APPROVED:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.BLOCKED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error="Action not approved",
             )
 
@@ -98,27 +110,39 @@ class ExecutionEngine:
             cmd = shlex.split(entry.action)
         except ValueError as exc:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.BLOCKED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error=f"Could not parse command: {exc}",
             )
         if not cmd:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.BLOCKED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error="Empty command",
             )
         base = cmd[0]
         if base not in self._allowlist:
             return ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.BLOCKED,
-                stdout=None, stderr=None, returncode=None,
-                executed_at=executed_at, duration_ms=0.0,
+                stdout=None,
+                stderr=None,
+                returncode=None,
+                executed_at=executed_at,
+                duration_ms=0.0,
                 error="Command not in allowlist",
             )
 
@@ -133,12 +157,10 @@ class ExecutionEngine:
                 timeout=effective_timeout,
             )
             duration_ms = (time.perf_counter() - t0) * 1000
-            status = (
-                ExecutionStatus.SUCCESS if proc.returncode == 0
-                else ExecutionStatus.FAILED
-            )
+            status = ExecutionStatus.SUCCESS if proc.returncode == 0 else ExecutionStatus.FAILED
             result = ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=status,
                 stdout=proc.stdout,
                 stderr=proc.stderr,
@@ -149,18 +171,24 @@ class ExecutionEngine:
             )
         except subprocess.TimeoutExpired as exc:
             result = ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.FAILED,
-                stdout=None, stderr=None, returncode=None,
+                stdout=None,
+                stderr=None,
+                returncode=None,
                 executed_at=executed_at,
                 duration_ms=(time.perf_counter() - t0) * 1000,
                 error=f"Timeout after {exc.timeout}s",
             )
         except Exception as exc:
             result = ExecutionResult(
-                entry_id=entry.id, action=entry.action,
+                entry_id=entry.id,
+                action=entry.action,
                 status=ExecutionStatus.FAILED,
-                stdout=None, stderr=None, returncode=None,
+                stdout=None,
+                stderr=None,
+                returncode=None,
                 executed_at=executed_at,
                 duration_ms=(time.perf_counter() - t0) * 1000,
                 error=str(exc),

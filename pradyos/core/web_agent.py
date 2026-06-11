@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pradyos.core.guardrail import GuardrailGate
@@ -36,6 +36,7 @@ class WebResult:
 
 class _LinkParser(HTMLParser):
     """Collect href values from <a> tags."""
+
     def __init__(self) -> None:
         super().__init__()
         self.links: list[str] = []
@@ -51,8 +52,8 @@ class _LinkParser(HTMLParser):
 class WebAgent:
     def __init__(
         self,
-        guardrail_gate: "GuardrailGate | None" = None,
-        snapshot_store: "SnapshotStore | None" = None,
+        guardrail_gate: GuardrailGate | None = None,
+        snapshot_store: SnapshotStore | None = None,
         max_age: int = 3600,
         timeout: int = 10,
     ) -> None:
@@ -78,9 +79,7 @@ class WebAgent:
         # Preferred: gate.evaluate(action, risk_level, context) → object with .decision/.reason
         if hasattr(self._gate, "evaluate"):
             try:
-                result = self._gate.evaluate(
-                    action=action, risk_level=risk_level, context=context
-                )
+                result = self._gate.evaluate(action=action, risk_level=risk_level, context=context)
                 if hasattr(result, "decision"):
                     return result.decision == "approved", getattr(result, "reason", "") or ""
                 if isinstance(result, dict):
@@ -93,6 +92,7 @@ class WebAgent:
         if hasattr(self._gate, "submit"):
             try:
                 from pradyos.core.guardrail import RiskLevel
+
                 risk_enum = RiskLevel(risk_level)
                 reason = None if risk_enum.value in ("safe", "low") else f"web_agent: {action}"
                 self._gate.submit(
@@ -131,8 +131,11 @@ class WebAgent:
         )
         if not approved:
             return WebResult(
-                url=url, status_code=0, body_text="",
-                content_type="", fetched_at=time.time(),
+                url=url,
+                status_code=0,
+                body_text="",
+                content_type="",
+                fetched_at=time.time(),
                 error=f"blocked by guardrail: {reason}",
             )
 
@@ -156,10 +159,18 @@ class WebAgent:
                 raw = resp.read()
                 status = getattr(resp, "status", 200)
                 ctype = resp.headers.get("Content-Type", "") if hasattr(resp, "headers") else ""
-            body = raw.decode("utf-8", errors="replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+            body = (
+                raw.decode("utf-8", errors="replace")
+                if isinstance(raw, bytes | bytearray)
+                else str(raw)
+            )
             return WebResult(
-                url=url, status_code=int(status), body_text=body,
-                content_type=ctype, fetched_at=fetched_at, error="",
+                url=url,
+                status_code=int(status),
+                body_text=body,
+                content_type=ctype,
+                fetched_at=fetched_at,
+                error="",
             )
         except urllib.error.HTTPError as exc:
             body = ""
@@ -168,13 +179,21 @@ class WebAgent:
             except Exception:
                 pass
             return WebResult(
-                url=url, status_code=exc.code, body_text=body,
-                content_type="", fetched_at=fetched_at, error=str(exc),
+                url=url,
+                status_code=exc.code,
+                body_text=body,
+                content_type="",
+                fetched_at=fetched_at,
+                error=str(exc),
             )
         except Exception as exc:
             return WebResult(
-                url=url, status_code=0, body_text="",
-                content_type="", fetched_at=fetched_at, error=str(exc),
+                url=url,
+                status_code=0,
+                body_text="",
+                content_type="",
+                fetched_at=fetched_at,
+                error=str(exc),
             )
 
     # ── search ───────────────────────────────────────────────────────────────
@@ -190,18 +209,20 @@ class WebAgent:
             action="web_search", risk_level="medium", context={"query": query}
         )
         if not approved:
-            return [WebResult(
-                url="", status_code=0, body_text="", content_type="",
-                fetched_at=time.time(),
-                error=f"blocked by guardrail: {reason}",
-            )]
+            return [
+                WebResult(
+                    url="",
+                    status_code=0,
+                    body_text="",
+                    content_type="",
+                    fetched_at=time.time(),
+                    error=f"blocked by guardrail: {reason}",
+                )
+            ]
 
         # 2. Build engine URL
         if engine_url is None:
-            engine_url = (
-                "https://html.duckduckgo.com/html/?q="
-                + urllib.parse.quote_plus(query)
-            )
+            engine_url = "https://html.duckduckgo.com/html/?q=" + urllib.parse.quote_plus(query)
 
         # 3. Fetch search page (skip inner guardrail — already cleared)
         page = self._raw_fetch(engine_url)

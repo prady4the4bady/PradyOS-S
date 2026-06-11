@@ -48,7 +48,7 @@ class SpaceSaving:
         if not _is_pos_int(k):
             raise SpaceSavingError(k)
         self._k = k
-        self._counts: dict[Any, list[int]] = {}   # item -> [count, error]
+        self._counts: dict[Any, list[int]] = {}  # item -> [count, error]
         self._total = 0
         self._lock = threading.Lock()
 
@@ -64,7 +64,7 @@ class SpaceSaving:
         return min_item, min_count
 
     def _add_locked(self, item: Any) -> None:
-        entry = self._counts.get(item)          # raises TypeError on unhashable BEFORE mutating
+        entry = self._counts.get(item)  # raises TypeError on unhashable BEFORE mutating
         self._total += 1
         if entry is not None:
             entry[0] += 1

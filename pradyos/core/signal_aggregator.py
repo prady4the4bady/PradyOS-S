@@ -23,7 +23,9 @@ class SignalAggregator:
         self._lock = threading.Lock()
 
     def record(self, name: str, value: float, timestamp: float | None = None) -> SignalPoint:
-        pt = SignalPoint(value=value, recorded_at=timestamp if timestamp is not None else time.time())
+        pt = SignalPoint(
+            value=value, recorded_at=timestamp if timestamp is not None else time.time()
+        )
         with self._lock:
             if name not in self._signals:
                 self._signals[name] = collections.deque(maxlen=self._max_total)

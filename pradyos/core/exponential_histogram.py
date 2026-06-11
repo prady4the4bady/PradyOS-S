@@ -42,7 +42,7 @@ def _is_pos_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class ExponentialHistogram:
@@ -55,10 +55,10 @@ class ExponentialHistogram:
             raise ExponentialHistogramError(epsilon)
         self._window = window
         self._epsilon = float(epsilon)
-        self._seed = seed                         # accepted for parity; deterministic → unused
+        self._seed = seed  # accepted for parity; deterministic → unused
         self._k = math.ceil(1.0 / self._epsilon)
-        self._buckets: list[list[int]] = []       # [timestamp, size], oldest → newest
-        self._now = -1                            # latest timestamp seen (−1 = empty)
+        self._buckets: list[list[int]] = []  # [timestamp, size], oldest → newest
+        self._now = -1  # latest timestamp seen (−1 = empty)
         self._lock = threading.Lock()
 
     # ── internal (run under the lock; never re-acquire) ──────────────────────────
@@ -70,8 +70,8 @@ class ExponentialHistogram:
         while size <= max_size:
             same = sorted((b for b in self._buckets if b[1] == size), key=lambda b: b[0])
             while len(same) > self._k:
-                b1, b2 = same[0], same[1]         # the two oldest of this size
-                ts_merged = max(b1[0], b2[0])     # merged bucket keeps the newer timestamp
+                b1, b2 = same[0], same[1]  # the two oldest of this size
+                ts_merged = max(b1[0], b2[0])  # merged bucket keeps the newer timestamp
                 self._buckets.remove(b1)
                 self._buckets.remove(b2)
                 self._buckets.append([ts_merged, size * 2])
@@ -81,7 +81,7 @@ class ExponentialHistogram:
         self._buckets.sort(key=lambda b: b[0])
 
     def _expire_locked(self) -> None:
-        cutoff = self._now - self._window         # buckets at ts ≤ cutoff are outside the window
+        cutoff = self._now - self._window  # buckets at ts ≤ cutoff are outside the window
         self._buckets = [b for b in self._buckets if b[0] > cutoff]
 
     def _update_locked(self, value: int, timestamp: int | None) -> None:
@@ -91,7 +91,7 @@ class ExponentialHistogram:
             if not _is_pos_int(timestamp) and timestamp != 0:
                 raise ExponentialHistogramError(timestamp)
             if timestamp < self._now:
-                raise ExponentialHistogramError(timestamp)   # timestamps are non-decreasing
+                raise ExponentialHistogramError(timestamp)  # timestamps are non-decreasing
             ts = timestamp
         self._now = ts
         for _ in range(value):
@@ -107,8 +107,9 @@ class ExponentialHistogram:
         with self._lock:
             self._update_locked(value, timestamp)
 
-    def reset(self, window: int | None = None, epsilon: float | None = None,
-              seed: Any = None) -> None:
+    def reset(
+        self, window: int | None = None, epsilon: float | None = None, seed: Any = None
+    ) -> None:
         """Clear all buckets and the tick counter; optionally reconfigure."""
         with self._lock:
             if window is not None:
@@ -132,7 +133,7 @@ class ExponentialHistogram:
             if not self._buckets:
                 return 0
             total = sum(b[1] for b in self._buckets)
-            oldest_size = self._buckets[0][1]      # buckets sorted oldest → newest
+            oldest_size = self._buckets[0][1]  # buckets sorted oldest → newest
             return total - oldest_size / 2.0
 
     def oldest(self) -> int | None:

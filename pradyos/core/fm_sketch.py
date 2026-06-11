@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 # Flajolet–Martin magic constant φ (correction for the lowest-unset-bit estimator).
 _PHI = 0.7735162909
@@ -61,7 +62,7 @@ class FMSketch:
     def __init__(self, num_bitmaps: int = 64, num_bits: int = 32, seed: int = 0) -> None:
         self._validate(num_bitmaps, num_bits, seed)
         self._m = num_bitmaps
-        self._p_bits = num_bitmaps.bit_length() - 1     # log2(m); m is a power of two
+        self._p_bits = num_bitmaps.bit_length() - 1  # log2(m); m is a power of two
         self._num_bits = num_bits
         self._seed = seed
         self._seed_bytes = repr(seed).encode("ascii")
@@ -96,14 +97,14 @@ class FMSketch:
 
     # ── update ────────────────────────────────────────────────────────────────────────
     def _add_hash(self, h: int) -> None:
-        bucket = h >> (_HASH_BITS - self._p_bits)                 # top p_bits → which bitmap
-        w = h & ((1 << (_HASH_BITS - self._p_bits)) - 1)          # remaining bits → ρ
+        bucket = h >> (_HASH_BITS - self._p_bits)  # top p_bits → which bitmap
+        w = h & ((1 << (_HASH_BITS - self._p_bits)) - 1)  # remaining bits → ρ
         if w == 0:
             rho = _HASH_BITS - self._p_bits
         else:
-            rho = (w & -w).bit_length() - 1                       # trailing-zero count
+            rho = (w & -w).bit_length() - 1  # trailing-zero count
         if rho >= self._num_bits:
-            rho = self._num_bits - 1                              # cap to the bitmap width
+            rho = self._num_bits - 1  # cap to the bitmap width
         self._bitmaps[bucket] |= 1 << rho
 
     def add(self, item: Any) -> None:
@@ -114,7 +115,7 @@ class FMSketch:
 
     def add_many(self, items: Iterable[Any]) -> int:
         """Observe many items; returns the number consumed."""
-        hashes = [self._hash(it) for it in items]                # hash outside the lock
+        hashes = [self._hash(it) for it in items]  # hash outside the lock
         with self._lock:
             for h in hashes:
                 self._add_hash(h)
@@ -130,10 +131,10 @@ class FMSketch:
 
     def _estimate_locked(self) -> float:
         if not any(self._bitmaps):
-            return 0.0                                            # empty sketch → exactly 0
+            return 0.0  # empty sketch → exactly 0
         total = sum(self._lowest_unset_bit(b) for b in self._bitmaps)
         a = total / self._m
-        return (self._m / _PHI) * (2.0 ** a)
+        return (self._m / _PHI) * (2.0**a)
 
     def estimate(self) -> float:
         """Estimated number of distinct items observed."""
@@ -148,7 +149,7 @@ class FMSketch:
         return self.count()
 
     # ── merge ─────────────────────────────────────────────────────────────────────────
-    def merge(self, other: "FMSketch") -> None:
+    def merge(self, other: FMSketch) -> None:
         """Fold ``other`` into ``self`` by OR-ing the bitmaps (configs must match)."""
         if not isinstance(other, FMSketch):
             raise FMSketchError("can only merge another FMSketch")
@@ -159,8 +160,9 @@ class FMSketch:
             for i, b in enumerate(snapshot):
                 self._bitmaps[i] |= b
 
-    def reset(self, num_bitmaps: int | None = None, num_bits: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, num_bitmaps: int | None = None, num_bits: int | None = None, seed: int | None = None
+    ) -> None:
         """Clear all bitmaps; optionally reconfigure ``num_bitmaps`` / ``num_bits`` / ``seed``."""
         with self._lock:
             nm = self._m if num_bitmaps is None else num_bitmaps
@@ -190,7 +192,7 @@ class FMSketch:
     @property
     def standard_error(self) -> float:
         """Relative standard error of the estimate, ``≈ 0.78 / √m``."""
-        return 0.78 / (self._m ** 0.5)
+        return 0.78 / (self._m**0.5)
 
     def stats(self) -> dict:
         """Summary: ``num_bitmaps`` / ``num_bits`` / ``estimate`` / ``standard_error`` / ``seed``."""
@@ -200,6 +202,6 @@ class FMSketch:
             "num_bitmaps": self._m,
             "num_bits": self._num_bits,
             "estimate": round(est, 4),
-            "standard_error": round(0.78 / (self._m ** 0.5), 6),
+            "standard_error": round(0.78 / (self._m**0.5), 6),
             "seed": self._seed,
         }

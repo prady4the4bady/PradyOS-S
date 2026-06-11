@@ -46,7 +46,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class RandomProjection:
@@ -73,8 +73,10 @@ class RandomProjection:
         rng = random.Random(self._seed)
         scale = 1.0 / math.sqrt(self._k)
         # k rows × d cols of Rademacher ±1/√k entries.
-        self._rows = [[scale if rng.random() < 0.5 else -scale for _ in range(self._d)]
-                      for _ in range(self._k)]
+        self._rows = [
+            [scale if rng.random() < 0.5 else -scale for _ in range(self._d)]
+            for _ in range(self._k)
+        ]
 
     def _check_vector(self, vector: Any) -> list:
         try:
@@ -105,7 +107,7 @@ class RandomProjection:
         with self._lock:
             pa = self._project_locked(va)
             pb = self._project_locked(vb)
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(pa, pb)))
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(pa, pb, strict=False)))
 
     def dot(self, vector_a: Any, vector_b: Any) -> float:
         """Estimated dot product ``⟨a, b⟩`` via the projection."""
@@ -114,7 +116,7 @@ class RandomProjection:
         with self._lock:
             pa = self._project_locked(va)
             pb = self._project_locked(vb)
-        return sum(x * y for x, y in zip(pa, pb))
+        return sum(x * y for x, y in zip(pa, pb, strict=False))
 
     def norm(self, vector: Any) -> float:
         """Estimated Euclidean norm ``‖a‖`` via the projection."""
@@ -123,8 +125,9 @@ class RandomProjection:
             p = self._project_locked(vec)
         return math.sqrt(sum(x * x for x in p))
 
-    def reset(self, input_dim: int | None = None, output_dim: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, input_dim: int | None = None, output_dim: int | None = None, seed: int | None = None
+    ) -> None:
         """Redraw the matrix; optionally reconfigure ``input_dim`` / ``output_dim`` / ``seed``."""
         with self._lock:
             nd = self._d if input_dim is None else input_dim

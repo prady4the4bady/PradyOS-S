@@ -21,12 +21,11 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _new_id() -> str:
     """Return a fresh UUID4 as a compact hex string (32 chars, no hyphens)."""
@@ -36,6 +35,7 @@ def _new_id() -> str:
 # ---------------------------------------------------------------------------
 # TelemetrySpan
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class TelemetrySpan:
@@ -59,8 +59,8 @@ class TelemetrySpan:
     trace_id: str
     start_ts: float
     span_id: str = field(default_factory=_new_id)
-    parent_id: Optional[str] = None
-    end_ts: Optional[float] = None
+    parent_id: str | None = None
+    end_ts: float | None = None
     status: str = "running"
     attributes: dict = field(default_factory=dict)
 
@@ -73,7 +73,7 @@ class TelemetrySpan:
     # Public helpers
     # ------------------------------------------------------------------
 
-    def duration_ms(self) -> Optional[float]:
+    def duration_ms(self) -> float | None:
         """Return elapsed milliseconds, or ``None`` if span is still running."""
         if self.end_ts is None:
             return None
@@ -99,6 +99,7 @@ class TelemetrySpan:
 # TelemetryCollector
 # ---------------------------------------------------------------------------
 
+
 class TelemetryCollector:
     """Ring-buffer telemetry store.
 
@@ -121,9 +122,9 @@ class TelemetryCollector:
         self,
         name: str,
         service: str,
-        trace_id: Optional[str] = None,
-        parent_id: Optional[str] = None,
-        attributes: Optional[dict] = None,
+        trace_id: str | None = None,
+        parent_id: str | None = None,
+        attributes: dict | None = None,
     ) -> TelemetrySpan:
         """Create a new span in ``"running"`` state and append it to the buffer.
 
@@ -151,8 +152,8 @@ class TelemetryCollector:
         self,
         span_id: str,
         status: str = "ok",
-        attributes: Optional[dict] = None,
-    ) -> Optional[TelemetrySpan]:
+        attributes: dict | None = None,
+    ) -> TelemetrySpan | None:
         """Finalise a span by ``span_id``.
 
         Sets ``end_ts``, ``status``, and merges any extra ``attributes``.
@@ -173,9 +174,9 @@ class TelemetryCollector:
         name: str,
         service: str,
         status: str = "ok",
-        duration_ms: Optional[float] = None,
-        trace_id: Optional[str] = None,
-        attributes: Optional[dict] = None,
+        duration_ms: float | None = None,
+        trace_id: str | None = None,
+        attributes: dict | None = None,
     ) -> TelemetrySpan:
         """One-shot span — creates and immediately finishes a span.
 
@@ -209,8 +210,8 @@ class TelemetryCollector:
     def get_spans(
         self,
         limit: int = 100,
-        service: Optional[str] = None,
-        status: Optional[str] = None,
+        service: str | None = None,
+        status: str | None = None,
     ) -> list:
         """Return the most-recent spans first, with optional filters.
 

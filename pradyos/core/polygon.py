@@ -39,7 +39,7 @@ class PolygonError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _cross(o, a, b):
@@ -51,8 +51,7 @@ def _on_segment(a, b, p) -> bool:
     """True iff point ``p`` lies on the closed segment ``a``–``b`` (exact when ints)."""
     if _cross(a, b, p) != 0:
         return False
-    return (min(a[0], b[0]) <= p[0] <= max(a[0], b[0])
-            and min(a[1], b[1]) <= p[1] <= max(a[1], b[1]))
+    return min(a[0], b[0]) <= p[0] <= max(a[0], b[0]) and min(a[1], b[1]) <= p[1] <= max(a[1], b[1])
 
 
 class Polygon:
@@ -60,7 +59,7 @@ class Polygon:
 
     def __init__(self, vertices: Any = None) -> None:
         self._lock = threading.Lock()
-        self._verts: list = []       # vertices in input order (NOT sorted / deduped)
+        self._verts: list = []  # vertices in input order (NOT sorted / deduped)
         if vertices is not None:
             self.build(vertices)
 
@@ -73,11 +72,13 @@ class Polygon:
             raise PolygonError("vertices must be iterable") from exc
         cleaned = []
         for p in raw:
-            if not (isinstance(p, (list, tuple)) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])):
+            if not (
+                isinstance(p, list | tuple) and len(p) == 2 and _is_num(p[0]) and _is_num(p[1])
+            ):
                 raise PolygonError("each vertex must be an (x, y) pair of numbers")
             cleaned.append((p[0], p[1]))
         with self._lock:
-            self._verts = cleaned       # order preserved verbatim
+            self._verts = cleaned  # order preserved verbatim
 
     # ── internal (lock already held) ─────────────────────────────────────────────────────
     def _signed_area2(self) -> float:
@@ -238,5 +239,10 @@ class Polygon:
                             convex = False
                             break
             orient = "CCW" if a2 > 0 else ("CW" if a2 < 0 else "degenerate")
-            return {"num_vertices": n, "area": area, "perimeter": per,
-                    "is_convex": convex, "orientation": orient}
+            return {
+                "num_vertices": n,
+                "area": area,
+                "perimeter": per,
+                "is_convex": convex,
+                "orientation": orient,
+            }

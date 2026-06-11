@@ -16,9 +16,8 @@ safe. Public methods take a single lock. Pure stdlib; deterministic.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class BTreeError(Exception):
@@ -30,7 +29,7 @@ class BTreeError(Exception):
 
 
 def _orderable(key: Any) -> bool:
-    return isinstance(key, (int, float, str)) and not isinstance(key, bool)
+    return isinstance(key, int | float | str) and not isinstance(key, bool)
 
 
 class _BTreeNode:
@@ -46,7 +45,9 @@ class BTree:
     """Multiway balanced ordered set: O(t logₜ n) search/insert/delete, all leaves at one depth."""
 
     def __init__(self, min_degree: int = 3) -> None:
-        if not (isinstance(min_degree, int) and not isinstance(min_degree, bool) and min_degree >= 2):
+        if not (
+            isinstance(min_degree, int) and not isinstance(min_degree, bool) and min_degree >= 2
+        ):
             raise BTreeError("min_degree must be an int >= 2")
         self._t = min_degree
         self._lock = threading.Lock()
@@ -77,11 +78,11 @@ class BTree:
     # ── insert (proactive split) ─────────────────────────────────────────────────────────
     def _split_child(self, x: _BTreeNode, i: int) -> None:
         t = self._t
-        y = x.children[i]                                  # full: 2t-1 keys
+        y = x.children[i]  # full: 2t-1 keys
         z = _BTreeNode(leaf=y.leaf)
         mid = y.keys[t - 1]
         z.keys = y.keys[t:]
-        y.keys = y.keys[:t - 1]
+        y.keys = y.keys[: t - 1]
         if not y.leaf:
             z.children = y.children[t:]
             y.children = y.children[:t]
@@ -157,24 +158,24 @@ class BTree:
         if len(x.children[i].keys) >= t:
             return i
         child = x.children[i]
-        if i > 0 and len(x.children[i - 1].keys) >= t:          # borrow from left
+        if i > 0 and len(x.children[i - 1].keys) >= t:  # borrow from left
             left = x.children[i - 1]
             child.keys.insert(0, x.keys[i - 1])
             x.keys[i - 1] = left.keys.pop()
             if not child.leaf:
                 child.children.insert(0, left.children.pop())
             return i
-        if i < len(x.children) - 1 and len(x.children[i + 1].keys) >= t:   # borrow from right
+        if i < len(x.children) - 1 and len(x.children[i + 1].keys) >= t:  # borrow from right
             right = x.children[i + 1]
             child.keys.append(x.keys[i])
             x.keys[i] = right.keys.pop(0)
             if not child.leaf:
                 child.children.append(right.children.pop(0))
             return i
-        if i < len(x.children) - 1:                              # merge with right
+        if i < len(x.children) - 1:  # merge with right
             self._merge(x, i)
             return i
-        self._merge(x, i - 1)                                    # merge with left
+        self._merge(x, i - 1)  # merge with left
         return i - 1
 
     def _delete(self, x: _BTreeNode, key: Any) -> None:
@@ -199,7 +200,7 @@ class BTree:
                 self._delete(x.children[i], key)
             return
         if x.leaf:
-            return                                              # not present (guarded by contains)
+            return  # not present (guarded by contains)
         j = self._ensure_child(x, i)
         self._delete(x.children[j], key)
 
@@ -220,14 +221,14 @@ class BTree:
             return True
 
     # ── queries ──────────────────────────────────────────────────────────────────────────
-    def minimum(self) -> Optional[Any]:
+    def minimum(self) -> Any | None:
         """Smallest key, or None if empty."""
         with self._lock:
             if self._size == 0:
                 return None
             return self._subtree_min(self._root)
 
-    def maximum(self) -> Optional[Any]:
+    def maximum(self) -> Any | None:
         """Largest key, or None if empty."""
         with self._lock:
             if self._size == 0:
@@ -294,5 +295,10 @@ class BTree:
             while not node.leaf:
                 h += 1
                 node = node.children[0]
-            return {"size": self._size, "height": h, "min_degree": self._t,
-                    "min": self._subtree_min(self._root), "max": self._subtree_max(self._root)}
+            return {
+                "size": self._size,
+                "height": h,
+                "min_degree": self._t,
+                "min": self._subtree_min(self._root),
+                "max": self._subtree_max(self._root),
+            }

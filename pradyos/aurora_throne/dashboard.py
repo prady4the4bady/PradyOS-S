@@ -46,6 +46,7 @@ _DEGRADED_ACTIVE = 5
 # DashboardSnapshot
 # ---------------------------------------------------------------------------
 
+
 @dataclasses.dataclass
 class DashboardSnapshot:
     """Immutable snapshot of the observability state at a point in time.
@@ -84,6 +85,7 @@ class DashboardSnapshot:
 # ObservabilityDashboard
 # ---------------------------------------------------------------------------
 
+
 class ObservabilityDashboard:
     """Live observability dashboard -- injected dependencies, no singletons.
 
@@ -105,7 +107,7 @@ class ObservabilityDashboard:
     """
 
     AGENT_ID = "aurora_throne.dashboard"
-    _BUS_TOPIC = "*"          # capture every event published on the bus
+    _BUS_TOPIC = "*"  # capture every event published on the bus
     _RING_SIZE = 50
 
     def __init__(
@@ -172,9 +174,8 @@ class ObservabilityDashboard:
         """Return the quarantine list from the kernel's SelfHealEngine."""
         if self._kernel is None:
             return []
-        she = (
-            getattr(self._kernel, "_self_heal_engine", None)
-            or getattr(self._kernel, "self_heal_engine", None)
+        she = getattr(self._kernel, "_self_heal_engine", None) or getattr(
+            self._kernel, "self_heal_engine", None
         )
         if she is None:
             return []

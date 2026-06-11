@@ -65,9 +65,13 @@ class CorrelationEngine:
 
         if not pts_a or not pts_b:
             return CorrelationResult(
-                signal_a=signal_a, signal_b=signal_b,
-                coefficient=nan, sample_size=0,
-                label="weak", window_secs=window_secs, computed_at=computed_at,
+                signal_a=signal_a,
+                signal_b=signal_b,
+                coefficient=nan,
+                sample_size=0,
+                label="weak",
+                window_secs=window_secs,
+                computed_at=computed_at,
             )
 
         # nearest-neighbour pairing — iterate shorter, match into longer
@@ -104,14 +108,18 @@ class CorrelationEngine:
         n = len(vals_a)
         if n < 2:
             return CorrelationResult(
-                signal_a=signal_a, signal_b=signal_b,
-                coefficient=nan, sample_size=n,
-                label="weak", window_secs=window_secs, computed_at=computed_at,
+                signal_a=signal_a,
+                signal_b=signal_b,
+                coefficient=nan,
+                sample_size=n,
+                label="weak",
+                window_secs=window_secs,
+                computed_at=computed_at,
             )
 
         mean_a = sum(vals_a) / n
         mean_b = sum(vals_b) / n
-        cov = sum((a - mean_a) * (b - mean_b) for a, b in zip(vals_a, vals_b)) / n
+        cov = sum((a - mean_a) * (b - mean_b) for a, b in zip(vals_a, vals_b, strict=False)) / n
         std_a = math.sqrt(sum((a - mean_a) ** 2 for a in vals_a) / n)
         std_b = math.sqrt(sum((b - mean_b) ** 2 for b in vals_b) / n)
 
@@ -121,7 +129,11 @@ class CorrelationEngine:
             r = cov / (std_a * std_b)
 
         return CorrelationResult(
-            signal_a=signal_a, signal_b=signal_b,
-            coefficient=r, sample_size=n,
-            label=_label(r), window_secs=window_secs, computed_at=computed_at,
+            signal_a=signal_a,
+            signal_b=signal_b,
+            coefficient=r,
+            sample_size=n,
+            label=_label(r),
+            window_secs=window_secs,
+            computed_at=computed_at,
         )

@@ -5,10 +5,17 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
-
 _VALID_OPS = {
-    "eq", "neq", "gt", "lt", "gte", "lte",
-    "contains", "startswith", "endswith", "regex",
+    "eq",
+    "neq",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "contains",
+    "startswith",
+    "endswith",
+    "regex",
 }
 
 _MISSING = object()
@@ -30,7 +37,7 @@ def _resolve(field: str, event: dict) -> Any:
 
 def _is_numeric(value: Any) -> bool:
     """True for int/float, excluding bool (which subclasses int)."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return isinstance(value, int | float) and not isinstance(value, bool)
 
 
 def _compare(op: str, resolved: Any, target: Any) -> bool:

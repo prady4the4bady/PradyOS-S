@@ -65,7 +65,9 @@ def register_reservoir_routes(app: Any, reservoir: Any | None = None) -> Any:
             reservoir.reset(capacity)
         except ReservoirError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
-        return JSONResponse({"capacity": reservoir.capacity, "seen": reservoir.seen, "filled": len(reservoir)})
+        return JSONResponse(
+            {"capacity": reservoir.capacity, "seen": reservoir.seen, "filled": len(reservoir)}
+        )
 
     @app.get("/api/v1/reservoir/stats")
     async def api_reservoir_stats() -> JSONResponse:

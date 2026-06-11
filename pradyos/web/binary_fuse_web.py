@@ -27,7 +27,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from pradyos.core.binary_fuse import BinaryFuseFilter, BinaryFuseError
+from pradyos.core.binary_fuse import BinaryFuseError, BinaryFuseFilter
 
 
 def register_binaryfuse_routes(app: Any, binary_fuse: Any | None = None) -> Any:

@@ -312,9 +312,7 @@ def _build_instructions(
     return steps, None
 
 
-async def _safe_memory_query(
-    memory_store: Any, query: str
-) -> list[dict[str, Any]]:
+async def _safe_memory_query(memory_store: Any, query: str) -> list[dict[str, Any]]:
     """Query memory_store regardless of whether it's sync or async."""
     if hasattr(memory_store, "query_async"):
         return await memory_store.query_async(query, n_results=5)

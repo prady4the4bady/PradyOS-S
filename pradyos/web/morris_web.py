@@ -44,18 +44,22 @@ def register_morris_routes(app: Any, morris_counter: Any | None = None) -> Any:
             morris_counter.increment(times)
         except MorrisCounterError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({
-            "register": morris_counter.register,
-            "estimate": morris_counter.estimate(),
-            "increments": morris_counter.increments,
-        })
+        return JSONResponse(
+            {
+                "register": morris_counter.register,
+                "estimate": morris_counter.estimate(),
+                "increments": morris_counter.increments,
+            }
+        )
 
     @app.get("/api/v1/morris/estimate")
     async def api_morris_estimate() -> JSONResponse:
-        return JSONResponse({
-            "estimate": morris_counter.estimate(),
-            "register": morris_counter.register,
-        })
+        return JSONResponse(
+            {
+                "estimate": morris_counter.estimate(),
+                "register": morris_counter.register,
+            }
+        )
 
     @app.get("/api/v1/morris/stats")
     async def api_morris_stats() -> JSONResponse:

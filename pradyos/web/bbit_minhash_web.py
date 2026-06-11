@@ -50,15 +50,20 @@ def register_bbitminhash_routes(app: Any, bbit_minhash: Any | None = None) -> An
         body = await request.json()
         if not isinstance(body, dict) or not isinstance(body.get("tokens"), list):
             return JSONResponse({"error": "tokens list is required"}, status_code=422)
-        other = BBitMinHash(num_perm=bbit_minhash.num_perm, b=bbit_minhash.b,
-                            seed=bbit_minhash.seed)
+        other = BBitMinHash(
+            num_perm=bbit_minhash.num_perm, b=bbit_minhash.b, seed=bbit_minhash.seed
+        )
         other.add_many(body["tokens"])
         return JSONResponse({"jaccard": bbit_minhash.jaccard(other)})
 
     @app.get("/api/v1/bbitminhash/signature")
     async def api_bbit_signature() -> JSONResponse:
-        return JSONResponse({"signature": list(bbit_minhash.signature()),
-                            "signature_bits": bbit_minhash.signature_bits()})
+        return JSONResponse(
+            {
+                "signature": list(bbit_minhash.signature()),
+                "signature_bits": bbit_minhash.signature_bits(),
+            }
+        )
 
     @app.get("/api/v1/bbitminhash/stats")
     async def api_bbit_stats() -> JSONResponse:

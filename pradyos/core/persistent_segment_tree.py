@@ -20,9 +20,8 @@ are all iterative. Pure stdlib; thread-safe via a single ``threading.Lock``; det
 
 from __future__ import annotations
 
-from typing import Any
-
 import threading
+from typing import Any
 
 
 class PersistentSegmentTreeError(Exception):
@@ -38,7 +37,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class PersistentSegmentTree:
@@ -55,7 +54,7 @@ class PersistentSegmentTree:
         self._sum: list[float] = []
         self._left: list[int] = []
         self._right: list[int] = []
-        self._versions: list[int] = []          # version index -> root node-id
+        self._versions: list[int] = []  # version index -> root node-id
         self._n = 0
 
     def _new_node(self, s: float, lc: int, rc: int) -> int:
@@ -99,13 +98,12 @@ class PersistentSegmentTree:
                 frame[2] = 1
                 stack.append([l, mid, 0, -1, -1])
             elif state == 1:
-                frame[3] = ret                 # left child id (just completed)
+                frame[3] = ret  # left child id (just completed)
                 frame[2] = 2
                 stack.append([mid + 1, r, 0, -1, -1])
             else:
-                frame[4] = ret                 # right child id (just completed)
-                ret = self._new_node(self._sum[frame[3]] + self._sum[frame[4]],
-                                     frame[3], frame[4])
+                frame[4] = ret  # right child id (just completed)
+                ret = self._new_node(self._sum[frame[3]] + self._sum[frame[4]], frame[3], frame[4])
                 stack.pop()
         return ret
 
@@ -118,12 +116,14 @@ class PersistentSegmentTree:
             raise PersistentSegmentTreeError("value must be a number")
         with self._lock:
             if not (0 <= version < len(self._versions)):
-                raise PersistentSegmentTreeError(f"version must be in [0, {len(self._versions) - 1}]")
+                raise PersistentSegmentTreeError(
+                    f"version must be in [0, {len(self._versions) - 1}]"
+                )
             if not (0 <= i < self._n):
                 raise PersistentSegmentTreeError(f"i must be in [0, {self._n - 1}]")
             cur = self._versions[version]
             l, r = 0, self._n - 1
-            path = []                          # (old_node_id, dir) from root down to the leaf
+            path = []  # (old_node_id, dir) from root down to the leaf
             while l != r:
                 mid = (l + r) // 2
                 if i <= mid:
@@ -134,8 +134,8 @@ class PersistentSegmentTree:
                     path.append((cur, 1))
                     cur = self._right[cur]
                     l = mid + 1
-            child = self._new_node(value, -1, -1)        # new leaf
-            for old_id, d in reversed(path):             # rebuild path bottom-up, sharing siblings
+            child = self._new_node(value, -1, -1)  # new leaf
+            for old_id, d in reversed(path):  # rebuild path bottom-up, sharing siblings
                 if d == 0:
                     lc, rc = child, self._right[old_id]
                 else:
@@ -151,7 +151,9 @@ class PersistentSegmentTree:
             raise PersistentSegmentTreeError("version, lo and hi must be ints")
         with self._lock:
             if not (0 <= version < len(self._versions)):
-                raise PersistentSegmentTreeError(f"version must be in [0, {len(self._versions) - 1}]")
+                raise PersistentSegmentTreeError(
+                    f"version must be in [0, {len(self._versions) - 1}]"
+                )
             if not (0 <= lo <= hi < self._n):
                 raise PersistentSegmentTreeError(f"need 0 <= lo <= hi < {self._n}")
             total = 0
@@ -174,7 +176,9 @@ class PersistentSegmentTree:
             raise PersistentSegmentTreeError("version and i must be ints")
         with self._lock:
             if not (0 <= version < len(self._versions)):
-                raise PersistentSegmentTreeError(f"version must be in [0, {len(self._versions) - 1}]")
+                raise PersistentSegmentTreeError(
+                    f"version must be in [0, {len(self._versions) - 1}]"
+                )
             if not (0 <= i < self._n):
                 raise PersistentSegmentTreeError(f"i must be in [0, {self._n - 1}]")
             cur = self._versions[version]

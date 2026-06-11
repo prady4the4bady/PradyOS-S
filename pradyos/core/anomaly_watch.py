@@ -22,13 +22,12 @@ from __future__ import annotations
 
 import threading
 from collections import deque
-from typing import Callable
+from collections.abc import Callable
 
 from sklearn.ensemble import IsolationForest
 
-
-MIN_SAMPLES = 10        # readings required before Isolation Forest scoring begins
-DEFAULT_WINDOW = 256    # max readings retained per source (oldest evicted)
+MIN_SAMPLES = 10  # readings required before Isolation Forest scoring begins
+DEFAULT_WINDOW = 256  # max readings retained per source (oldest evicted)
 
 
 class SourceNotFoundError(Exception):

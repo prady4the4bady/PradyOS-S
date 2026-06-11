@@ -59,10 +59,14 @@ def register_hld_routes(app: Any, heavy_light: Any | None = None) -> Any:
             hl.update(body["node"], body["value"])
         except HeavyLightError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"node": body["node"], "value": body["value"], "total": hl.stats()["total"]})
+        return JSONResponse(
+            {"node": body["node"], "value": body["value"], "total": hl.stats()["total"]}
+        )
 
     @app.get("/api/v1/hld/path_sum")
-    async def api_hld_path_sum(u: int = Query(..., ge=0), v: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_hld_path_sum(
+        u: int = Query(..., ge=0), v: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             s = hl.path_sum(u, v)
         except HeavyLightError as exc:
@@ -70,7 +74,9 @@ def register_hld_routes(app: Any, heavy_light: Any | None = None) -> Any:
         return JSONResponse({"u": u, "v": v, "sum": s})
 
     @app.get("/api/v1/hld/path_max")
-    async def api_hld_path_max(u: int = Query(..., ge=0), v: int = Query(..., ge=0)) -> JSONResponse:
+    async def api_hld_path_max(
+        u: int = Query(..., ge=0), v: int = Query(..., ge=0)
+    ) -> JSONResponse:
         try:
             m = hl.path_max(u, v)
         except HeavyLightError as exc:

@@ -38,8 +38,8 @@ class _Node:
     __slots__ = ("children", "count")
 
     def __init__(self) -> None:
-        self.children: list = [None, None]   # children[0], children[1]
-        self.count = 0                       # number of stored values passing through this node
+        self.children: list = [None, None]  # children[0], children[1]
+        self.count = 0  # number of stored values passing through this node
 
 
 def _is_int(x: Any) -> bool:
@@ -99,7 +99,7 @@ class XorTrie:
                 path.append((node, b))
                 node = node.children[b]
                 node.count -= 1
-            for parent, b in reversed(path):       # prune subtrees that emptied out
+            for parent, b in reversed(path):  # prune subtrees that emptied out
                 if parent.children[b].count == 0:
                     parent.children[b] = None
             self._size -= 1
@@ -136,7 +136,7 @@ class XorTrie:
                 qb = (query >> pos) & 1
                 opp = node.children[1 - qb]
                 if opp is not None and opp.count > 0:
-                    result |= (1 << pos)
+                    result |= 1 << pos
                     node = opp
                 else:
                     node = node.children[qb]
@@ -155,7 +155,7 @@ class XorTrie:
                 if same is not None and same.count > 0:
                     node = same
                 else:
-                    result |= (1 << pos)
+                    result |= 1 << pos
                     node = node.children[1 - qb]
             return result
 
@@ -176,12 +176,12 @@ class XorTrie:
                 qb = (query >> pos) & 1
                 kb = (k >> pos) & 1
                 if kb == 1:
-                    xor0 = node.children[qb]            # XOR-bit 0 here → strictly below k
+                    xor0 = node.children[qb]  # XOR-bit 0 here → strictly below k
                     if xor0 is not None:
                         cnt += xor0.count
-                    node = node.children[qb ^ 1]        # follow the XOR-bit-1 branch
+                    node = node.children[qb ^ 1]  # follow the XOR-bit-1 branch
                 else:
-                    node = node.children[qb]            # only XOR-bit 0 can stay below k
+                    node = node.children[qb]  # only XOR-bit 0 can stay below k
             return cnt
 
     # ── introspection ──────────────────────────────────────────────────────────────────

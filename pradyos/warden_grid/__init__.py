@@ -6,7 +6,7 @@ API the rest of the constellation reads from.
 """
 
 from pradyos.warden_grid.incidents import Incident, IncidentSeverity, IncidentStore
-from pradyos.warden_grid.monitor import WardenMonitor, HealthSnapshot
+from pradyos.warden_grid.monitor import HealthSnapshot, WardenMonitor
 from pradyos.warden_grid.thresholds import Thresholds
 
 __all__ = [

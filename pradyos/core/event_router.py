@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
-from typing import Any
-
+from dataclasses import dataclass
 
 _VALID_OPS = {
-    "eq", "neq", "gt", "lt", "gte", "lte",
-    "contains", "startswith", "endswith",
+    "eq",
+    "neq",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "contains",
+    "startswith",
+    "endswith",
 }
 
 _MISSING = object()

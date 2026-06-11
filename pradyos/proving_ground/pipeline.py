@@ -23,8 +23,8 @@ into the kernel via ``AdmissionPipeline.register_with(imperium)``.
 from __future__ import annotations
 
 import logging
-import re
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -36,7 +36,6 @@ from typing import Any
 from pradyos.core.audit import AuditLog, get_audit_log
 from pradyos.core.bus import EventBus, get_bus
 from pradyos.core.ids import new_id
-from pradyos.core.types import ExecutionLane
 from pradyos.proving_ground.scanner import scan_dependencies, scan_directory
 from pradyos.proving_ground.verdict import (
     AdmissionStatus,
@@ -110,7 +109,8 @@ class AdmissionPipeline:
         )
         log.info("Proving Ground: admitting %s@%s → %s", repo_url, ref, workspace)
         self.audit.record(
-            agent_id=self.AGENT_ID, kind="admission",
+            agent_id=self.AGENT_ID,
+            kind="admission",
             summary=f"ADMIT START: {repo_url}@{ref}",
             detail={"repo_url": repo_url, "ref": ref, "workspace": workspace},
             correlation_id=cid,
@@ -188,7 +188,9 @@ class AdmissionPipeline:
             )
             if result.returncode != 0:
                 verdict.status = AdmissionStatus.REJECTED
-                verdict.reason = f"git clone failed (exit {result.returncode}): {result.stderr[:500]}"
+                verdict.reason = (
+                    f"git clone failed (exit {result.returncode}): {result.stderr[:500]}"
+                )
         except subprocess.TimeoutExpired:
             verdict.status = AdmissionStatus.QUARANTINED
             verdict.reason = "git clone timed out after 60s"
@@ -203,7 +205,9 @@ class AdmissionPipeline:
         soft = [v for v in scan.violations if v.get("severity") == "SOFT"]
         if hard:
             verdict.status = AdmissionStatus.REJECTED
-            verdict.reason = f"constitutional HARD violation: {hard[0]['label']} in {hard[0]['file']}"
+            verdict.reason = (
+                f"constitutional HARD violation: {hard[0]['label']} in {hard[0]['file']}"
+            )
         elif soft:
             verdict.status = AdmissionStatus.QUARANTINED
             verdict.reason = f"constitutional SOFT violation: {soft[0]['label']}"
@@ -214,7 +218,9 @@ class AdmissionPipeline:
         verdict.dependency_audit = audit
         if flagged:
             verdict.status = AdmissionStatus.QUARANTINED
-            verdict.reason = f"dependency audit: flagged {flagged[0]['package']} — {flagged[0]['reason']}"
+            verdict.reason = (
+                f"dependency audit: flagged {flagged[0]['package']} — {flagged[0]['reason']}"
+            )
 
     def _run_tests(self, workspace: str, verdict: AdmissionVerdict) -> None:
         cmd = _detect_test_command(workspace)
@@ -277,7 +283,8 @@ class AdmissionPipeline:
         verdict.finished_at = time.time()
         self._verdicts[verdict.correlation_id or ""] = verdict
         self.audit.record(
-            agent_id=self.AGENT_ID, kind="admission",
+            agent_id=self.AGENT_ID,
+            kind="admission",
             summary=f"ADMIT {verdict.status.value}: {verdict.repo_url}",
             detail=verdict.to_dict(),
             correlation_id=verdict.correlation_id,
@@ -285,7 +292,9 @@ class AdmissionPipeline:
         self.bus.publish("proving_ground.verdict", verdict.to_dict())
         log.info(
             "Proving Ground verdict: %s — %s (%.1fs)",
-            verdict.status.value, verdict.reason, verdict.duration_sec,
+            verdict.status.value,
+            verdict.reason,
+            verdict.duration_sec,
         )
         return verdict
 
@@ -293,20 +302,20 @@ class AdmissionPipeline:
 
     # Hard violations → REJECTED immediately
     _INLINE_HARD = [
-        re.compile(r"rm\s+-[rRfF]{1,4}\s*/", re.I),        # rm -rf /
-        re.compile(r"\bDROP\s+TABLE\b", re.I),              # SQL DROP TABLE
-        re.compile(r"\bformat\s+[a-zA-Z]:", re.I),          # format c:
-        re.compile(r"\bmkfs\.", re.I),                       # mkfs.ext4 etc.
-        re.compile(r"dd\s+if=/dev/zero", re.I),              # disk wipe
-        re.compile(r":\(\)\s*\{", re.I),                    # fork bomb
+        re.compile(r"rm\s+-[rRfF]{1,4}\s*/", re.I),  # rm -rf /
+        re.compile(r"\bDROP\s+TABLE\b", re.I),  # SQL DROP TABLE
+        re.compile(r"\bformat\s+[a-zA-Z]:", re.I),  # format c:
+        re.compile(r"\bmkfs\.", re.I),  # mkfs.ext4 etc.
+        re.compile(r"dd\s+if=/dev/zero", re.I),  # disk wipe
+        re.compile(r":\(\)\s*\{", re.I),  # fork bomb
     ]
 
     # Soft violations → QUARANTINED
     _INLINE_SOFT = [
-        re.compile(r"\beval\s*\(", re.I),                   # eval()
-        re.compile(r"\bexec\s*\(", re.I),                   # exec()
-        re.compile(r"__import__\s*\("),                     # __import__()
-        re.compile(r"\brmdir\s+/", re.I),                   # rmdir /
+        re.compile(r"\beval\s*\(", re.I),  # eval()
+        re.compile(r"\bexec\s*\(", re.I),  # exec()
+        re.compile(r"__import__\s*\("),  # __import__()
+        re.compile(r"\brmdir\s+/", re.I),  # rmdir /
         re.compile(r"(?i)(password|secret|token)\s*=\s*['\"][^'\"]{4,}['\"]"),
     ]
 

@@ -32,7 +32,7 @@ import math
 import threading
 from typing import Any
 
-_DENOM = (1 << 64) + 1               # maps a 64-bit digest into the open interval (0, 1)
+_DENOM = (1 << 64) + 1  # maps a 64-bit digest into the open interval (0, 1)
 
 
 class RendezvousError(Exception):
@@ -48,7 +48,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_pos_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and x > 0
+    return isinstance(x, int | float) and not isinstance(x, bool) and x > 0
 
 
 class RendezvousHash:
@@ -72,8 +72,8 @@ class RendezvousHash:
     def _score(self, key: Any, node: Any, weight: float) -> float:
         data = repr((self._seed, key, node)).encode("utf-8")
         digest = int.from_bytes(hashlib.blake2b(data, digest_size=8).digest(), "big")
-        h = (digest + 1) / _DENOM                      # h in (0, 1), never 0 or 1
-        return -weight / math.log(h)                   # ln(h) < 0 → score > 0
+        h = (digest + 1) / _DENOM  # h in (0, 1), never 0 or 1
+        return -weight / math.log(h)  # ln(h) < 0 → score > 0
 
     # ── node management ────────────────────────────────────────────────────────────────
     def _add_locked(self, node: Any, weight: float) -> None:

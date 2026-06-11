@@ -16,7 +16,6 @@ import json
 import logging
 import os
 import re
-import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from typing import Any
@@ -85,6 +84,7 @@ def _start_http_server(port: int) -> None:
 # JSON proposal extraction helper
 # ---------------------------------------------------------------------------
 
+
 def _extract_json_proposal(text: str) -> dict | None:
     """Extract first JSON object containing 'intent' and 'kind' keys from text."""
     text = text.strip()
@@ -117,6 +117,7 @@ def _extract_json_proposal(text: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Autonomous proposal loop
 # ---------------------------------------------------------------------------
+
 
 async def _proposal_loop(
     oracle: Oracle,
@@ -192,12 +193,15 @@ async def _proposal_loop(
                 proposed = True
                 log.info(
                     "ORACLE proposal cycle %d: proposed '%s' (%s)",
-                    cycle, payload.get("intent", ""), payload.get("kind", ""),
+                    cycle,
+                    payload.get("intent", ""),
+                    payload.get("kind", ""),
                 )
             else:
                 log.debug(
                     "ORACLE proposal cycle %d: no valid JSON in response: %r",
-                    cycle, response[:120],
+                    cycle,
+                    response[:120],
                 )
 
         except Exception as e:  # noqa: BLE001
@@ -278,7 +282,9 @@ async def run_daemon(
     # Autonomous proposal loop — runs until cancelled
     proposal_task = asyncio.create_task(
         _proposal_loop(
-            oracle, bus, audit,
+            oracle,
+            bus,
+            audit,
             interval_sec=int(os.environ.get("PRADYOS_PROPOSAL_INTERVAL", "60")),
         )
     )

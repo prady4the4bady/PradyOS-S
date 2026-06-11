@@ -16,9 +16,8 @@ thread-safe via a single ``threading.Lock``; deterministic.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 import threading
+from typing import Any
 
 
 class FibonacciHeapError(Exception):
@@ -30,7 +29,7 @@ class FibonacciHeapError(Exception):
 
 
 def _is_num(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 def _is_int(x: Any) -> bool:
@@ -43,8 +42,8 @@ class _FibNode:
     def __init__(self, key: float, handle: int) -> None:
         self.key = key
         self.handle = handle
-        self.parent: Optional[_FibNode] = None
-        self.child: Optional[_FibNode] = None
+        self.parent: _FibNode | None = None
+        self.child: _FibNode | None = None
         self.left: _FibNode = self
         self.right: _FibNode = self
         self.degree = 0
@@ -57,7 +56,7 @@ class FibonacciHeap:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._min: Optional[_FibNode] = None
+        self._min: _FibNode | None = None
         self._size = 0
         self._handles: dict[int, _FibNode] = {}
         self._next = 0
@@ -74,7 +73,7 @@ class FibonacciHeap:
             self._min.right = node
 
     @staticmethod
-    def _iter_circular(start: Optional[_FibNode]) -> list:
+    def _iter_circular(start: _FibNode | None) -> list:
         if start is None:
             return []
         out = []
@@ -258,5 +257,8 @@ class FibonacciHeap:
         """Summary: ``size`` / ``num_trees`` / ``min`` (None if empty)."""
         with self._lock:
             num_trees = len(self._iter_circular(self._min))
-            return {"size": self._size, "num_trees": num_trees,
-                    "min": None if self._min is None else self._min.key}
+            return {
+                "size": self._size,
+                "num_trees": num_trees,
+                "min": None if self._min is None else self._min.key,
+            }

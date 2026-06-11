@@ -57,14 +57,13 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class CountingBloom:
     """Deletion-supporting Bloom filter over 4-bit saturating counters."""
 
-    def __init__(self, capacity: int = 10000, error_rate: float = 0.01,
-                 seed: int = 0) -> None:
+    def __init__(self, capacity: int = 10000, error_rate: float = 0.01, seed: int = 0) -> None:
         self._validate(capacity, error_rate, seed)
         self._capacity = capacity
         self._error_rate = error_rate
@@ -145,8 +144,9 @@ class CountingBloom:
             return 0.0
         return (1.0 - math.exp(-self._k * n / self._m)) ** self._k
 
-    def reset(self, capacity: int | None = None, error_rate: float | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, capacity: int | None = None, error_rate: float | None = None, seed: int | None = None
+    ) -> None:
         """Clear all counters; optionally reconfigure ``capacity`` / ``error_rate`` / ``seed``."""
         with self._lock:
             nc = self._capacity if capacity is None else capacity

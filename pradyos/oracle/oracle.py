@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
 from typing import Any
 
 from pradyos.core.bus import EventBus, get_bus
-from pradyos.core.types import TaskState
 from pradyos.imperium.task import ImperiumTask
 from pradyos.oracle.client import OllamaClient
 from pradyos.oracle.planner import OraclePlan, OraclePlanner

@@ -44,7 +44,7 @@ def _is_int(x: Any) -> bool:
 
 
 def _is_number(x: Any) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+    return isinstance(x, int | float) and not isinstance(x, bool)
 
 
 class GKSummary:
@@ -57,7 +57,7 @@ class GKSummary:
             raise GKError(seed)
         self._eps = float(epsilon)
         self._seed = seed
-        self._s: list[list] = []          # sorted tuples [v, g, delta]
+        self._s: list[list] = []  # sorted tuples [v, g, delta]
         self._n = 0
         self._since_compress = 0
         self._interval = max(1, int(1.0 / (2.0 * self._eps)))
@@ -78,9 +78,9 @@ class GKSummary:
         v = float(value)
         i = self._find_index(v)
         if i == 0 or i == len(self._s):
-            delta = 0                     # new minimum or maximum → exact rank
+            delta = 0  # new minimum or maximum → exact rank
         else:
-            delta = int(2.0 * self._eps * self._n)   # ⌊2εn⌋ with the pre-insert count
+            delta = int(2.0 * self._eps * self._n)  # ⌊2εn⌋ with the pre-insert count
         self._s.insert(i, [v, 1, delta])
         self._n += 1
         self._since_compress += 1
@@ -91,7 +91,7 @@ class GKSummary:
     def _compress_locked(self) -> None:
         threshold = int(2.0 * self._eps * self._n)
         i = len(self._s) - 2
-        while i >= 1:                     # never merge away the min (0) or the max (last)
+        while i >= 1:  # never merge away the min (0) or the max (last)
             if self._s[i][1] + self._s[i + 1][1] + self._s[i + 1][2] <= threshold:
                 self._s[i + 1][1] += self._s[i][1]
                 del self._s[i]

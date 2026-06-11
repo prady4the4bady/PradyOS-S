@@ -52,8 +52,10 @@ def _is_int(x: Any) -> bool:
 
 
 def _base_hash(item: Any) -> int:
-    return int.from_bytes(hashlib.blake2b(repr(item).encode("utf-8"), digest_size=8).digest(),
-                          "big") % _PRIME
+    return (
+        int.from_bytes(hashlib.blake2b(repr(item).encode("utf-8"), digest_size=8).digest(), "big")
+        % _PRIME
+    )
 
 
 def estimate_jaccard(sig_a: Any, sig_b: Any, b: int) -> float:
@@ -64,7 +66,7 @@ def estimate_jaccard(sig_a: Any, sig_b: Any, b: int) -> float:
     bb = list(sig_b)
     if len(a) != len(bb) or not a:
         raise BBitMinHashError("signatures must be non-empty and equal length")
-    match_rate = sum(1 for x, y in zip(a, bb) if x == y) / len(a)
+    match_rate = sum(1 for x, y in zip(a, bb, strict=False) if x == y) / len(a)
     c = 2.0 ** (-b)
     est = (match_rate - c) / (1.0 - c)
     return min(1.0, max(0.0, est))
@@ -91,7 +93,7 @@ class BBitMinHash:
         rng = random.Random(self._seed)
         self._a = [rng.randrange(1, _PRIME) for _ in range(self._k)]
         self._b_coef = [rng.randrange(0, _PRIME) for _ in range(self._k)]
-        self._mins = [_PRIME] * self._k        # full running minimums (max sentinel)
+        self._mins = [_PRIME] * self._k  # full running minimums (max sentinel)
         self._count = 0
 
     # ── mutation ──────────────────────────────────────────────────────────────────────
@@ -125,7 +127,7 @@ class BBitMinHash:
         with self._lock:
             return tuple(m & self._mask for m in self._mins)
 
-    def jaccard(self, other: "BBitMinHash") -> float:
+    def jaccard(self, other: BBitMinHash) -> float:
         """Bias-corrected Jaccard estimate against another compatible sketch."""
         if not isinstance(other, BBitMinHash):
             raise BBitMinHashError("other must be a BBitMinHash")
@@ -133,8 +135,9 @@ class BBitMinHash:
             raise BBitMinHashError("incompatible sketches (num_perm / b / seed differ)")
         return estimate_jaccard(self.signature(), other.signature(), self._b)
 
-    def reset(self, num_perm: int | None = None, b: int | None = None,
-              seed: int | None = None) -> None:
+    def reset(
+        self, num_perm: int | None = None, b: int | None = None, seed: int | None = None
+    ) -> None:
         """Clear the sketch; optionally reconfigure ``num_perm`` / ``b`` / ``seed``."""
         with self._lock:
             nk = self._k if num_perm is None else num_perm

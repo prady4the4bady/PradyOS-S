@@ -72,5 +72,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]
-get-version = "py310"
+# E501: line length handled by the formatter. E741: single-letter names (l/i/j/r)
+# are idiomatic in this algorithm-heavy codebase (tree/segment/geometry code).
+ignore = ["E501", "E741"]

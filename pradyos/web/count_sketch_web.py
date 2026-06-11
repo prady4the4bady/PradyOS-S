@@ -67,8 +67,9 @@ def register_count_sketch_routes(app: Any, count_sketch: Any | None = None) -> A
 
     @app.get("/api/v1/countsketch/heavy_hitters")
     async def api_cs_heavy_hitters(threshold: float = Query(ge=0.0, le=1.0)) -> JSONResponse:
-        return JSONResponse({"threshold": threshold,
-                             "heavy_hitters": count_sketch.heavy_hitters(threshold)})
+        return JSONResponse(
+            {"threshold": threshold, "heavy_hitters": count_sketch.heavy_hitters(threshold)}
+        )
 
     @app.get("/api/v1/countsketch/stats")
     async def api_cs_stats() -> JSONResponse:

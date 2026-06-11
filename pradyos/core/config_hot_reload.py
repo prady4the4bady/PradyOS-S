@@ -8,6 +8,7 @@ Watches a YAML/JSON config file for changes and hot-reloads:
 No external dependencies: uses json.loads as YAML fallback (tests write
 JSON; real deployments may install PyYAML for true YAML support).
 """
+
 from __future__ import annotations
 
 import json
@@ -30,6 +31,7 @@ try:
         return _yaml.safe_load(text) or {}
 
 except ImportError:  # pragma: no cover — PyYAML not installed in stdlib-only env
+
     def _parse_config(text: str) -> dict:  # type: ignore[misc]
         result = json.loads(text)
         if not isinstance(result, dict):
@@ -40,6 +42,7 @@ except ImportError:  # pragma: no cover — PyYAML not installed in stdlib-only 
 # ---------------------------------------------------------------------------
 # ReloadResult
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ReloadResult:
@@ -62,6 +65,7 @@ class ReloadResult:
 # ---------------------------------------------------------------------------
 # ConfigHotReloader
 # ---------------------------------------------------------------------------
+
 
 class ConfigHotReloader:
     """File-watcher that hot-reloads config sections into running components.

@@ -35,7 +35,7 @@ def register_kdtree_routes(app: Any, kd_tree: Any | None = None) -> Any:
     (factory scope — never a module-level global)."""
     if kd_tree is None:
         kd_tree = KDTree(dim=2)
-    state = {"tree": kd_tree}                     # holder: build may swap in a new-dimension tree
+    state = {"tree": kd_tree}  # holder: build may swap in a new-dimension tree
 
     @app.post("/api/v1/kdtree/build")
     async def api_kd_build(request: Request) -> JSONResponse:
@@ -60,22 +60,35 @@ def register_kdtree_routes(app: Any, kd_tree: Any | None = None) -> Any:
             dist = tree.nearest_dist(body["point"])
         except KDTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"point": body["point"],
-                             "nearest": list(nearest) if nearest is not None else None,
-                             "distance": dist})
+        return JSONResponse(
+            {
+                "point": body["point"],
+                "nearest": list(nearest) if nearest is not None else None,
+                "distance": dist,
+            }
+        )
 
     @app.post("/api/v1/kdtree/range")
     async def api_kd_range(request: Request) -> JSONResponse:
         body = await request.json()
-        if not isinstance(body, dict) or not isinstance(body.get("lo"), list) \
-                or not isinstance(body.get("hi"), list):
+        if (
+            not isinstance(body, dict)
+            or not isinstance(body.get("lo"), list)
+            or not isinstance(body.get("hi"), list)
+        ):
             return JSONResponse({"error": "lo and hi lists are required"}, status_code=422)
         try:
             hits = state["tree"].range(body["lo"], body["hi"])
         except KDTreeError as exc:
             return JSONResponse({"error": str(exc.detail)}, status_code=422)
-        return JSONResponse({"lo": body["lo"], "hi": body["hi"],
-                             "points": [list(p) for p in hits], "count": len(hits)})
+        return JSONResponse(
+            {
+                "lo": body["lo"],
+                "hi": body["hi"],
+                "points": [list(p) for p in hits],
+                "count": len(hits),
+            }
+        )
 
     @app.get("/api/v1/kdtree/stats")
     async def api_kd_stats() -> JSONResponse:

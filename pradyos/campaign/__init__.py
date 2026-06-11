@@ -15,9 +15,9 @@ Public surface:
     get_engine()       — process-level singleton
 """
 
+from pradyos.campaign.engine import CampaignEngine, get_engine
 from pradyos.campaign.model import Campaign, CampaignNode, CampaignStatus, NodeStatus
 from pradyos.campaign.registry import CampaignRegistry
-from pradyos.campaign.engine import CampaignEngine, get_engine
 
 __all__ = [
     "Campaign",

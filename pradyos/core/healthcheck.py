@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Callable, Literal
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Literal
 
 # ---------------------------------------------------------------------------
 # Data model
@@ -89,12 +90,14 @@ class HealthRegistry:
                 results.append(probe)
             except Exception as exc:  # noqa: BLE001
                 elapsed_ms = (time.monotonic() - t0) * 1000.0
-                results.append(HealthProbe(
-                    name=name,
-                    status="down",
-                    latency_ms=elapsed_ms,
-                    detail=f"exception: {exc!r}",
-                ))
+                results.append(
+                    HealthProbe(
+                        name=name,
+                        status="down",
+                        latency_ms=elapsed_ms,
+                        detail=f"exception: {exc!r}",
+                    )
+                )
         return results
 
     def overall(self) -> Literal["ok", "degraded", "down"]:

@@ -22,9 +22,9 @@ AgentID = NewType("AgentID", str)
 class Priority(str, Enum):
     """IMPERIUM task priority classes (blueprint §IV/V)."""
 
-    SOVEREIGN = "SOVEREIGN"      # direct Sovereign directive — preempts everything
+    SOVEREIGN = "SOVEREIGN"  # direct Sovereign directive — preempts everything
     OPERATIONAL = "OPERATIONAL"  # ordinary machine-owned work
-    BACKGROUND = "BACKGROUND"    # idle / nightly self-improvement work
+    BACKGROUND = "BACKGROUND"  # idle / nightly self-improvement work
 
     @property
     def rank(self) -> int:
@@ -38,7 +38,7 @@ class TaskState(str, Enum):
     RUNNING = "RUNNING"
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
-    ESCALATED = "ESCALATED"   # crossed Sovereign approval boundary
+    ESCALATED = "ESCALATED"  # crossed Sovereign approval boundary
     CANCELLED = "CANCELLED"
 
     @property
@@ -55,5 +55,5 @@ class ExecutionLane(str, Enum):
     """TITAN OPS subprocess lanes (blueprint §VIII)."""
 
     UNPRIVILEGED = "unprivileged"  # default — ordinary exploration
-    PRIVILEGED = "privileged"      # constitutional admin (sudo / root)
-    SANDBOX = "sandbox"            # NIGHT CITADEL experiment lane
+    PRIVILEGED = "privileged"  # constitutional admin (sudo / root)
+    SANDBOX = "sandbox"  # NIGHT CITADEL experiment lane

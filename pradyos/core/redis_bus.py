@@ -22,7 +22,8 @@ import json
 import os
 import threading
 from collections import defaultdict
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 Subscriber = Callable[[str, dict[str, Any]], None]
 
@@ -56,9 +57,7 @@ class RedisBus:
         if redis_client is not None:
             self._redis = redis_client
         else:
-            url = redis_url or os.environ.get(
-                "PRADYOS_REDIS_URL", "redis://127.0.0.1:6379/0"
-            )
+            url = redis_url or os.environ.get("PRADYOS_REDIS_URL", "redis://127.0.0.1:6379/0")
             self._redis = _redis.from_url(url)
 
         self._pubsub = self._redis.pubsub()
@@ -143,9 +142,7 @@ class RedisBus:
         """Route a raw redis-py pubsub message to local callbacks."""
         mtype = message.get("type")
         raw_channel = message.get("channel", b"")
-        topic: str = (
-            raw_channel.decode() if isinstance(raw_channel, bytes) else raw_channel
-        )
+        topic: str = raw_channel.decode() if isinstance(raw_channel, bytes) else raw_channel
 
         try:
             raw_data = message.get("data", b"{}")

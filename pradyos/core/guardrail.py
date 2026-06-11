@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -45,8 +45,8 @@ class GuardrailGate:
 
     def __init__(
         self,
-        approval_queue: "ApprovalQueue | None" = None,
-        decision_journal: "DecisionJournal | None" = None,
+        approval_queue: ApprovalQueue | None = None,
+        decision_journal: DecisionJournal | None = None,
     ) -> None:
         self._queue = approval_queue
         self._journal = decision_journal
@@ -93,8 +93,7 @@ class GuardrailGate:
                         agent_id="guardrail_gate",
                         decision_type="pending_approval",
                         rationale=(
-                            f"action={action} risk={risk_level.value} "
-                            f"reason={reason or '-'}"
+                            f"action={action} risk={risk_level.value} " f"reason={reason or '-'}"
                         ),
                         outcome="queued",
                     )
