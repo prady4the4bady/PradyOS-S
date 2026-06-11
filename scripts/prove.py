@@ -583,6 +583,9 @@ DEFAULT_MODULES: list[str] = [
     # Agent 7 — CHRONICLE SAGE (institutional memory)
     "tests/test_chronicle_sage.py",
     "tests/test_chronicle_sage_web.py",
+    # SPECTER — web-action executor
+    "tests/test_specter.py",
+    "tests/test_specter_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

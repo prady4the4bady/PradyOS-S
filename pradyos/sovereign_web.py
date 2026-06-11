@@ -105,6 +105,7 @@ from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
 from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
 from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
 from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
+from pradyos.web.specter_web import register_specter_routes  # SPECTER — web-action executor
 from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
 from pradyos.web.splay_tree_web import register_splaytree_routes  # Phase 133
 from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
@@ -345,6 +346,7 @@ def create_app(
     synaptic: Any | None = None,
     nexus: Any | None = None,
     chronicle: Any | None = None,
+    specter: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3676,6 +3678,8 @@ def create_app(
     register_nexus_routes(app, nexus)  # Agent 4 — NEXUS WEAVE A2A orchestration
 
     register_chronicle_routes(app, chronicle)  # Agent 7 — CHRONICLE SAGE institutional memory
+
+    register_specter_routes(app, specter)  # SPECTER — web-action executor
 
     return app
 
