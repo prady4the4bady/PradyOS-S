@@ -87,6 +87,7 @@ from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Ph
 from pradyos.web.polygon_web import register_polygon_routes  # Phase 168
 from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
 from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
+from pradyos.web.prism_web import register_prism_routes  # PRISM — creative artifact production
 from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
 from pradyos.web.quasar_web import register_quasar_routes  # Plane 8 — QUASAR GATE
 from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
@@ -347,6 +348,7 @@ def create_app(
     nexus: Any | None = None,
     chronicle: Any | None = None,
     specter: Any | None = None,
+    prism: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3680,6 +3682,8 @@ def create_app(
     register_chronicle_routes(app, chronicle)  # Agent 7 — CHRONICLE SAGE institutional memory
 
     register_specter_routes(app, specter)  # SPECTER — web-action executor
+
+    register_prism_routes(app, prism)  # PRISM — creative artifact production
 
     return app
 

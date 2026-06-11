@@ -586,6 +586,9 @@ DEFAULT_MODULES: list[str] = [
     # SPECTER — web-action executor
     "tests/test_specter.py",
     "tests/test_specter_web.py",
+    # PRISM — creative artifact production
+    "tests/test_prism.py",
+    "tests/test_prism_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
