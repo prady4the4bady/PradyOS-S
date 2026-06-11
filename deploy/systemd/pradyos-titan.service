@@ -5,8 +5,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=notify
-WatchdogSec=30
+# The daemon does not implement sd_notify readiness signalling; Type=notify
+# stalls the boot transaction waiting for a READY=1 that never comes.
+Type=exec
 ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.titan_ops.daemon
 Restart=on-failure
 RestartSec=3
@@ -14,20 +15,32 @@ StartLimitBurst=10
 
 # TITAN OPS has constitutional admin authority.
 # Privilege is granted because every action is audited.
+# Group=pradyos so the control socket (daemon chmods it to 0660) is reachable
+# by the unprivileged planes (IMPERIUM, Sovereign Web).
 User=root
-Group=root
+Group=pradyos
+UMask=0007
 
 Environment=PRADYOS_TITAN_SOCKET=/run/pradyos/titan.sock
 Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
 Environment=PRADYOS_BUS_BACKEND=redis
 Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
+EnvironmentFile=-/etc/pradyos/titan.env
 
-# Audit + state stay sovereign across restarts
-RuntimeDirectory=pradyos
-StateDirectory=pradyos
-LogsDirectory=pradyos
+# /run/pradyos, /var/log/pradyos and /var/lib/pradyos are provisioned by
+# tmpfiles.d / the image build (root:pradyos, group-writable). No
+# RuntimeDirectory=/StateDirectory=/LogsDirectory= here: those directives
+# chown to the unit's User, and this is the only root unit sharing those
+# directories with the pradyos-user planes.
 
-# Sandboxing — TITAN OPS may operate on host but cannot wander
+# Sandboxing — TITAN OPS may operate on the host but cannot wander.
+# No syscall filter / W^X lockdown: the executor spawns arbitrary audited
+# commands and loads Python C extensions.
 ProtectSystem=full
-Prote
+ProtectHome=read-only
+PrivateTmp=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=multi-user.target

@@ -5,8 +5,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=notify
-WatchdogSec=30
+# The daemon does not implement sd_notify readiness signalling; Type=notify
+# stalls the boot transaction waiting for a READY=1 that never comes.
+Type=exec
 ExecStart=/opt/pradyos/.venv/bin/python -m pradyos.warden_grid.monitor
 Restart=on-failure
 RestartSec=3

@@ -9,7 +9,7 @@ Requires=pradyos-imperium.service
 BindsTo=pradyos-oracle.service
 
 [Service]
-Type=simple
+Type=exec
 ExecStart=/opt/pradyos/.venv/bin/pradyos-admission
 Restart=on-failure
 RestartSec=3
@@ -29,10 +29,11 @@ EnvironmentFile=-/etc/pradyos/admission.env
 # ---------- Persistent directories ----------
 LogsDirectory=pradyos
 StateDirectory=pradyos
-RuntimeDirectory=pradyos
 
-# ---------- Hardening ----------
-# The admission bridge reads constitutional rules and writes audit events only.
+# ---------- Hardening (Python-ML-safe) ----------
+# The bridge imports the ORACLE package (numpy / scikit-learn stack), so
+# MemoryDenyWriteExecute= and SystemCallFilter= are deliberately absent —
+# they kill the ML imports at load time.
 ProtectSystem=strict
 ReadWritePaths=/var/log/pradyos /var/lib/pradyos
 ProtectHome=true
@@ -44,6 +45,7 @@ ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictNamespaces=true
 LockPersonality=true
-MemoryDenyWriteExecute=true
 RestrictRealtime=true
-System
+
+[Install]
+WantedBy=multi-user.target
