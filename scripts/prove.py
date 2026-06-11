@@ -559,6 +559,9 @@ DEFAULT_MODULES: list[str] = [
     # Plane 8 — QUASAR GATE (inference router)
     "tests/test_quasar_gate.py",
     "tests/test_quasar_web.py",
+    # Plane 6 — STARMAP (knowledge graph)
+    "tests/test_starmap.py",
+    "tests/test_starmap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
