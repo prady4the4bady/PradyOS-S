@@ -574,6 +574,9 @@ DEFAULT_MODULES: list[str] = [
     # Agent 5 — SENTINEL WATCH (adversarial defense)
     "tests/test_sentinel_watch.py",
     "tests/test_sentinel_watch_web.py",
+    # Agent 6 — SYNAPTIC MIND (model management)
+    "tests/test_synaptic_mind.py",
+    "tests/test_synaptic_mind_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

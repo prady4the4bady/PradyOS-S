@@ -110,6 +110,7 @@ from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 11
 from pradyos.web.starmap_web import register_starmap_routes  # Plane 6 — STARMAP
 from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
 from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
+from pradyos.web.synaptic_mind_web import register_synaptic_routes  # Agent 6 — SYNAPTIC MIND
 from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
 from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 93
 from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
@@ -339,6 +340,7 @@ def create_app(
     helios: Any | None = None,
     citadel: Any | None = None,
     sentinel: Any | None = None,
+    synaptic: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3664,6 +3666,8 @@ def create_app(
     register_citadel_routes(app, citadel)  # Plane 9 — NIGHT CITADEL self-improvement
 
     register_sentinel_routes(app, sentinel)  # Agent 5 — SENTINEL WATCH adversarial defense
+
+    register_synaptic_routes(app, synaptic)  # Agent 6 — SYNAPTIC MIND model management
 
     return app
 
