@@ -79,6 +79,7 @@ from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
 from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
 from pradyos.web.morris_web import register_morris_routes  # Phase 111
+from pradyos.web.nexus_weave_web import register_nexus_routes  # Agent 4 — NEXUS WEAVE
 from pradyos.web.night_citadel_web import register_citadel_routes  # Plane 9 — NIGHT CITADEL
 from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 150
 from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Phase 149
@@ -341,6 +342,7 @@ def create_app(
     citadel: Any | None = None,
     sentinel: Any | None = None,
     synaptic: Any | None = None,
+    nexus: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3668,6 +3670,8 @@ def create_app(
     register_sentinel_routes(app, sentinel)  # Agent 5 — SENTINEL WATCH adversarial defense
 
     register_synaptic_routes(app, synaptic)  # Agent 6 — SYNAPTIC MIND model management
+
+    register_nexus_routes(app, nexus)  # Agent 4 — NEXUS WEAVE A2A orchestration
 
     return app
 

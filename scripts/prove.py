@@ -577,6 +577,9 @@ DEFAULT_MODULES: list[str] = [
     # Agent 6 — SYNAPTIC MIND (model management)
     "tests/test_synaptic_mind.py",
     "tests/test_synaptic_mind_web.py",
+    # Agent 4 — NEXUS WEAVE (A2A orchestration)
+    "tests/test_nexus_weave.py",
+    "tests/test_nexus_weave_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
