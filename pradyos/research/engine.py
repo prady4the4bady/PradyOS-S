@@ -257,7 +257,9 @@ class ResearchEngine:
         notes: list[str] = []
 
         if not chosen:
-            notes.append("no research sources configured — register a source to gather intelligence")
+            notes.append(
+                "no research sources configured — register a source to gather intelligence"
+            )
 
         # Collect documents (I/O happens here, behind the source interface).
         docs: list[SourceDoc] = []
@@ -270,7 +272,9 @@ class ResearchEngine:
                     notes.append(f"source {name!r} failed on {q!r}: {exc}")
                     continue
                 for d in found or []:
-                    docs.append(d if d.source else SourceDoc(d.url, d.title, d.snippet, d.content, name))
+                    docs.append(
+                        d if d.source else SourceDoc(d.url, d.title, d.snippet, d.content, name)
+                    )
 
         findings = self._rank(docs, q_terms, max_findings)
         key_points = self._key_points(docs, findings, q_terms)
@@ -302,7 +306,9 @@ class ResearchEngine:
         best: dict[str, Finding] = {}
         for d in docs:
             key = _normalize_url(d.url)
-            haystack = _term_set(f"{d.title} {d.title} {d.snippet} {d.content}")  # title weighted ×2
+            haystack = _term_set(
+                f"{d.title} {d.title} {d.snippet} {d.content}"
+            )  # title weighted ×2
             matched = tuple(sorted(q_terms & haystack))
             score = len(matched)
             prior = best.get(key)
