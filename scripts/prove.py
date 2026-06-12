@@ -562,6 +562,36 @@ DEFAULT_MODULES: list[str] = [
     # Plane 6 — STARMAP (knowledge graph)
     "tests/test_starmap.py",
     "tests/test_starmap_web.py",
+    # Plane 7 — BASTION (security shield)
+    "tests/test_bastion.py",
+    "tests/test_bastion_web.py",
+    # Agent 2 — HELIOS FORGE (build engine)
+    "tests/test_helios_forge.py",
+    "tests/test_helios_forge_web.py",
+    # Plane 9 — NIGHT CITADEL (self-improvement)
+    "tests/test_night_citadel.py",
+    "tests/test_night_citadel_web.py",
+    # Agent 5 — SENTINEL WATCH (adversarial defense)
+    "tests/test_sentinel_watch.py",
+    "tests/test_sentinel_watch_web.py",
+    # Agent 6 — SYNAPTIC MIND (model management)
+    "tests/test_synaptic_mind.py",
+    "tests/test_synaptic_mind_web.py",
+    # Agent 4 — NEXUS WEAVE (A2A orchestration)
+    "tests/test_nexus_weave.py",
+    "tests/test_nexus_weave_web.py",
+    # Agent 7 — CHRONICLE SAGE (institutional memory)
+    "tests/test_chronicle_sage.py",
+    "tests/test_chronicle_sage_web.py",
+    # SPECTER — web-action executor
+    "tests/test_specter.py",
+    "tests/test_specter_web.py",
+    # PRISM — creative artifact production
+    "tests/test_prism.py",
+    "tests/test_prism_web.py",
+    # Plane 10 — AETHER SHELL (experience layer)
+    "tests/test_aether_shell.py",
+    "tests/test_aether_shell_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

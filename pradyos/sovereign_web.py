@@ -30,17 +30,20 @@ from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.core.timeout_guard import TimeoutExpiredError  # Phase 56
 from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.sovereign.audit_ui import build_audit_html
+from pradyos.web.aether_shell_web import register_aether_routes  # Plane 10 — AETHER SHELL
 from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
 from pradyos.web.ams_web import register_ams_routes  # Phase 130
 from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
 from pradyos.web.avl_tree_web import register_avl_routes  # Phase 155
 from pradyos.web.b_tree_web import register_btree_routes  # Phase 156
+from pradyos.web.bastion_web import register_bastion_routes  # Plane 7 — BASTION
 from pradyos.web.bbit_minhash_web import register_bbitminhash_routes  # Phase 122
 from pradyos.web.binary_fuse_web import register_binaryfuse_routes  # Phase 108
 from pradyos.web.binary_lifting_web import register_binarylifting_routes  # Phase 161
 from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
 from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
 from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
+from pradyos.web.chronicle_sage_web import register_chronicle_routes  # Agent 7 — CHRONICLE SAGE
 from pradyos.web.convex_hull_web import register_convexhull_routes  # Phase 167
 from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
 from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
@@ -57,6 +60,7 @@ from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
 from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
 from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
 from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
+from pradyos.web.helios_forge_web import register_helios_routes  # Agent 2 — HELIOS FORGE
 from pradyos.web.hyper_minhash_web import register_hyperminhash_routes  # Phase 117
 from pradyos.web.iblt_web import register_iblt_routes  # Phase 121
 from pradyos.web.implicit_treap_web import register_implicittreap_routes  # Phase 162
@@ -77,11 +81,14 @@ from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
 from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
 from pradyos.web.morris_web import register_morris_routes  # Phase 111
+from pradyos.web.nexus_weave_web import register_nexus_routes  # Agent 4 — NEXUS WEAVE
+from pradyos.web.night_citadel_web import register_citadel_routes  # Plane 9 — NIGHT CITADEL
 from pradyos.web.pairing_heap_web import register_pairingheap_routes  # Phase 150
 from pradyos.web.persistent_segment_tree_web import register_perseg_routes  # Phase 149
 from pradyos.web.polygon_web import register_polygon_routes  # Phase 168
 from pradyos.web.pr_quadtree_web import register_pr_quadtree_routes  # Phase 153
 from pradyos.web.priority_sampling_web import register_prioritysample_routes  # Phase 131
+from pradyos.web.prism_web import register_prism_routes  # PRISM — creative artifact production
 from pradyos.web.qdigest_web import register_qdigest_routes  # Phase 105
 from pradyos.web.quasar_web import register_quasar_routes  # Plane 8 — QUASAR GATE
 from pradyos.web.quotient_web import register_quotient_routes  # Phase 90
@@ -94,11 +101,13 @@ from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
 from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
 from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
+from pradyos.web.sentinel_watch_web import register_sentinel_routes  # Agent 5 — SENTINEL WATCH
 from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
 from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
 from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
 from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
 from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
+from pradyos.web.specter_web import register_specter_routes  # SPECTER — web-action executor
 from pradyos.web.spectralbloom_web import register_spectralbloom_routes  # Phase 103
 from pradyos.web.splay_tree_web import register_splaytree_routes  # Phase 133
 from pradyos.web.sqrt_decomposition_web import register_sqrtdecomp_routes  # Phase 147
@@ -106,6 +115,7 @@ from pradyos.web.stable_bloom_web import register_stablebloom_routes  # Phase 11
 from pradyos.web.starmap_web import register_starmap_routes  # Plane 6 — STARMAP
 from pradyos.web.suffix_array_web import register_suffixarray_routes  # Phase 141
 from pradyos.web.suffix_automaton_web import register_suffixautomaton_routes  # Phase 151
+from pradyos.web.synaptic_mind_web import register_synaptic_routes  # Agent 6 — SYNAPTIC MIND
 from pradyos.web.ternary_search_tree_web import register_tst_routes  # Phase 164
 from pradyos.web.theta_sketch_web import register_theta_sketch_routes  # Phase 93
 from pradyos.web.tiny_lfu_web import register_tinylfu_routes  # Phase 116
@@ -331,6 +341,16 @@ def create_app(
     polygon: Any | None = None,
     quasar: Any | None = None,
     starmap: Any | None = None,
+    bastion: Any | None = None,
+    helios: Any | None = None,
+    citadel: Any | None = None,
+    sentinel: Any | None = None,
+    synaptic: Any | None = None,
+    nexus: Any | None = None,
+    chronicle: Any | None = None,
+    specter: Any | None = None,
+    prism: Any | None = None,
+    aether: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3648,6 +3668,26 @@ def create_app(
     register_quasar_routes(app, quasar)  # Plane 8 — QUASAR GATE inference router
 
     register_starmap_routes(app, starmap)  # Plane 6 — STARMAP knowledge graph
+
+    register_bastion_routes(app, bastion)  # Plane 7 — BASTION security shield
+
+    register_helios_routes(app, helios)  # Agent 2 — HELIOS FORGE build engine
+
+    register_citadel_routes(app, citadel)  # Plane 9 — NIGHT CITADEL self-improvement
+
+    register_sentinel_routes(app, sentinel)  # Agent 5 — SENTINEL WATCH adversarial defense
+
+    register_synaptic_routes(app, synaptic)  # Agent 6 — SYNAPTIC MIND model management
+
+    register_nexus_routes(app, nexus)  # Agent 4 — NEXUS WEAVE A2A orchestration
+
+    register_chronicle_routes(app, chronicle)  # Agent 7 — CHRONICLE SAGE institutional memory
+
+    register_specter_routes(app, specter)  # SPECTER — web-action executor
+
+    register_prism_routes(app, prism)  # PRISM — creative artifact production
+
+    register_aether_routes(app, aether)  # Plane 10 — AETHER SHELL experience layer
 
     return app
 
