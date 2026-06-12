@@ -598,6 +598,9 @@ DEFAULT_MODULES: list[str] = [
     # SKILL LIBRARY — learn-from-experience self-improvement
     "tests/test_skills.py",
     "tests/test_skills_web.py",
+    # CODEMAP — structural self-knowledge of own code
+    "tests/test_codemap.py",
+    "tests/test_codemap_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

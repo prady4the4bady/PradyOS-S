@@ -152,6 +152,21 @@ json_post "$API/api/v1/skills/reinforce" '{"id":"st-skill","success":true}' \
     || fail "skills reinforcement did not raise proven confidence"
 emit "PRADYOS-SELFTEST: skills (self-improvement) ok"
 
+# --- Phase 7: CODEMAP — the OS reasons about its own code (self-knowledge) -----
+# Deterministic, parses-not-executes: feed the running OS a small module, then
+# confirm it extracted the function, its import dependency, and the importer edge.
+json_post "$API/api/v1/codemap/analyze" \
+    '{"module":"st.app","source":"from st.util import helper\n\n\ndef run(a, b):\n    return helper(a, b)\n"}' \
+    "d.get('counts',{}).get('functions')==1 and d.get('dependencies')==['st.util']" \
+    || fail "codemap did not extract module structure"
+json_check "$API/api/v1/codemap/defines?symbol=run" \
+    "len(d.get('definitions',[]))==1 and d['definitions'][0]['module']=='st.app'" \
+    || fail "codemap did not locate the symbol definition"
+json_check "$API/api/v1/codemap/importers?target=st.util" \
+    "d.get('importers')==['st.app']" \
+    || fail "codemap did not compute the importer edge"
+emit "PRADYOS-SELFTEST: codemap (self-knowledge) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"
