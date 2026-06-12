@@ -592,6 +592,9 @@ DEFAULT_MODULES: list[str] = [
     # Plane 10 — AETHER SHELL (experience layer)
     "tests/test_aether_shell.py",
     "tests/test_aether_shell_web.py",
+    # RESEARCH — autonomous intelligence gathering
+    "tests/test_research.py",
+    "tests/test_research_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

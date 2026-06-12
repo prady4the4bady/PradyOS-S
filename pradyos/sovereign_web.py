@@ -97,6 +97,7 @@ from pradyos.web.random_projection_web import register_randomprojection_routes  
 from pradyos.web.range_tree_web import register_rangetree_routes  # Phase 157
 from pradyos.web.rank_select_web import register_rankselect_routes  # Phase 134
 from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
+from pradyos.web.research_web import register_research_routes  # RESEARCH — intelligence gathering
 from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
 from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
@@ -351,6 +352,7 @@ def create_app(
     specter: Any | None = None,
     prism: Any | None = None,
     aether: Any | None = None,
+    research: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3689,6 +3691,8 @@ def create_app(
 
     register_aether_routes(app, aether)  # Plane 10 — AETHER SHELL experience layer
 
+    register_research_routes(app, research)  # RESEARCH — autonomous intelligence gathering
+
     return app
 
 
@@ -3720,11 +3724,22 @@ def main() -> None:
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
     from pradyos.imperium.checkpoint import CheckpointStore
+    from pradyos.research import ResearchEngine, WebAgentSource
 
     bus = get_bus()
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()
-    app = create_app(campaign_registry=registry, checkpoint_store=checkpoint, bus=bus)
+    # Live intelligence gathering: register the web source so the booted OS can
+    # actually research the open web in real time. Reading is low-risk and the
+    # WebAgent's own guardrail gate still applies. The default create_app() used
+    # by tests registers no source and stays deterministic / offline.
+    research = ResearchEngine(sources=[WebAgentSource()])
+    app = create_app(
+        campaign_registry=registry,
+        checkpoint_store=checkpoint,
+        bus=bus,
+        research=research,
+    )
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
 
