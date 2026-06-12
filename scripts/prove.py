@@ -589,6 +589,9 @@ DEFAULT_MODULES: list[str] = [
     # PRISM — creative artifact production
     "tests/test_prism.py",
     "tests/test_prism_web.py",
+    # Plane 10 — AETHER SHELL (experience layer)
+    "tests/test_aether_shell.py",
+    "tests/test_aether_shell_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

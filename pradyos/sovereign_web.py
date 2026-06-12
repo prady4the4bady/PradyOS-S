@@ -30,6 +30,7 @@ from pradyos.core.tdigest import TDigest  # Phase 79
 from pradyos.core.timeout_guard import TimeoutExpiredError  # Phase 56
 from pradyos.core.vectorclock import VectorClock  # Phase 75
 from pradyos.sovereign.audit_ui import build_audit_html
+from pradyos.web.aether_shell_web import register_aether_routes  # Plane 10 — AETHER SHELL
 from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
 from pradyos.web.ams_web import register_ams_routes  # Phase 130
 from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
@@ -349,6 +350,7 @@ def create_app(
     chronicle: Any | None = None,
     specter: Any | None = None,
     prism: Any | None = None,
+    aether: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3684,6 +3686,8 @@ def create_app(
     register_specter_routes(app, specter)  # SPECTER — web-action executor
 
     register_prism_routes(app, prism)  # PRISM — creative artifact production
+
+    register_aether_routes(app, aether)  # Plane 10 — AETHER SHELL experience layer
 
     return app
 
