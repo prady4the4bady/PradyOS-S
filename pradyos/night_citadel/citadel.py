@@ -12,6 +12,9 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+# ``idle`` is the dormant state (index 0) before a cycle is initiated; a created
+# ``_Cycle`` starts already-initiated at ``auditing``. It is kept in PHASES so the
+# exposed ``phase_index`` stays stable and an idle citadel is representable.
 PHASES: tuple[str, ...] = (
     "idle",
     "auditing",

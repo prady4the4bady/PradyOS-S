@@ -84,6 +84,24 @@ def test_cannot_advance_past_staged():
         f.advance("b")
 
 
+def test_staged_build_is_immutable():
+    f = _f()
+    f.create("b", "p")
+    for _ in range(3):
+        f.advance("b")
+    f.record_tests("b", passed=1, failed=0)
+    f.advance("b")  # validated
+    f.advance("b")  # staged (terminal)
+    for mutate in (
+        lambda: f.add_milestone("b", "late"),
+        lambda: f.complete_milestone("b", "late"),
+        lambda: f.record_artifact("b", "x", "code"),
+        lambda: f.record_tests("b", passed=2, failed=0),
+    ):
+        with pytest.raises(ForgeError):
+            mutate()
+
+
 def test_complete_unknown_milestone_raises():
     f = _f()
     f.create("b", "p")

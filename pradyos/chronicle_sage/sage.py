@@ -50,6 +50,8 @@ class ChronicleSage:
             raise ChronicleError(f"entry_type must be one of {ENTRY_TYPES}")
         if not _is_str(title):
             raise ChronicleError("title must be a non-empty string")
+        if isinstance(tags, str | bytes):
+            raise ChronicleError("tags must be a list/tuple of strings, not a single string")
         tag_list = list(tags) if tags is not None else []
         if not all(_is_str(t) for t in tag_list):
             raise ChronicleError("tags must be strings")
@@ -85,8 +87,13 @@ class ChronicleSage:
         return [dict(e) for e in sel[-limit:]]
 
     def latest(self, entry_type: str | None = None) -> dict[str, Any] | None:
-        sel = self.entries(entry_type=entry_type, limit=len(self._entries) or 1)
-        return sel[-1] if sel else None
+        if entry_type is not None and entry_type not in ENTRY_TYPES:
+            raise ChronicleError(f"entry_type must be one of {ENTRY_TYPES}")
+        with self._lock:
+            for e in reversed(self._entries):
+                if entry_type is None or e["type"] == entry_type:
+                    return dict(e)
+            return None
 
     def digest(self, limit: int = 20) -> dict[str, Any]:
         """A 'what changed' summary: counts per type + the most recent entries."""
@@ -94,9 +101,10 @@ class ChronicleSage:
             by_type: dict[str, int] = {}
             for e in self._entries:
                 by_type[e["type"]] = by_type.get(e["type"], 0) + 1
+            total = len(self._entries)
             recent = [dict(e) for e in self._entries[-limit:]]
         return {
-            "total": len(self._entries),
+            "total": total,
             "by_type": by_type,
             "recent": recent,
         }

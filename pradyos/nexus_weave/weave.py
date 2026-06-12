@@ -87,7 +87,12 @@ class NexusWeave:
             raise NexusError("agent name must be a non-empty string")
         if location not in _LOCATIONS:
             raise NexusError(f"location must be one of {_LOCATIONS}")
-        caps = frozenset(capabilities)
+        if isinstance(capabilities, str | bytes):
+            raise NexusError("capabilities must be a collection of strings, not a single string")
+        try:
+            caps = frozenset(capabilities)
+        except TypeError as exc:
+            raise NexusError("capabilities must be an iterable of strings") from exc
         if not caps or not all(_is_str(c) for c in caps):
             raise NexusError("capabilities must be a non-empty set of strings")
         with self._lock:

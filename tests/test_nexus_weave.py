@@ -25,6 +25,13 @@ def test_register_validation():
         n.register_agent("a", "internal", set())
 
 
+def test_register_rejects_bare_string_capabilities():
+    # "build" must not become {'b','u','i','l','d'}
+    n = NexusWeave()
+    with pytest.raises(NexusError):
+        n.register_agent("a", "internal", "build")
+
+
 def test_route_prefers_internal():
     n = _n()
     n.submit("t1", "build")  # both helios(internal) and cloud-coder(external) can

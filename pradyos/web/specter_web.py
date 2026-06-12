@@ -12,18 +12,8 @@ from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
 from pradyos.specter import Specter, SpecterError
-
-
-def _err(exc: SpecterError) -> JSONResponse:
-    code = 404 if "unknown" in str(exc) else 422
-    return JSONResponse({"error": str(exc)}, status_code=code)
-
-
-async def _json(request: Request) -> Any:
-    try:
-        return await request.json()
-    except Exception:
-        return None
+from pradyos.web._responses import err_response as _err
+from pradyos.web._responses import read_json as _json
 
 
 def register_specter_routes(app: Any, specter: Any | None = None) -> Any:

@@ -114,12 +114,14 @@ class HeliosForge:
             raise ForgeError("milestone name must be a non-empty string")
         with self._lock:
             b = self._require(build_id)
+            self._ensure_mutable(b)
             b.milestones.setdefault(name, False)
             return b.manifest()
 
     def complete_milestone(self, build_id: str, name: str) -> dict[str, Any]:
         with self._lock:
             b = self._require(build_id)
+            self._ensure_mutable(b)
             if name not in b.milestones:
                 raise ForgeError(f"unknown milestone {name!r}")
             b.milestones[name] = True
@@ -132,6 +134,7 @@ class HeliosForge:
             raise ForgeError(f"artifact kind must be one of {_ARTIFACT_KINDS}")
         with self._lock:
             b = self._require(build_id)
+            self._ensure_mutable(b)
             b.artifacts.append({"name": name, "kind": kind})
             return b.manifest()
 
@@ -140,6 +143,7 @@ class HeliosForge:
             raise ForgeError("passed/failed must be non-negative ints")
         with self._lock:
             b = self._require(build_id)
+            self._ensure_mutable(b)
             b.tests = {"passed": passed, "failed": failed}
             return b.manifest()
 
@@ -171,3 +175,9 @@ class HeliosForge:
         if b is None:
             raise ForgeError(f"unknown build {build_id!r}")
         return b
+
+    @staticmethod
+    def _ensure_mutable(b: _Build) -> None:
+        """``staged`` is terminal — its manifest must never change afterwards."""
+        if b.stage == "staged":
+            raise ForgeError(f"build {b.id!r} is staged (terminal) and is immutable")

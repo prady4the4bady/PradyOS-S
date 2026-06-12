@@ -12,13 +12,7 @@ from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
 from pradyos.chronicle_sage import ChronicleError, ChronicleSage
-
-
-async def _json(request: Request) -> Any:
-    try:
-        return await request.json()
-    except Exception:
-        return None
+from pradyos.web._responses import read_json as _json
 
 
 def register_chronicle_routes(app: Any, chronicle: Any | None = None) -> Any:

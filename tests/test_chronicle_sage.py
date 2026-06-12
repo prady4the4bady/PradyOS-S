@@ -28,6 +28,13 @@ def test_record_validation():
         c.record("doc", "t", tags=[1, 2])
 
 
+def test_record_rejects_string_tags():
+    # a bare string must not be silently split into character "tags"
+    c = _c()
+    with pytest.raises(ChronicleError):
+        c.record("doc", "t", tags="ops")
+
+
 def test_entries_filter_by_type():
     c = _c()
     c.record("deployment", "d1")

@@ -78,6 +78,8 @@ class AetherShell:
             return dict(intent)
 
     def intents(self, limit: int = 50) -> list[dict[str, Any]]:
+        if not isinstance(limit, int) or limit <= 0:
+            raise AetherError("limit must be a positive integer")
         with self._lock:
             return [dict(i) for i in self._intents[-limit:]]
 
@@ -131,6 +133,7 @@ class AetherShell:
         """The governance-chamber view: urgent-first active cards, per surface."""
         with self._lock:
             active = [dict(c) for c in self._cards.values() if not c["acked"]]
+            total_cards = len(self._cards)
         active.sort(key=lambda c: (-_URGENCY_RANK[c["urgency"]], c["seq"]))
         by_surface: dict[str, list[dict[str, Any]]] = {s: [] for s in SURFACES}
         for c in active:
@@ -149,7 +152,7 @@ class AetherShell:
             "counts": {
                 "active": len(active),
                 "urgent": urgent,
-                "acked": len(self._cards) - len(active),
+                "acked": total_cards - len(active),
             },
         }
 

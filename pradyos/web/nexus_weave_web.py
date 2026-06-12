@@ -13,18 +13,8 @@ from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
 from pradyos.nexus_weave import NexusError, NexusWeave, NoRouteError
-
-
-def _err(exc: NexusError) -> JSONResponse:
-    code = 404 if "unknown" in str(exc) else 422
-    return JSONResponse({"error": str(exc)}, status_code=code)
-
-
-async def _json(request: Request) -> Any:
-    try:
-        return await request.json()
-    except Exception:
-        return None
+from pradyos.web._responses import err_response as _err
+from pradyos.web._responses import read_json as _json
 
 
 def register_nexus_routes(app: Any, nexus: Any | None = None) -> Any:

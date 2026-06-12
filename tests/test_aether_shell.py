@@ -48,6 +48,16 @@ def test_intent_validation():
         a.capture_intent("i", "")
 
 
+def test_intents_rejects_nonpositive_limit():
+    a = _a()
+    a.capture_intent("i", "build")
+    assert len(a.intents(limit=1)) == 1
+    with pytest.raises(AetherError):
+        a.intents(limit=0)
+    with pytest.raises(AetherError):
+        a.intents(limit=-1)
+
+
 # ── cards ───────────────────────────────────────────────────────────────────────
 
 

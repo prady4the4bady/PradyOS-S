@@ -13,18 +13,8 @@ from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
 from pradyos.helios_forge import ForgeError, HeliosForge
-
-
-def _err(exc: ForgeError) -> JSONResponse:
-    code = 404 if "unknown" in str(exc) else 422
-    return JSONResponse({"error": str(exc)}, status_code=code)
-
-
-async def _json(request: Request) -> Any:
-    try:
-        return await request.json()
-    except Exception:
-        return None
+from pradyos.web._responses import err_response as _err
+from pradyos.web._responses import read_json as _json
 
 
 def register_helios_routes(app: Any, helios: Any | None = None) -> Any:
