@@ -44,6 +44,7 @@ from pradyos.web.binomial_heap_web import register_binomial_routes  # Phase 160
 from pradyos.web.bloomier_web import register_bloomier_routes  # Phase 114
 from pradyos.web.cartesian_tree_web import register_cartesiantree_routes  # Phase 145
 from pradyos.web.chronicle_sage_web import register_chronicle_routes  # Agent 7 — CHRONICLE SAGE
+from pradyos.web.codemap_web import register_codemap_routes  # CODEMAP — code self-knowledge
 from pradyos.web.convex_hull_web import register_convexhull_routes  # Phase 167
 from pradyos.web.count_sketch_web import register_count_sketch_routes  # Phase 94
 from pradyos.web.counting_bloom_web import register_countingbloom_routes  # Phase 107
@@ -355,6 +356,7 @@ def create_app(
     aether: Any | None = None,
     research: Any | None = None,
     skills: Any | None = None,
+    codemap: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3696,6 +3698,8 @@ def create_app(
     register_research_routes(app, research)  # RESEARCH — autonomous intelligence gathering
 
     register_skills_routes(app, skills)  # SKILL LIBRARY — learn-from-experience self-improvement
+
+    register_codemap_routes(app, codemap)  # CODEMAP — structural self-knowledge of own code
 
     return app
 
