@@ -106,6 +106,7 @@ from pradyos.web.sentinel_watch_web import register_sentinel_routes  # Agent 5 �
 from pradyos.web.simhash_lsh_web import register_simhashlsh_routes  # Phase 126
 from pradyos.web.simhash_web import register_simhash_routes  # Phase 89
 from pradyos.web.skew_heap_web import register_skewheap_routes  # Phase 136
+from pradyos.web.skills_web import register_skills_routes  # SKILL LIBRARY — learn from experience
 from pradyos.web.sparse_segment_tree_web import register_sparseseg_routes  # Phase 166
 from pradyos.web.sparse_table_web import register_sparsetable_routes  # Phase 138
 from pradyos.web.specter_web import register_specter_routes  # SPECTER — web-action executor
@@ -353,6 +354,7 @@ def create_app(
     prism: Any | None = None,
     aether: Any | None = None,
     research: Any | None = None,
+    skills: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3692,6 +3694,8 @@ def create_app(
     register_aether_routes(app, aether)  # Plane 10 — AETHER SHELL experience layer
 
     register_research_routes(app, research)  # RESEARCH — autonomous intelligence gathering
+
+    register_skills_routes(app, skills)  # SKILL LIBRARY — learn-from-experience self-improvement
 
     return app
 

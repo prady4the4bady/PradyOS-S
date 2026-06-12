@@ -137,6 +137,21 @@ curl -fsS --max-time 60 -X POST "$API/api/v1/research/run" \
     || fail "research run did not return a well-formed brief"
 emit "PRADYOS-SELFTEST: research (live intelligence) ok"
 
+# --- Phase 6: SKILL LIBRARY learns from experience (self-improvement) ----------
+# Deterministic, no egress: teach the running OS a skill, confirm it is recalled
+# for a matching intent, then reinforce it and confirm its proven confidence rises.
+json_post "$API/api/v1/skills/learn" \
+    '{"id":"st-skill","name":"Deploy web","trigger":"deploy web service","steps":["build","ship"]}' \
+    "d.get('id')=='st-skill' and d.get('confidence')==0.5" \
+    || fail "skills did not learn a new skill"
+json_post "$API/api/v1/skills/match" '{"intent":"deploy the web service now"}' \
+    "len(d.get('skills',[])) >= 1 and d['skills'][0]['id']=='st-skill'" \
+    || fail "skills did not match a learned skill to an intent"
+json_post "$API/api/v1/skills/reinforce" '{"id":"st-skill","success":true}' \
+    "d.get('success')==1 and d.get('confidence') > 0.5" \
+    || fail "skills reinforcement did not raise proven confidence"
+emit "PRADYOS-SELFTEST: skills (self-improvement) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"

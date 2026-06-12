@@ -595,6 +595,9 @@ DEFAULT_MODULES: list[str] = [
     # RESEARCH — autonomous intelligence gathering
     "tests/test_research.py",
     "tests/test_research_web.py",
+    # SKILL LIBRARY — learn-from-experience self-improvement
+    "tests/test_skills.py",
+    "tests/test_skills_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
