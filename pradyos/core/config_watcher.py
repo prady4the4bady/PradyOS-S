@@ -172,6 +172,16 @@ class ConfigWatcher:
 
     def _on_file_changed(self) -> None:
         """Called when a mtime change is detected."""
+        # Writers truncate-then-write, so an mtime bump can momentarily expose a
+        # zero-byte file. Empty TOML parses as a *valid* empty document, which
+        # would silently reset every setting to its default — so treat a 0-byte
+        # file as a transient mid-write state and wait for the real content.
+        try:
+            if self._path.stat().st_size == 0:
+                log.debug("Config file %s momentarily empty — deferring reload", self._path)
+                return
+        except OSError:
+            return
         log.info("Config file changed: %s — reloading", self._path)
         try:
             new_cfg = load_config(toml_path=self._path)

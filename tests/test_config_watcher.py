@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import time
+import os
 import threading
+import time
 from pathlib import Path
-from unittest.mock import MagicMock, call
-
-import pytest
+from unittest.mock import MagicMock
 
 from pradyos.core.config import SovereignConfig
 from pradyos.core.config_watcher import ConfigWatcher
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -30,7 +28,11 @@ this is not valid toml ===
 
 
 def _write(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
+    # Atomic replace: a polling watcher must never observe a half-written
+    # (zero-byte) file, which would otherwise parse as empty/default config.
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(content, encoding="utf-8")
+    os.replace(tmp, path)
 
 
 # ---------------------------------------------------------------------------
