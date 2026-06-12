@@ -167,6 +167,27 @@ json_check "$API/api/v1/codemap/importers?target=st.util" \
     || fail "codemap did not compute the importer edge"
 emit "PRADYOS-SELFTEST: codemap (self-knowledge) ok"
 
+# --- Phase 8: REVIEW GATE — vet a self-modification (safe self-improvement) ----
+# A change that removes a public symbol must be denied; a change to the
+# constitution must escalate to the Sovereign rather than auto-apply.
+json_post "$API/api/v1/review/assess" \
+    '{"path":"pradyos/x.py","before":"def a():\n    pass\n\n\ndef b():\n    pass\n","after":"def a():\n    pass\n"}' \
+    "d.get('decision')=='deny'" \
+    || fail "review gate did not deny a public-API removal"
+json_post "$API/api/v1/review/assess" \
+    '{"path":"pradyos/core/constitution.py","after":"x = 2\n"}' \
+    "d.get('decision')=='escalate'" \
+    || fail "review gate did not escalate a constitution change"
+emit "PRADYOS-SELFTEST: review (safe self-modification) ok"
+
+# --- Phase 9: FORTIFY — the OS audits its own code for weaknesses (self-heal) --
+# Feed the running OS fragile source and confirm it flags the weaknesses.
+json_post "$API/api/v1/fortify/audit" \
+    '{"module":"st.weak","source":"def f(x=[]):\n    try:\n        g()\n    except:\n        pass\n"}' \
+    "d.get('risk',0) >= 6 and any(f['rule']=='mutable_default' for f in d.get('findings',[]))" \
+    || fail "fortify did not flag code weaknesses"
+emit "PRADYOS-SELFTEST: fortify (self-hardening) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"

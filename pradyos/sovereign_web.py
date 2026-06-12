@@ -56,6 +56,7 @@ from pradyos.web.exponential_histogram_web import register_exponential_histogram
 from pradyos.web.fenwick2d_web import register_fenwick2d_routes  # Phase 146
 from pradyos.web.fibonacci_heap_web import register_fibonacci_routes  # Phase 154
 from pradyos.web.fmsketch_web import register_fmsketch_routes  # Phase 129
+from pradyos.web.fortify_web import register_fortify_routes  # FORTIFY — self-hardening audit
 from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
 from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
 from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
@@ -100,6 +101,7 @@ from pradyos.web.rank_select_web import register_rankselect_routes  # Phase 134
 from pradyos.web.rendezvous_web import register_rendezvous_routes  # Phase 119
 from pradyos.web.research_web import register_research_routes  # RESEARCH — intelligence gathering
 from pradyos.web.reservoir_web import register_reservoir_routes  # Phase 85
+from pradyos.web.review_web import register_review_routes  # REVIEW GATE — safe self-modification
 from pradyos.web.ribbon_web import register_ribbon_routes  # Phase 101
 from pradyos.web.scalable_bloom_web import register_scalablebloom_routes  # Phase 118
 from pradyos.web.scapegoat_tree_web import register_scapegoat_routes  # Phase 159
@@ -357,6 +359,8 @@ def create_app(
     research: Any | None = None,
     skills: Any | None = None,
     codemap: Any | None = None,
+    review: Any | None = None,
+    fortify: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3700,6 +3704,10 @@ def create_app(
     register_skills_routes(app, skills)  # SKILL LIBRARY — learn-from-experience self-improvement
 
     register_codemap_routes(app, codemap)  # CODEMAP — structural self-knowledge of own code
+
+    register_review_routes(app, review)  # REVIEW GATE — vet self-modifications before commit
+
+    register_fortify_routes(app, fortify)  # FORTIFY — self-hardening audit of own code
 
     return app
 

@@ -601,6 +601,12 @@ DEFAULT_MODULES: list[str] = [
     # CODEMAP — structural self-knowledge of own code
     "tests/test_codemap.py",
     "tests/test_codemap_web.py",
+    # REVIEW GATE — vet self-modifications
+    "tests/test_review.py",
+    "tests/test_review_web.py",
+    # FORTIFY — self-hardening audit
+    "tests/test_fortify.py",
+    "tests/test_fortify_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
