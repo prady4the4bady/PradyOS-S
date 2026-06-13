@@ -33,6 +33,7 @@ from pradyos.sovereign.audit_ui import build_audit_html
 from pradyos.web.aether_shell_web import register_aether_routes  # Plane 10 — AETHER SHELL
 from pradyos.web.aho_corasick_web import register_ahocorasick_routes  # Phase 142
 from pradyos.web.ams_web import register_ams_routes  # Phase 130
+from pradyos.web.ascent_web import register_ascent_routes  # ASCENT — self-improvement loop
 from pradyos.web.augmentedsketch_web import register_augmentedsketch_routes  # Phase 104
 from pradyos.web.avl_tree_web import register_avl_routes  # Phase 155
 from pradyos.web.b_tree_web import register_btree_routes  # Phase 156
@@ -363,6 +364,7 @@ def create_app(
     review: Any | None = None,
     fortify: Any | None = None,
     evolve: Any | None = None,
+    ascent: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3713,6 +3715,8 @@ def create_app(
 
     register_evolve_routes(app, evolve)  # EVOLVE — autonomous self-improvement pipeline
 
+    register_ascent_routes(app, ascent)  # ASCENT — autonomous self-improvement loop (orchestrator)
+
     return app
 
 
@@ -3741,6 +3745,7 @@ def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
 
+    from pradyos.ascent import AscentLoop
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
     from pradyos.core.web_agent import WebAgent
@@ -3769,12 +3774,17 @@ def main() -> None:
     # candidate fixes (zero API credits). If Ollama is absent, propose() degrades
     # gracefully. The default create_app() used by tests wires no proposer.
     evolve = EvolveEngine(proposer=OllamaProposer())
+    # Close the loop: ASCENT shares the live EVOLVE engine, so its autonomous
+    # cycles flow through the same local-LLM proposer + gate. The default
+    # create_app() used by tests wires no loop (survey/decide stays deterministic).
+    ascent = AscentLoop(evolve=evolve)
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,
         bus=bus,
         research=research,
         evolve=evolve,
+        ascent=ascent,
     )
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
