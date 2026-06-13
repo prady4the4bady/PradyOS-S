@@ -188,6 +188,21 @@ json_post "$API/api/v1/fortify/audit" \
     || fail "fortify did not flag code weaknesses"
 emit "PRADYOS-SELFTEST: fortify (self-hardening) ok"
 
+# --- Phase 10: EVOLVE — autonomous self-improvement pipeline (the capstone) ----
+# The OS judges a proposed change to its OWN code end-to-end: FORTIFY robustness
+# delta + REVIEW GATE safety composed into one verdict. A bare-except fix that
+# improves robustness and passes review must be promoted; a constitution edit
+# must escalate to the Sovereign.
+json_post "$API/api/v1/evolve/evaluate" \
+    '{"path":"pradyos/st.py","before":"def f():\n    try:\n        g()\n    except:\n        pass\n","after":"def f():\n    try:\n        g()\n    except ValueError:\n        log()\n"}' \
+    "d.get('verdict')=='promote' and d.get('risk_delta')==-3" \
+    || fail "evolve did not promote a safe robustness-improving change"
+json_post "$API/api/v1/evolve/evaluate" \
+    '{"path":"pradyos/core/constitution.py","after":"x = 2\n"}' \
+    "d.get('verdict')=='escalate'" \
+    || fail "evolve did not escalate a constitution change"
+emit "PRADYOS-SELFTEST: evolve (autonomous self-improvement) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"

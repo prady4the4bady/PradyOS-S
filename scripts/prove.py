@@ -607,6 +607,9 @@ DEFAULT_MODULES: list[str] = [
     # FORTIFY — self-hardening audit
     "tests/test_fortify.py",
     "tests/test_fortify_web.py",
+    # EVOLVE — autonomous self-improvement pipeline
+    "tests/test_evolve.py",
+    "tests/test_evolve_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
