@@ -3752,8 +3752,9 @@ def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
 
-    from pradyos.ascent import AscentDriver, AscentLoop, OwnModuleSource
+    from pradyos.ascent import AscentApplier, AscentDriver, AscentLoop, OwnModuleSource
     from pradyos.campaign.registry import CampaignRegistry
+    from pradyos.core.audit import get_audit_log
     from pradyos.core.bus import get_bus
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, OllamaProposer
@@ -3794,7 +3795,16 @@ def main() -> None:
     # Close the loop: ASCENT shares the live EVOLVE engine, so its autonomous
     # cycles flow through the same local-LLM proposer + gate. The default
     # create_app() used by tests wires no loop (survey/decide stays deterministic).
-    ascent = AscentLoop(evolve=evolve)
+    # The apply-gate: a Sovereign-approved promote is STAGED (re-gated + audited)
+    # into a writable dir — the OS never overwrites its own running source (and
+    # can't, under ProtectSystem=strict); a privileged deploy step promotes it.
+    apply_root = (
+        Path(os.environ.get("PRADYOS_STATE_PATH") or "/var/lib/pradyos/state") / "ascent-applied"
+    )
+    ascent = AscentLoop(
+        evolve=evolve,
+        applier=AscentApplier(apply_root=apply_root, audit=get_audit_log()),
+    )
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,

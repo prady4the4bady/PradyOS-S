@@ -96,6 +96,24 @@ def register_ascent_routes(app: Any, ascent: Any | None = None) -> Any:
         except AscentError as exc:
             return _err(exc)
 
+    @app.post("/api/v1/ascent/apply")
+    async def api_ascent_apply(request: Request) -> JSONResponse:
+        body = await _json(request)
+        if not isinstance(body, dict) or "seq" not in body:
+            return JSONResponse({"error": "seq is required"}, status_code=422)
+        try:
+            # apply() re-gates + writes to disk (staging) — keep the I/O off the loop.
+            return JSONResponse(await run_in_threadpool(loop.apply, body["seq"]))
+        except AscentError as exc:
+            return _err(exc)
+
+    @app.get("/api/v1/ascent/applied")
+    async def api_ascent_applied(limit: int = Query(20)) -> JSONResponse:
+        try:
+            return JSONResponse({"applied": loop.applied(limit=limit)})
+        except AscentError as exc:
+            return _err(exc)
+
     @app.get("/api/v1/ascent/stats")
     async def api_ascent_stats() -> JSONResponse:
         return JSONResponse(loop.stats())

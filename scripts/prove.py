@@ -614,6 +614,7 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_ascent.py",
     "tests/test_ascent_web.py",
     "tests/test_ascent_driver.py",
+    "tests/test_ascent_apply.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported

@@ -250,6 +250,94 @@ def test_decisions_limit_validation_and_reset_clears():
     assert loop.decisions() == [] and loop.stats()["decisions"] == 0
 
 
+# ── apply-gate (loop ↔ applier) ────────────────────────────────────────────────
+
+
+class _FakeApplier:
+    def __init__(self, applied: bool = True, gate: str = "approve") -> None:
+        self.calls: list[tuple[str, str]] = []
+        self._applied = applied
+        self._gate = gate
+
+    def apply(self, module: str, after: str) -> dict:
+        self.calls.append((module, after))
+        return {
+            "applied": self._applied,
+            "module": module,
+            "gate_decision": self._gate,
+            "reason": "staged" if self._applied else "refused",
+            "path": f"/staged/{module}" if self._applied else None,
+            "bytes": len(after.encode("utf-8")) if self._applied else 0,
+        }
+
+
+def _approved_loop(applier):
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"), applier=applier)
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    seq = loop.pending()[0]["seq"]
+    loop.resolve(seq, "approve")
+    return loop, seq
+
+
+def test_apply_stages_approved_change_and_marks_decision():
+    applier = _FakeApplier(applied=True)
+    loop, seq = _approved_loop(applier)
+    rec = loop.apply(seq)
+    assert rec["applied"] is True and rec["module"] == "a.py" and rec["seq"] == seq
+    assert applier.calls == [("a.py", "x = 1\n")]  # applier got the module + after
+    assert loop.applied()[-1]["seq"] == seq
+    assert loop.decisions()[-1]["status"] == "applied"
+    assert loop.stats()["applied"] == 1 and loop.stats()["applier_configured"] is True
+
+
+def test_apply_refused_marks_decision_apply_refused():
+    loop, seq = _approved_loop(_FakeApplier(applied=False, gate="deny"))
+    rec = loop.apply(seq)
+    assert rec["applied"] is False and rec["gate_decision"] == "deny"
+    assert loop.decisions()[-1]["status"] == "apply_refused"
+
+
+def test_apply_without_applier_raises():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    loop.resolve(loop.pending()[0]["seq"], "approve")
+    with pytest.raises(AscentError, match="no applier"):
+        loop.apply(1)
+
+
+def test_apply_unknown_or_unapproved_seq_raises():
+    # a rejected (not approved) seq cannot be applied; an absent seq is unknown
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"), applier=_FakeApplier())
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    loop.resolve(loop.pending()[0]["seq"], "reject")
+    with pytest.raises(AscentError, match="not approved"):
+        loop.apply(1)
+    with pytest.raises(AscentError, match="unknown approved decision"):
+        loop.apply(999)
+
+
+def test_apply_twice_is_refused():
+    loop, seq = _approved_loop(_FakeApplier(applied=True))
+    loop.apply(seq)
+    with pytest.raises(AscentError, match="already applied"):
+        loop.apply(seq)
+
+
+@pytest.mark.parametrize("bad", [True, "1", 1.5])
+def test_apply_bad_seq_type_raises(bad):
+    with pytest.raises(AscentError, match="seq must be an integer"):
+        AscentLoop(applier=_FakeApplier()).apply(bad)
+
+
+def test_applied_limit_validation_and_reset_clears():
+    loop, seq = _approved_loop(_FakeApplier(applied=True))
+    loop.apply(seq)
+    with pytest.raises(AscentError):
+        loop.applied(limit=0)
+    loop.reset()
+    assert loop.applied() == [] and loop.stats()["applied"] == 0
+
+
 def test_proposer_unavailable_records_skip_with_note():
     loop = AscentLoop(evolve=_FakeEvolve(proposed=False, note="proposer unavailable"))
     [cyc] = loop.run_cycle({"a.py": WEAK_HIGH})
