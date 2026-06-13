@@ -214,6 +214,25 @@ json_post "$API/api/v1/evolve/propose" \
     || fail "evolve /propose did not return a well-formed response"
 emit "PRADYOS-SELFTEST: evolve propose (live LLM step) ok"
 
+# --- Phase 11: ASCENT — the autonomous self-improvement LOOP (capstone orchestrator)
+# ASCENT closes the loop EVOLVE leaves open: it decides WHAT to harden (surveys
+# its own modules by FORTIFY risk), synthesises a directive from the worst finding,
+# drives EVOLVE's propose+gate, then decides the outcome (apply/defer/escalate/
+# discard). The survey/decide core is deterministic; a full cycle is probed
+# structurally since the proposer degrades gracefully if the local model is absent.
+json_post "$API/api/v1/ascent/survey" \
+    '{"candidates":{"pradyos/weak.py":"def f(x=[]):\n    try:\n        g()\n    except:\n        pass\n","pradyos/clean.py":"x = 1\n"}}' \
+    "d['survey'][0]['module']=='pradyos/weak.py' and d['survey'][0]['risk']>=6 and 'mutable_default' in (d['survey'][0]['directive'] or '')" \
+    || fail "ascent survey did not rank the weakest module first with a directive"
+json_post "$API/api/v1/ascent/cycle" \
+    '{"candidates":{"pradyos/weak.py":"def f(x=[]):\n    try:\n        g()\n    except:\n        pass\n"}}' \
+    "len(d.get('cycles',[]))==1 and d['cycles'][0]['module']=='pradyos/weak.py' and d['cycles'][0]['decision'] in ('apply','defer','escalate','discard','skipped')" \
+    || fail "ascent cycle did not run a well-formed autonomous cycle"
+json_check "$API/api/v1/ascent/stats" \
+    "d.get('evolve_wired') is True and d.get('proposer_configured') is True" \
+    || fail "ascent loop is not wired to the live EVOLVE engine + proposer"
+emit "PRADYOS-SELFTEST: ascent (self-improvement loop) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"

@@ -610,6 +610,9 @@ DEFAULT_MODULES: list[str] = [
     # EVOLVE — autonomous self-improvement pipeline
     "tests/test_evolve.py",
     "tests/test_evolve_web.py",
+    # ASCENT — the autonomous self-improvement loop (capstone orchestrator)
+    "tests/test_ascent.py",
+    "tests/test_ascent_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
