@@ -19,6 +19,9 @@ Environment=PRADYOS_AUDIT_PATH=/var/log/pradyos/audit.jsonl
 Environment=PRADYOS_STATE_PATH=/var/lib/pradyos/state
 Environment=PRADYOS_BUS_BACKEND=redis
 Environment=PRADYOS_REDIS_URL=redis://127.0.0.1:6379/0
+# ASCENT autonomous self-improvement heartbeat interval (seconds). Short here so
+# the booted OS visibly surveys itself in real time shortly after start.
+Environment=PRADYOS_ASCENT_INTERVAL=20
 EnvironmentFile=-/etc/pradyos/web.env
 
 StateDirectory=pradyos
