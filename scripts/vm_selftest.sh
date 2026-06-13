@@ -124,8 +124,8 @@ emit "PRADYOS-SELFTEST: constellation breadth ok"
 # (deterministic), then exercise a bounded real run with a structural-only
 # assertion so the gate stays robust whether or not this guest has outbound
 # internet (no internet ⇒ zero findings, but still a well-formed brief).
-json_check "$API/api/v1/research/sources" "'web' in d.get('sources', [])" \
-    || fail "research plane has no live 'web' source registered"
+json_check "$API/api/v1/research/sources" "'web' in d.get('sources', []) and 'rss' in d.get('sources', [])" \
+    || fail "research plane missing a live source (expected web + rss)"
 json_post "$API/api/v1/research/plan" '{"question":"latest rust async runtimes"}' \
     "len(d.get('queries', [])) >= 1 and d['queries'][0] == 'latest rust async runtimes'" \
     || fail "research plan did not expand the question"
@@ -133,7 +133,7 @@ curl -fsS --max-time 60 -X POST "$API/api/v1/research/run" \
     -H 'Content-Type: application/json' \
     -d '{"question":"what is the rust language","angles":[],"max_results":1,"max_findings":3}' \
     | /opt/pradyos/.venv/bin/python -c \
-    "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and d.get('sources_consulted')==['web']) else 1)" 2>/dev/null \
+    "import sys,json; d=json.load(sys.stdin); sc=set(d.get('sources_consulted') or []); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and {'web','rss'} <= sc) else 1)" 2>/dev/null \
     || fail "research run did not return a well-formed brief"
 emit "PRADYOS-SELFTEST: research (live intelligence) ok"
 
@@ -202,6 +202,17 @@ json_post "$API/api/v1/evolve/evaluate" \
     "d.get('verdict')=='escalate'" \
     || fail "evolve did not escalate a constitution change"
 emit "PRADYOS-SELFTEST: evolve (autonomous self-improvement) ok"
+
+# EVOLVE can also PROPOSE a fix (local-LLM proposer wired). Verify the proposer
+# is configured, then exercise /propose structurally — it degrades gracefully
+# (proposed:false) if the local model is absent, so the gate stays robust.
+json_check "$API/api/v1/evolve/stats" "d.get('proposer_configured') is True" \
+    || fail "evolve has no live code proposer configured"
+json_post "$API/api/v1/evolve/propose" \
+    '{"path":"pradyos/st.py","directive":"harden error handling","before":"def f():\n    return 1\n"}' \
+    "'proposed' in d and ('after' in d)" \
+    || fail "evolve /propose did not return a well-formed response"
+emit "PRADYOS-SELFTEST: evolve propose (live LLM step) ok"
 
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do

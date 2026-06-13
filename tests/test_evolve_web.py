@@ -64,3 +64,24 @@ def test_stats_and_reset(client):
     client.post("/api/v1/evolve/evaluate", json={"path": "pradyos/a.py", "after": "x = 1\n"})
     assert client.get("/api/v1/evolve/stats").json()["evaluations"] == 1
     assert client.delete("/api/v1/evolve/reset").json()["evaluations"] == 0
+
+
+def test_propose_route_with_proposer():
+    app = FastAPI()
+    register_evolve_routes(app, EvolveEngine(proposer=lambda b, d: "def f():\n    return 1\n"))
+    body = TestClient(app).post(
+        "/api/v1/evolve/propose",
+        json={"path": "pradyos/x.py", "directive": "improve", "before": "def f():\n    return 0\n"},
+    ).json()
+    assert body["proposed"] is True and body["evaluation"]["verdict"] == "promote"
+
+
+def test_propose_missing_fields_422(client):
+    assert client.post("/api/v1/evolve/propose", json={"path": "p"}).status_code == 422
+
+
+def test_propose_without_proposer_graceful(client):
+    body = client.post(
+        "/api/v1/evolve/propose", json={"path": "pradyos/x.py", "directive": "improve"}
+    ).json()
+    assert body["proposed"] is False

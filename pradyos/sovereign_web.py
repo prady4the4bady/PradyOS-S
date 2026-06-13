@@ -3743,22 +3743,33 @@ def main() -> None:
 
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
+    from pradyos.core.web_agent import WebAgent
+    from pradyos.evolve import EvolveEngine, OllamaProposer
     from pradyos.imperium.checkpoint import CheckpointStore
-    from pradyos.research import ResearchEngine, WebAgentSource
+    from pradyos.research import ResearchEngine, RssSource, WebAgentSource
 
     bus = get_bus()
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()
-    # Live intelligence gathering: register the web source so the booted OS can
-    # actually research the open web in real time. Reading is low-risk and the
-    # WebAgent's own guardrail gate still applies. The default create_app() used
-    # by tests registers no source and stays deterministic / offline.
-    research = ResearchEngine(sources=[WebAgentSource()])
+    # Live intelligence gathering: register the web + RSS feed sources so the
+    # booted OS can research the open web and monitor feeds in real time. Both
+    # share ONE WebAgent so egress flows through a single guardrail/cache. The
+    # default create_app() used by tests registers no source and stays
+    # deterministic.
+    web_agent = WebAgent()
+    research = ResearchEngine(
+        sources=[WebAgentSource(web_agent=web_agent), RssSource(web_agent=web_agent)]
+    )
+    # Live self-improvement: wire a LOCAL Ollama proposer so EVOLVE can generate
+    # candidate fixes (zero API credits). If Ollama is absent, propose() degrades
+    # gracefully. The default create_app() used by tests wires no proposer.
+    evolve = EvolveEngine(proposer=OllamaProposer())
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,
         bus=bus,
         research=research,
+        evolve=evolve,
     )
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")

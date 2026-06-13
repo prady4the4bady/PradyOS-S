@@ -25,12 +25,15 @@ that this pipeline gates.
 
 from __future__ import annotations
 
+import logging
 import threading
 from dataclasses import dataclass
 from typing import Any
 
 from pradyos.fortify import FortifyEngine
 from pradyos.review import ReviewGate
+
+log = logging.getLogger("pradyos.evolve")
 
 
 class EvolveError(RuntimeError):
@@ -72,10 +75,14 @@ class Evaluation:
 class EvolveEngine:
     """Composes FORTIFY + REVIEW GATE into a gated self-improvement decision."""
 
-    def __init__(self) -> None:
+    def __init__(self, proposer: Any | None = None) -> None:
         # Private engines: evaluating a candidate must not pollute the live planes.
         self._fortify = FortifyEngine()
         self._review = ReviewGate()
+        # Optional code proposer: callable(before, directive) -> after source.
+        # The live wiring uses a LOCAL LLM (Ollama → no API credits); tests inject
+        # a fake. None ⇒ EVOLVE only judges externally-supplied changes.
+        self._proposer = proposer
         self._evals: list[Evaluation] = []
         self._seq = 0
         self._lock = threading.RLock()
@@ -113,6 +120,50 @@ class EvolveEngine:
             )
             self._evals.append(ev)
         return ev.to_dict()
+
+    def propose(self, path: str, directive: str, before: str = "") -> dict[str, Any]:
+        """Generate a candidate change with the proposer, then judge it.
+
+        Turns the judge into a doer: the (local-LLM) proposer writes a candidate
+        ``after`` for ``directive``; EVOLVE then runs its full gate on it. The
+        change is never applied — it is *judged*, gated, and returned. Degrades
+        gracefully (``proposed: false`` + a note) when no proposer is configured
+        or the proposer is unavailable.
+        """
+        if not _is_str(path):
+            raise EvolveError("path must be a non-empty string")
+        if not _is_str(directive):
+            raise EvolveError("directive must be a non-empty string")
+        if not isinstance(before, str):
+            raise EvolveError("before must be a string")
+
+        base = {
+            "path": path,
+            "directive": directive,
+            "proposed": False,
+            "after": None,
+            "evaluation": None,
+        }
+        if self._proposer is None:
+            return {**base, "note": "no code proposer configured"}
+        try:
+            after = self._proposer(before, directive)
+        except Exception as exc:  # noqa: BLE001 — a dead/absent LLM must not crash the plane
+            # Log internally; keep the client-facing note generic (no transport leak).
+            log.warning("evolve proposer failed for %s: %s", path, exc)
+            return {**base, "note": "proposer unavailable"}
+        if not isinstance(after, str) or not after.strip():
+            return {**base, "note": "proposer returned no code"}
+
+        evaluation = self.evaluate(path, after, before)
+        return {
+            "path": path,
+            "directive": directive,
+            "proposed": True,
+            "after": after,
+            "evaluation": evaluation,
+            "note": f"verdict={evaluation['verdict']}",
+        }
 
     @staticmethod
     def _compose(
@@ -152,7 +203,11 @@ class EvolveEngine:
             by_verdict: dict[str, int] = {}
             for ev in self._evals:
                 by_verdict[ev.verdict] = by_verdict.get(ev.verdict, 0) + 1
-            return {"evaluations": len(self._evals), "by_verdict": by_verdict}
+            return {
+                "evaluations": len(self._evals),
+                "by_verdict": by_verdict,
+                "proposer_configured": self._proposer is not None,
+            }
 
     def reset(self) -> None:
         with self._lock:
@@ -160,3 +215,55 @@ class EvolveEngine:
             self._seq = 0
             self._fortify.reset()
             self._review.reset()
+
+
+def _strip_code_fences(text: str) -> str:
+    """Pull Python out of a ```python ... ``` block if the model wrapped it."""
+    import re
+
+    m = re.search(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
+    return (m.group(1) if m else text).strip() + "\n"
+
+
+class OllamaProposer:
+    """A code proposer backed by a LOCAL Ollama model — zero API credits.
+
+    Constructed lazily and never contacted at import time. If Ollama is not
+    running, ``__call__`` raises and :meth:`EvolveEngine.propose` degrades
+    gracefully. Used as the live proposer in production; tests inject a fake.
+    """
+
+    name = "ollama"
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:11434",
+        model: str = "qwen2.5-coder:7b",
+        timeout: int = 120,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.timeout = timeout
+
+    def __call__(self, before: str, directive: str) -> str:
+        import json
+        import urllib.request
+
+        prompt = (
+            "You are refactoring a single Python module. "
+            f"{directive}\n"
+            "Return ONLY the complete revised module as Python code — no prose, "
+            "no explanation. Preserve every public function/class name.\n\n"
+            f"{before}"
+        )
+        payload = json.dumps({"model": self.model, "prompt": prompt, "stream": False}).encode(
+            "utf-8"
+        )
+        req = urllib.request.Request(
+            f"{self.base_url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return _strip_code_fences(data.get("response", ""))
