@@ -100,3 +100,33 @@ def test_reset_clears(client):
     client.post("/api/v1/ascent/cycle", json={"candidates": {"a.py": WEAK}})
     stats = client.delete("/api/v1/ascent/reset").json()
     assert stats["cycles"] == 0 and stats["pending"] == 0
+
+
+# ── Sovereign review surface ────────────────────────────────────────────────────
+
+
+def test_queue_resolve_decisions_flow(client):
+    client.post("/api/v1/ascent/cycle", json={"candidates": {"a.py": WEAK}})
+    queue = client.get("/api/v1/ascent/queue").json()["queue"]
+    assert len(queue) == 1
+    seq = queue[0]["seq"]
+    rec = client.post("/api/v1/ascent/resolve", json={"seq": seq, "decision": "approve"}).json()
+    assert rec["status"] == "approved"
+    assert client.get("/api/v1/ascent/queue").json()["queue"] == []  # dequeued
+    assert client.get("/api/v1/ascent/decisions").json()["decisions"][-1]["seq"] == seq
+
+
+def test_resolve_missing_fields_422(client):
+    assert client.post("/api/v1/ascent/resolve", json={"seq": 1}).status_code == 422
+
+
+def test_resolve_unknown_seq_404(client):
+    resp = client.post("/api/v1/ascent/resolve", json={"seq": 999, "decision": "approve"})
+    assert resp.status_code == 404
+
+
+def test_resolve_bad_decision_422(client):
+    client.post("/api/v1/ascent/cycle", json={"candidates": {"a.py": WEAK}})
+    seq = client.get("/api/v1/ascent/queue").json()["queue"][0]["seq"]
+    resp = client.post("/api/v1/ascent/resolve", json={"seq": seq, "decision": "applied"})
+    assert resp.status_code == 422

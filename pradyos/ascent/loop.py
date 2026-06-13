@@ -97,6 +97,7 @@ class AscentLoop:
         self._evolve = evolve
         self._cycles: list[Cycle] = []
         self._pending: list[dict[str, Any]] = []  # promoted changes queued for apply
+        self._decisions: list[dict[str, Any]] = []  # the Sovereign's approve/reject log
         self._seq = 0
         self._lock = threading.RLock()
 
@@ -270,6 +271,53 @@ class AscentLoop:
         with self._lock:
             return [dict(p) for p in self._pending[-limit:]]
 
+    # ── Sovereign review ─────────────────────────────────────────────────────
+    # ASCENT proposes autonomously but never decides alone: a promoted change
+    # sits in the queue until the Sovereign approves or rejects it.
+
+    def review_queue(self, limit: int = 20) -> list[dict[str, Any]]:
+        """The promoted changes awaiting the Sovereign's approve/reject decision."""
+        return self.pending(limit=limit)
+
+    def resolve(self, seq: int, decision: str, by: str = "sovereign") -> dict[str, Any]:
+        """Record the Sovereign's decision on a queued promote and dequeue it.
+
+        ``decision`` is ``approve`` or ``reject``. Approval marks the change
+        ``approved`` (an applier/the Sovereign still performs the actual write —
+        ASCENT never applies code itself); rejection drops it. Idempotent only in
+        the sense that a resolved item leaves the queue, so a second resolve of
+        the same ``seq`` raises ``unknown``.
+        """
+        if isinstance(seq, bool) or not isinstance(seq, int):
+            raise AscentError("seq must be an integer")
+        norm = decision.strip().lower() if isinstance(decision, str) else ""
+        if norm not in ("approve", "reject"):
+            raise AscentError("decision must be 'approve' or 'reject'")
+        actor = by if _is_str(by) else "sovereign"
+        with self._lock:
+            idx = next((i for i, p in enumerate(self._pending) if p["seq"] == seq), None)
+            if idx is None:
+                raise AscentError(f"unknown pending seq={seq}")
+            item = self._pending.pop(idx)
+            record = {
+                "seq": seq,
+                "module": item["module"],
+                "directive": item["directive"],
+                "decision": norm,
+                "status": "approved" if norm == "approve" else "rejected",
+                "by": actor,
+                "after": item.get("after"),
+            }
+            self._decisions.append(record)
+            return dict(record)
+
+    def decisions(self, limit: int = 20) -> list[dict[str, Any]]:
+        """The Sovereign's approve/reject decision log (most recent last)."""
+        if not isinstance(limit, int) or limit <= 0:
+            raise AscentError("limit must be a positive integer")
+        with self._lock:
+            return [dict(d) for d in self._decisions[-limit:]]
+
     def stats(self) -> dict[str, Any]:
         proposer_configured = False
         if self._evolve is not None:
@@ -288,6 +336,7 @@ class AscentLoop:
                 "by_verdict": by_verdict,
                 "by_decision": by_decision,
                 "pending": len(self._pending),
+                "decisions": len(self._decisions),
                 "evolve_wired": self._evolve is not None,
                 "proposer_configured": proposer_configured,
             }
@@ -306,5 +355,6 @@ class AscentLoop:
         with self._lock:
             self._cycles.clear()
             self._pending.clear()
+            self._decisions.clear()
             self._seq = 0
             self._fortify.reset()

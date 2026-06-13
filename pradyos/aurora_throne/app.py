@@ -67,6 +67,7 @@ from textual.widgets import (
 from pradyos.aurora_throne.widgets import (
     approvals_panel,
     audit_panel,
+    forge_panel,
     header_banner,
     health_panel,
     incidents_panel,
@@ -212,6 +213,19 @@ def _warden_get(url: str, path: str, timeout: float = 1.5) -> dict[str, Any] | N
     full = f"{url.rstrip('/')}{path}"
     try:
         with urllib.request.urlopen(full, timeout=timeout) as resp:  # noqa: S310
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _api_post(
+    url: str, path: str, body: dict[str, Any], timeout: float = 2.0
+) -> dict[str, Any] | None:
+    full = f"{url.rstrip('/')}{path}"
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(full, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             return json.loads(resp.read().decode("utf-8"))
     except Exception:  # noqa: BLE001
         return None
@@ -769,6 +783,80 @@ def _upd(widget: Widget, selector: str, wtype: type, content: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+class AscentForgePane(TabPane):
+    """View 6 — ASCENT self-forge: autonomous proposals awaiting Sovereign approval."""
+
+    def __init__(self, throne: ThroneApp) -> None:
+        super().__init__("Self-Forge", id="pane-forge")
+        self._throne = throne
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Static(
+                "[bold green]ASCENT — AUTONOMOUS SELF-FORGE[/bold green]", classes="panel-title"
+            )
+            yield Static(id="forge-beat")
+            yield Static(
+                "[bold]Proposals awaiting approval[/bold]  "
+                "[dim](c → ascent approve|reject <seq>)[/dim]",
+                classes="panel-title",
+            )
+            qt = DataTable(id="forge-queue", cursor_type="row")
+            qt.add_columns("seq", "module", "risk", "directive")
+            yield qt
+            yield Static("[bold]Recent decisions[/bold]", classes="panel-title")
+            dt = DataTable(id="forge-decisions", cursor_type="row")
+            dt.add_columns("seq", "module", "status", "by")
+            yield dt
+
+    def refresh_data(
+        self,
+        queue: list[dict[str, Any]],
+        decisions: list[dict[str, Any]],
+        driver: dict[str, Any] | None,
+    ) -> None:
+        if driver and driver.get("running"):
+            beat = (
+                f"[green]● live[/green]  ticks: [cyan]{driver.get('ticks', 0)}[/cyan]  "
+                f"interval: [cyan]{driver.get('interval_s', '—')}s[/cyan]"
+            )
+        elif driver is not None:
+            beat = "[yellow]○ idle[/yellow]"
+        else:
+            beat = "[dim]driver offline[/dim]"
+        _upd(self, "#forge-beat", Static, f"heartbeat: {beat}")
+
+        try:
+            qt = self.query_one("#forge-queue", DataTable)
+            qt.clear()
+            for item in (queue or [])[:12]:
+                rb, ra = item.get("risk_before"), item.get("risk_after")
+                risk = f"{rb}→{ra}" if rb is not None and ra is not None else str(rb or "—")
+                qt.add_row(
+                    str(item.get("seq", "?")),
+                    item.get("module", "?"),
+                    risk,
+                    (item.get("directive") or "—")[:60],
+                )
+        except NoMatches:
+            pass
+
+        try:
+            dt = self.query_one("#forge-decisions", DataTable)
+            dt.clear()
+            for d in (decisions or [])[-8:]:
+                status = d.get("status", "?")
+                color = {"approved": "green", "rejected": "red"}.get(status, "white")
+                dt.add_row(
+                    str(d.get("seq", "?")),
+                    d.get("module", "?"),
+                    f"[{color}]{status}[/{color}]",
+                    d.get("by", "—"),
+                )
+        except NoMatches:
+            pass
+
+
 class ThroneApp(App):
     """AURORA THRONE — Sovereign Governance Chamber (Textual cinematic UI)."""
 
@@ -780,11 +868,13 @@ class ThroneApp(App):
         Binding("3", "show_tab('pane-campaign')", "Campaign", show=True),
         Binding("4", "show_tab('pane-health')", "Health", show=True),
         Binding("5", "show_tab('pane-gallery')", "Gallery", show=True),
+        Binding("6", "show_tab('pane-forge')", "Self-Forge", show=True),
         Binding("f1", "show_tab('pane-morning')", "Morning Brief", show=False),
         Binding("f2", "show_tab('pane-dossiers')", "Dossiers", show=False),
         Binding("f3", "show_tab('pane-campaign')", "Campaign", show=False),
         Binding("f4", "show_tab('pane-health')", "Health", show=False),
         Binding("f5", "show_tab('pane-gallery')", "Gallery", show=False),
+        Binding("f6", "show_tab('pane-forge')", "Self-Forge", show=False),
         Binding("c", "focus_command", "Command", show=True),
         Binding("escape", "close_command", "Close", show=False),
         Binding("q", "quit", "Quit", show=True),
@@ -803,6 +893,7 @@ class ThroneApp(App):
         self._warden_url = warden_url or os.environ.get(
             "PRADYOS_WARDEN_URL", "http://127.0.0.1:9701"
         )
+        self._web_url = os.environ.get("PRADYOS_WEB_URL", "http://127.0.0.1:8000")
         self._audit = audit or get_audit_log()
         self._checkpoint = checkpoint or CheckpointStore()
         self._refresh_interval = max(0.5, 1.0 / max(0.1, refresh_hz))
@@ -814,6 +905,7 @@ class ThroneApp(App):
         self._campaign = CampaignViewPane(self)
         self._health = EmpireHealthPane(self)
         self._gallery = ArtifactGalleryPane(self)
+        self._forge = AscentForgePane(self)
 
     def compose(self) -> ComposeResult:
         yield ThroneHeader()
@@ -823,6 +915,7 @@ class ThroneApp(App):
             yield self._campaign
             yield self._health
             yield self._gallery
+            yield self._forge
         self._cmd_bar = CommandBar(self)
         self._cmd_bar.display = False
         yield self._cmd_bar
@@ -865,6 +958,16 @@ class ThroneApp(App):
             return self._imperium.dead_letter_queue()
         return []
 
+    def _gather_ascent(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None]:
+        queue = (_warden_get(self._web_url, "/api/v1/ascent/queue") or {}).get("queue", [])
+        decisions = (_warden_get(self._web_url, "/api/v1/ascent/decisions") or {}).get(
+            "decisions", []
+        )
+        driver = _warden_get(self._web_url, "/api/v1/ascent/driver")
+        return queue, decisions, driver
+
     @work(thread=True)
     def _refresh_all(self) -> None:
         snap = self._gather_health()
@@ -872,8 +975,9 @@ class ThroneApp(App):
         stats, records, approvals = self._gather_queue()
         audit = self._gather_audit()
         dlq = self._gather_dlq()
+        ascent = self._gather_ascent()
         self.call_from_thread(
-            self._apply_refresh, snap, incidents, stats, records, approvals, audit, dlq
+            self._apply_refresh, snap, incidents, stats, records, approvals, audit, dlq, ascent
         )
 
     def _apply_refresh(
@@ -885,12 +989,14 @@ class ThroneApp(App):
         approvals: list,
         audit: list,
         dlq: list,
+        ascent: tuple[list, list, dict | None],
     ) -> None:
         self._morning.refresh_data(snap, incidents, stats, approvals, audit)
         self._dossiers.refresh_data(records)
         self._campaign.refresh_data(records, approvals)
         self._health.refresh_data(snap, incidents)
         self._gallery.refresh_data(dlq, records, audit)
+        self._forge.refresh_data(*ascent)
 
     # ---------- actions ----------
 
@@ -959,9 +1065,32 @@ class ThroneApp(App):
                 )
             else:
                 self.notify(f"Task not found: {tid}", severity="error")
+        elif verb == "ascent":
+            # ascent approve <seq> | ascent reject <seq> — resolve a self-forge proposal
+            sub = parts[1].lower() if len(parts) > 1 else ""
+            if sub not in ("approve", "reject") or len(parts) < 3:
+                self.notify("Usage: ascent approve|reject <seq>", severity="error")
+            else:
+                try:
+                    seq = int(parts[2])
+                except ValueError:
+                    self.notify("ascent: <seq> must be an integer", severity="error")
+                    self.action_close_command()
+                    return
+                res = _api_post(
+                    self._web_url, "/api/v1/ascent/resolve", {"seq": seq, "decision": sub}
+                )
+                if res and res.get("status"):
+                    self.notify(
+                        f"ASCENT {res['status']} seq {seq}",
+                        severity="information" if sub == "approve" else "warning",
+                    )
+                else:
+                    self.notify(f"Cannot {sub} ascent seq {seq}", severity="error")
         else:
             self.notify(
-                f"Unknown command: {verb!r}  (a=approve, r=reject, q=quit)", severity="error"
+                f"Unknown command: {verb!r}  (a=approve, r=reject, ascent=forge, q=quit)",
+                severity="error",
             )
         self.action_close_command()
 
@@ -1012,6 +1141,7 @@ class Throne:
         self.warden_url = warden_url or os.environ.get(
             "PRADYOS_WARDEN_URL", "http://127.0.0.1:9701"
         )
+        self._web_url = os.environ.get("PRADYOS_WEB_URL", "http://127.0.0.1:8000")
         self.audit = audit or get_audit_log()
         self.checkpoint = checkpoint or CheckpointStore()
         self.refresh_hz = refresh_hz
@@ -1067,12 +1197,14 @@ class Throne:
         incidents = (incidents_data or {}).get("open", [])
         stats, records, approvals = self._gather_queue()
         audit = self._gather_audit()
+        ascent_queue, ascent_decisions, ascent_driver = self._gather_ascent()
 
         layout = Layout()
         layout.split_column(
             Layout(header_banner(), name="header", size=4),
             Layout(name="upper"),
             Layout(name="middle"),
+            Layout(name="forge"),
             Layout(name="lower"),
         )
         layout["upper"].split_row(
@@ -1083,8 +1215,19 @@ class Throne:
             Layout(approvals_panel(approvals), name="approvals", ratio=1),
             Layout(incidents_panel(incidents), name="incidents", ratio=1),
         )
+        layout["forge"].update(forge_panel(ascent_queue, ascent_decisions, ascent_driver))
         layout["lower"].update(audit_panel(audit))
         self.console.print(layout)
+
+    def _gather_ascent(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None]:
+        queue = (_warden_get(self._web_url, "/api/v1/ascent/queue") or {}).get("queue", [])
+        decisions = (_warden_get(self._web_url, "/api/v1/ascent/decisions") or {}).get(
+            "decisions", []
+        )
+        driver = _warden_get(self._web_url, "/api/v1/ascent/driver")
+        return queue, decisions, driver
 
     def _gather_queue(self) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
         if self.imperium is not None:

@@ -180,6 +180,71 @@ def audit_panel(records: list[dict[str, Any]]) -> Panel:
     return Panel(tbl, title="AUDIT TAIL — LAST 10 ACTIONS", border_style="magenta", box=box.HEAVY)
 
 
+def forge_panel(
+    queue: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    driver: dict[str, Any] | None,
+) -> Panel:
+    """ASCENT self-improvement review — the autonomous proposals awaiting the
+    Sovereign's approve/reject, the driver heartbeat, and recent decisions."""
+    if driver and driver.get("running"):
+        beat = (
+            f"[green]● live[/green]  ticks: [cyan]{driver.get('ticks', 0)}[/cyan]  "
+            f"interval: [cyan]{driver.get('interval_s', '—')}s[/cyan]"
+        )
+    elif driver is not None:
+        beat = "[yellow]○ idle[/yellow]"
+    else:
+        beat = "[dim]driver offline[/dim]"
+
+    qtbl = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_DOUBLE_HEAD)
+    qtbl.add_column("seq", style="dim", justify="right")
+    qtbl.add_column("module", style="cyan", overflow="fold")
+    qtbl.add_column("risk", justify="right")
+    qtbl.add_column("directive", overflow="fold")
+    if queue:
+        for item in queue[:10]:
+            rb = item.get("risk_before")
+            ra = item.get("risk_after")
+            risk = f"{rb}→{ra}" if rb is not None and ra is not None else str(rb or "—")
+            qtbl.add_row(
+                str(item.get("seq", "?")),
+                item.get("module", "?"),
+                risk,
+                (item.get("directive") or "—")[:70],
+            )
+    else:
+        qtbl.add_row("—", "[dim]no proposals awaiting review[/dim]", "—", "—")
+
+    dtbl = Table(show_header=True, header_style="bold cyan", box=box.MINIMAL)
+    dtbl.add_column("seq", style="dim", justify="right")
+    dtbl.add_column("module", overflow="fold")
+    dtbl.add_column("decision")
+    dtbl.add_column("by")
+    for d in decisions[-6:]:
+        status = d.get("status", "?")
+        color = {"approved": "green", "rejected": "red"}.get(status, "white")
+        dtbl.add_row(
+            str(d.get("seq", "?")),
+            d.get("module", "?"),
+            f"[{color}]{status}[/{color}]",
+            d.get("by", "—"),
+        )
+
+    body = Group(
+        Text.from_markup(f"heartbeat: {beat}"),
+        Text(""),
+        Text.from_markup(
+            "[bold]Proposals awaiting Sovereign approval[/bold] — `ascent approve|reject <seq>`"
+        ),
+        qtbl,
+        Text(""),
+        Text.from_markup("[bold]Recent decisions[/bold]"),
+        dtbl,
+    )
+    return Panel(body, title="ASCENT — SELF-FORGE", border_style="green", box=box.HEAVY)
+
+
 def header_banner() -> Panel:
     text = Text()
     text.append("PRADY OS ", style="bold cyan")

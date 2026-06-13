@@ -70,6 +70,32 @@ def register_ascent_routes(app: Any, ascent: Any | None = None) -> Any:
         except AscentError as exc:
             return _err(exc)
 
+    @app.get("/api/v1/ascent/queue")
+    async def api_ascent_queue(limit: int = Query(20)) -> JSONResponse:
+        try:
+            return JSONResponse({"queue": loop.review_queue(limit=limit)})
+        except AscentError as exc:
+            return _err(exc)
+
+    @app.post("/api/v1/ascent/resolve")
+    async def api_ascent_resolve(request: Request) -> JSONResponse:
+        body = await _json(request)
+        if not isinstance(body, dict) or "seq" not in body or "decision" not in body:
+            return JSONResponse({"error": "seq and decision are required"}, status_code=422)
+        try:
+            return JSONResponse(
+                loop.resolve(body["seq"], body["decision"], body.get("by", "sovereign"))
+            )
+        except AscentError as exc:
+            return _err(exc)
+
+    @app.get("/api/v1/ascent/decisions")
+    async def api_ascent_decisions(limit: int = Query(20)) -> JSONResponse:
+        try:
+            return JSONResponse({"decisions": loop.decisions(limit=limit)})
+        except AscentError as exc:
+            return _err(exc)
+
     @app.get("/api/v1/ascent/stats")
     async def api_ascent_stats() -> JSONResponse:
         return JSONResponse(loop.stats())
