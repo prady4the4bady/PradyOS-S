@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from pradyos.research import (
+    GitHubSource,
     ResearchEngine,
     ResearchError,
     RssSource,
@@ -14,6 +15,12 @@ from pradyos.research import (
     WebAgentSource,
     strip_html,
 )
+
+_GH_JSON = """{"items":[
+  {"full_name":"tokio-rs/tokio","html_url":"https://github.com/tokio-rs/tokio",
+   "description":"An async runtime for Rust","topics":["rust","async","runtime"]},
+  {"full_name":"foo/bar","html_url":"https://github.com/foo/bar","description":"unrelated"}
+]}"""
 
 _RSS = """<?xml version="1.0"?>
 <rss version="2.0"><channel><title>Tech</title>
@@ -302,3 +309,51 @@ def test_rss_source_via_engine():
     brief = eng.research("rust async runtimes", angles=())
     assert brief.to_dict()["sources_consulted"] == ["rss"]
     assert any("ex.com/rust" in f["url"] for f in brief.to_dict()["findings"])
+
+
+# ── GitHubSource (no live I/O — fake fetcher) ──────────────────────────────────
+
+
+def test_github_source_parses_results():
+    src = GitHubSource(fetcher=lambda url: _GH_JSON)
+    docs = src.search("rust async runtime", 5)
+    assert len(docs) == 2
+    assert docs[0].url == "https://github.com/tokio-rs/tokio"
+    assert docs[0].title == "tokio-rs/tokio" and docs[0].source == "github"
+    assert "runtime" in docs[0].content  # description + topics
+
+
+def test_github_source_query_in_url():
+    captured = {}
+
+    def _fetch(url):
+        captured["url"] = url
+        return _GH_JSON
+
+    GitHubSource(fetcher=_fetch).search("rust async", 5)
+    assert (
+        "q=rust+async" in captured["url"]
+        and "api.github.com/search/repositories" in captured["url"]
+    )
+
+
+def test_github_source_bad_json_and_dead_api_are_safe():
+    assert GitHubSource(fetcher=lambda url: "not json").search("x", 5) == []
+    assert GitHubSource(fetcher=lambda url: "").search("x", 5) == []
+
+    def _boom(url):
+        raise RuntimeError("api down")
+
+    assert GitHubSource(fetcher=_boom).search("x", 5) == []
+
+
+def test_github_source_skips_items_without_url():
+    src = GitHubSource(fetcher=lambda url: '{"items":[{"full_name":"a/b","description":"no url"}]}')
+    assert src.search("x", 5) == []
+
+
+def test_github_source_via_engine():
+    eng = ResearchEngine(sources=[GitHubSource(fetcher=lambda url: _GH_JSON)])
+    brief = eng.research("rust async runtime", angles=())
+    assert brief.to_dict()["sources_consulted"] == ["github"]
+    assert any("tokio-rs/tokio" in f["url"] for f in brief.to_dict()["findings"])

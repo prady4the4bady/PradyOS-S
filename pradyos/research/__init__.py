@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pradyos.research.engine import (
     Finding,
+    GitHubSource,
     ResearchBrief,
     ResearchEngine,
     ResearchError,
@@ -19,6 +20,7 @@ from pradyos.research.engine import (
 
 __all__ = [
     "Finding",
+    "GitHubSource",
     "ResearchBrief",
     "ResearchEngine",
     "ResearchError",

@@ -124,8 +124,8 @@ emit "PRADYOS-SELFTEST: constellation breadth ok"
 # (deterministic), then exercise a bounded real run with a structural-only
 # assertion so the gate stays robust whether or not this guest has outbound
 # internet (no internet ⇒ zero findings, but still a well-formed brief).
-json_check "$API/api/v1/research/sources" "'web' in d.get('sources', []) and 'rss' in d.get('sources', [])" \
-    || fail "research plane missing a live source (expected web + rss)"
+json_check "$API/api/v1/research/sources" "{'web','rss','github'} <= set(d.get('sources', []))" \
+    || fail "research plane missing a live source (expected web + rss + github)"
 json_post "$API/api/v1/research/plan" '{"question":"latest rust async runtimes"}' \
     "len(d.get('queries', [])) >= 1 and d['queries'][0] == 'latest rust async runtimes'" \
     || fail "research plan did not expand the question"
@@ -133,7 +133,7 @@ curl -fsS --max-time 60 -X POST "$API/api/v1/research/run" \
     -H 'Content-Type: application/json' \
     -d '{"question":"what is the rust language","angles":[],"max_results":1,"max_findings":3}' \
     | /opt/pradyos/.venv/bin/python -c \
-    "import sys,json; d=json.load(sys.stdin); sc=set(d.get('sources_consulted') or []); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and {'web','rss'} <= sc) else 1)" 2>/dev/null \
+    "import sys,json; d=json.load(sys.stdin); sc=set(d.get('sources_consulted') or []); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and {'web','rss','github'} <= sc) else 1)" 2>/dev/null \
     || fail "research run did not return a well-formed brief"
 emit "PRADYOS-SELFTEST: research (live intelligence) ok"
 

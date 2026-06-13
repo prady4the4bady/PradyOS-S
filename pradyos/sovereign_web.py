@@ -3746,19 +3746,23 @@ def main() -> None:
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, OllamaProposer
     from pradyos.imperium.checkpoint import CheckpointStore
-    from pradyos.research import ResearchEngine, RssSource, WebAgentSource
+    from pradyos.research import GitHubSource, ResearchEngine, RssSource, WebAgentSource
 
     bus = get_bus()
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()
-    # Live intelligence gathering: register the web + RSS feed sources so the
-    # booted OS can research the open web and monitor feeds in real time. Both
-    # share ONE WebAgent so egress flows through a single guardrail/cache. The
-    # default create_app() used by tests registers no source and stays
-    # deterministic.
+    # Live intelligence gathering: register the web + RSS + GitHub sources so the
+    # booted OS can research the open web, monitor feeds, and search code in real
+    # time. web + RSS share ONE WebAgent (single guardrail/cache); GitHub uses its
+    # own API fetch. The default create_app() used by tests registers no source
+    # and stays deterministic.
     web_agent = WebAgent()
     research = ResearchEngine(
-        sources=[WebAgentSource(web_agent=web_agent), RssSource(web_agent=web_agent)]
+        sources=[
+            WebAgentSource(web_agent=web_agent),
+            RssSource(web_agent=web_agent),
+            GitHubSource(),
+        ]
     )
     # Live self-improvement: wire a LOCAL Ollama proposer so EVOLVE can generate
     # candidate fixes (zero API credits). If Ollama is absent, propose() degrades
