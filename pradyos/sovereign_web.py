@@ -3757,11 +3757,12 @@ def main() -> None:
     # own API fetch. The default create_app() used by tests registers no source
     # and stays deterministic.
     web_agent = WebAgent()
+    github_token = os.environ.get("PRADYOS_GITHUB_TOKEN") or None  # optional, higher rate limit
     research = ResearchEngine(
         sources=[
             WebAgentSource(web_agent=web_agent),
             RssSource(web_agent=web_agent),
-            GitHubSource(),
+            GitHubSource(token=github_token),
         ]
     )
     # Live self-improvement: wire a LOCAL Ollama proposer so EVOLVE can generate

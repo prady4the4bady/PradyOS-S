@@ -347,6 +347,13 @@ def test_github_source_bad_json_and_dead_api_are_safe():
     assert GitHubSource(fetcher=_boom).search("x", 5) == []
 
 
+def test_github_source_non_dict_json_is_safe():
+    # json.loads can return a list/str/number — must not raise on .get()
+    assert GitHubSource(fetcher=lambda url: "[]").search("x", 5) == []
+    assert GitHubSource(fetcher=lambda url: '{"items":"notalist"}').search("x", 5) == []
+    assert GitHubSource(fetcher=lambda url: '{"items":[1,2,3]}').search("x", 5) == []
+
+
 def test_github_source_skips_items_without_url():
     src = GitHubSource(fetcher=lambda url: '{"items":[{"full_name":"a/b","description":"no url"}]}')
     assert src.search("x", 5) == []

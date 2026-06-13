@@ -626,13 +626,18 @@ class GitHubSource:
             data = json.loads(raw)
         except (ValueError, TypeError):
             return []
+        # Degrade gracefully on any unexpected JSON shape (non-dict, no item list).
+        if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+            return []
         docs: list[SourceDoc] = []
-        for item in (data.get("items") or [])[:limit]:
+        for item in data["items"][:limit]:
+            if not isinstance(item, dict):
+                continue
             html_url = (item.get("html_url") or "").strip()
             if not html_url:
                 continue
             desc = item.get("description") or ""
-            topics = " ".join(item.get("topics") or [])
+            topics = " ".join(t for t in (item.get("topics") or []) if isinstance(t, str))
             docs.append(
                 SourceDoc(
                     url=html_url,
