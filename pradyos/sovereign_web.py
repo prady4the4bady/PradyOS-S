@@ -52,6 +52,7 @@ from pradyos.web.cu_sketch_web import register_cusketch_routes  # Phase 123
 from pradyos.web.cuckoo_web import register_cuckoo_routes  # Phase 86
 from pradyos.web.cuckoohash_web import register_cuckoohash_routes  # Phase 132
 from pradyos.web.ddsketch_web import register_ddsketch_routes  # Phase 96
+from pradyos.web.evolve_web import register_evolve_routes  # EVOLVE — self-improvement pipeline
 from pradyos.web.exponential_histogram_web import register_exponential_histogram_routes  # Phase 97
 from pradyos.web.fenwick2d_web import register_fenwick2d_routes  # Phase 146
 from pradyos.web.fibonacci_heap_web import register_fibonacci_routes  # Phase 154
@@ -361,6 +362,7 @@ def create_app(
     codemap: Any | None = None,
     review: Any | None = None,
     fortify: Any | None = None,
+    evolve: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3708,6 +3710,8 @@ def create_app(
     register_review_routes(app, review)  # REVIEW GATE — vet self-modifications before commit
 
     register_fortify_routes(app, fortify)  # FORTIFY — self-hardening audit of own code
+
+    register_evolve_routes(app, evolve)  # EVOLVE — autonomous self-improvement pipeline
 
     return app
 
