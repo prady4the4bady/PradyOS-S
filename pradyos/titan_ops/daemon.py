@@ -180,24 +180,34 @@ class TitanClient:
     def wait_ready(self, timeout: float = 3.0) -> bool:
         """Block until the daemon is accepting connections (or timeout expires).
 
-        On POSIX: waits for the Unix socket file to appear.
-        On Windows / TCP fallback: polls the TCP port with retries.
+        Probes with a real connect()/close() on every retry — for both Unix
+        and TCP endpoints — rather than a proxy signal.  On POSIX the Unix
+        socket *file* is created at bind() time, before listen() is called,
+        so a file-existence check can return True while connect() still
+        raises ConnectionRefusedError (the startup race this guards against).
+        A successful connect is the only reliable "the listener is up" signal.
         Returns True if ready, False on timeout.
         """
         deadline = time.monotonic() + timeout
         use_unix = _use_unix_socket(self.socket_path)
         while time.monotonic() < deadline:
-            if use_unix:
-                if Path(self.socket_path).exists():
-                    return True
-            else:
-                try:
+            s = None
+            try:
+                if use_unix:
+                    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    s.settimeout(0.1)
+                    s.connect(self.socket_path)
+                else:
                     s = socket.create_connection((self.tcp_host, self.tcp_port), timeout=0.1)
-                    s.close()
-                    return True
-                except OSError:
-                    pass
-            time.sleep(0.02)
+                return True
+            except OSError:
+                time.sleep(0.02)
+            finally:
+                if s is not None:
+                    try:
+                        s.close()
+                    except OSError:
+                        pass
         return False
 
     def _connect(self) -> socket.socket:
