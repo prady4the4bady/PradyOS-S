@@ -7,7 +7,9 @@ from types import SimpleNamespace
 import pytest
 
 from pradyos.research import (
+    ArxivSource,
     GitHubSource,
+    HackerNewsSource,
     ResearchEngine,
     ResearchError,
     RssSource,
@@ -34,6 +36,23 @@ _ATOM = """<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <entry><title>Python typing news</title><link href="https://ex.com/typing"/>
     <summary>PEP updates for typing.</summary></entry>
+</feed>"""
+
+_HN_JSON = """{"hits":[
+  {"objectID":"111","title":"Tokio 2.0 released","url":"https://tokio.rs/blog/2",
+   "story_text":"The async runtime for Rust ships a new scheduler.","points":420},
+  {"objectID":"222","title":"Ask HN: best async runtime?","url":null,
+   "story_text":"Looking for advice on Rust async."}
+]}"""
+
+_ARXIV_ATOM = """<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <title>Attention Is All
+      You Need</title>
+    <link href="http://arxiv.org/abs/1706.03762v5" rel="alternate"/>
+    <summary>We propose the Transformer, a new network architecture.</summary>
+  </entry>
 </feed>"""
 
 
@@ -364,3 +383,95 @@ def test_github_source_via_engine():
     brief = eng.research("rust async runtime", angles=())
     assert brief.to_dict()["sources_consulted"] == ["github"]
     assert any("tokio-rs/tokio" in f["url"] for f in brief.to_dict()["findings"])
+
+
+# ── HackerNewsSource (no live I/O — fake fetcher) ──────────────────────────────
+
+
+def test_hackernews_source_parses_results():
+    src = HackerNewsSource(fetcher=lambda url: _HN_JSON)
+    docs = src.search("rust async", 5)
+    assert len(docs) == 2
+    assert docs[0].url == "https://tokio.rs/blog/2"  # external link preferred
+    assert docs[0].title == "Tokio 2.0 released" and docs[0].source == "hackernews"
+    assert "scheduler" in docs[0].content
+
+
+def test_hackernews_source_falls_back_to_discussion_url():
+    # A story with no external url → its HN discussion permalink.
+    src = HackerNewsSource(fetcher=lambda url: _HN_JSON)
+    docs = src.search("rust async", 5)
+    assert docs[1].url == "https://news.ycombinator.com/item?id=222"
+
+
+def test_hackernews_source_query_in_url():
+    captured = {}
+
+    def _fetch(url):
+        captured["url"] = url
+        return _HN_JSON
+
+    HackerNewsSource(fetcher=_fetch).search("rust async", 5)
+    assert "query=rust+async" in captured["url"]
+    assert "hn.algolia.com/api/v1/search" in captured["url"] and "tags=story" in captured["url"]
+
+
+def test_hackernews_source_bad_json_and_dead_api_are_safe():
+    assert HackerNewsSource(fetcher=lambda url: "not json").search("x", 5) == []
+    assert HackerNewsSource(fetcher=lambda url: "").search("x", 5) == []
+    assert HackerNewsSource(fetcher=lambda url: "[]").search("x", 5) == []
+    assert HackerNewsSource(fetcher=lambda url: '{"hits":"notalist"}').search("x", 5) == []
+    assert HackerNewsSource(fetcher=lambda url: '{"hits":[1,2]}').search("x", 5) == []
+
+    def _boom(url):
+        raise RuntimeError("api down")
+
+    assert HackerNewsSource(fetcher=_boom).search("x", 5) == []
+
+
+def test_hackernews_source_via_engine():
+    eng = ResearchEngine(sources=[HackerNewsSource(fetcher=lambda url: _HN_JSON)])
+    brief = eng.research("rust async", angles=())
+    assert brief.to_dict()["sources_consulted"] == ["hackernews"]
+    assert any("tokio.rs/blog" in f["url"] for f in brief.to_dict()["findings"])
+
+
+# ── ArxivSource (no live I/O — fake fetcher) ───────────────────────────────────
+
+
+def test_arxiv_source_parses_atom_and_normalizes_title():
+    src = ArxivSource(fetcher=lambda url: _ARXIV_ATOM)
+    docs = src.search("transformer attention", 5)
+    assert len(docs) == 1
+    assert docs[0].url == "http://arxiv.org/abs/1706.03762v5"
+    assert docs[0].title == "Attention Is All You Need"  # newline/indent collapsed
+    assert docs[0].source == "arxiv" and "Transformer" in docs[0].content
+
+
+def test_arxiv_source_query_in_url():
+    captured = {}
+
+    def _fetch(url):
+        captured["url"] = url
+        return _ARXIV_ATOM
+
+    ArxivSource(fetcher=_fetch).search("graph neural", 5)
+    assert "search_query=all:graph+neural" in captured["url"]
+    assert "export.arxiv.org/api/query" in captured["url"]
+
+
+def test_arxiv_source_bad_xml_and_dead_api_are_safe():
+    assert ArxivSource(fetcher=lambda url: "not xml").search("x", 5) == []
+    assert ArxivSource(fetcher=lambda url: "").search("x", 5) == []
+
+    def _boom(url):
+        raise RuntimeError("api down")
+
+    assert ArxivSource(fetcher=_boom).search("x", 5) == []
+
+
+def test_arxiv_source_via_engine():
+    eng = ResearchEngine(sources=[ArxivSource(fetcher=lambda url: _ARXIV_ATOM)])
+    brief = eng.research("transformer attention", angles=())
+    assert brief.to_dict()["sources_consulted"] == ["arxiv"]
+    assert any("1706.03762" in f["url"] for f in brief.to_dict()["findings"])

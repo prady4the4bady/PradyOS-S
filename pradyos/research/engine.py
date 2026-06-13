@@ -648,3 +648,147 @@ class GitHubSource:
                 )
             )
         return docs
+
+
+class HackerNewsSource:
+    """Searches Hacker News (Algolia API) for stories matching the query.
+
+    Surfaces the developer/tech zeitgeist behind the deterministic engine: hits
+    the public HN Algolia search API (no auth) for stories, returning each
+    story's linked URL (or its HN discussion when it has no external link). JSON
+    parsing is pure; the fetch is behind an injectable ``fetcher`` so it is
+    unit-tested with canned JSON and never needs the network in tests.
+    """
+
+    name = "hackernews"
+
+    def __init__(self, fetcher: Any | None = None, snippet_chars: int = 300) -> None:
+        self._fetcher = fetcher  # callable(url) -> JSON text; None ⇒ live HTTP
+        self._snippet_chars = snippet_chars
+
+    def _fetch(self, url: str) -> str:
+        if self._fetcher is not None:
+            try:
+                return self._fetcher(url) or ""
+            except Exception:  # noqa: BLE001 — a dead API must not sink the source
+                return ""
+        import urllib.request
+
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "pradyos-research"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 — network/rate-limit failures degrade to no docs
+            return ""
+
+    def search(self, query: str, limit: int) -> list[SourceDoc]:
+        import json
+        from urllib.parse import quote_plus
+
+        url = (
+            "https://hn.algolia.com/api/v1/search?"
+            f"query={quote_plus(query)}&tags=story&hitsPerPage={min(limit, 20)}"
+        )
+        raw = self._fetch(url)
+        if not raw.strip():
+            return []
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+        # Degrade gracefully on any unexpected JSON shape (non-dict, no hit list).
+        if not isinstance(data, dict) or not isinstance(data.get("hits"), list):
+            return []
+        docs: list[SourceDoc] = []
+        for hit in data["hits"][:limit]:
+            if not isinstance(hit, dict):
+                continue
+            object_id = str(hit.get("objectID") or "").strip()
+            external = (hit.get("url") or "").strip()
+            link = external or (
+                f"https://news.ycombinator.com/item?id={object_id}" if object_id else ""
+            )
+            if not link:
+                continue
+            title = str(hit.get("title") or hit.get("story_title") or link)
+            body = strip_html(hit.get("story_text") or "") or title
+            docs.append(
+                SourceDoc(
+                    url=link,
+                    title=title,
+                    snippet=body[: self._snippet_chars],
+                    content=body[:4000],
+                    source=self.name,
+                )
+            )
+        return docs
+
+
+# arXiv's public API answers an Atom feed we can parse with the shared parser.
+_ARXIV_API = "http://export.arxiv.org/api/query"
+
+
+class ArxivSource:
+    """Searches arXiv (Atom API) for papers matching the query.
+
+    Brings scientific-paper intelligence behind the deterministic engine: hits
+    the public arXiv API and parses its Atom response with the shared feed
+    parser (so the query is searched server-side — no client-side filtering).
+    The fetch is behind an injectable ``fetcher`` (the live default uses the
+    shared WebAgent so egress flows through the same guardrail), so it is
+    unit-tested with canned Atom XML and never needs the network in tests.
+    """
+
+    name = "arxiv"
+
+    def __init__(
+        self,
+        fetcher: Any | None = None,
+        web_agent: Any | None = None,
+        snippet_chars: int = 300,
+    ) -> None:
+        self._fetcher = fetcher  # callable(url) -> Atom XML; None ⇒ live WebAgent
+        self._agent = web_agent
+        self._snippet_chars = snippet_chars
+
+    def _fetch(self, url: str) -> str:
+        if self._fetcher is not None:
+            try:
+                return self._fetcher(url) or ""
+            except Exception:  # noqa: BLE001 — a dead API must not sink the source
+                return ""
+        if self._agent is None:
+            from pradyos.core.web_agent import WebAgent
+
+            self._agent = WebAgent()
+        try:
+            r = self._agent.fetch(url)
+        except Exception:  # noqa: BLE001 — a dead API must not sink the source
+            return ""
+        if getattr(r, "error", "") or getattr(r, "status_code", 0) != 200:
+            return ""
+        return getattr(r, "body_text", "")
+
+    def search(self, query: str, limit: int) -> list[SourceDoc]:
+        from urllib.parse import quote_plus
+
+        url = (
+            f"{_ARXIV_API}?search_query=all:{quote_plus(query)}"
+            f"&start=0&max_results={min(limit, 20)}"
+        )
+        docs: list[SourceDoc] = []
+        for item in _parse_feed(self._fetch(url)):
+            title = _WS.sub(" ", item["title"]).strip()
+            summary = item["summary"]
+            docs.append(
+                SourceDoc(
+                    url=item["link"],
+                    title=title or item["link"],
+                    snippet=summary[: self._snippet_chars],
+                    content=summary[:4000],
+                    source=self.name,
+                )
+            )
+            if len(docs) >= limit:
+                break
+        return docs
