@@ -468,9 +468,19 @@ def _parse_feed(xml_text: str) -> list[dict[str, str]]:
         elif tag == "entry":  # Atom
             link = ""
             for child in node:
-                if child.tag.split("}")[-1].lower() == "link":
-                    link = child.get("href", "") or _localtext(node, "link")
+                if child.tag.split("}")[-1].lower() != "link":
+                    continue
+                href = (child.get("href", "") or "").strip()
+                if not href:
+                    continue
+                rel = (child.get("rel", "") or "").lower()
+                if rel in ("", "alternate"):  # the canonical article link
+                    link = href
                     break
+                if not link:  # otherwise keep the first usable href as a fallback
+                    link = href
+            if not link:
+                link = _localtext(node, "link")
             items.append(
                 {
                     "title": _localtext(node, "title"),
@@ -508,10 +518,14 @@ class RssSource:
         self,
         feeds: list[str] | tuple[str, ...] | None = None,
         fetcher: Any | None = None,
+        web_agent: Any | None = None,
         snippet_chars: int = 300,
     ) -> None:
         self._feeds = list(_DEFAULT_FEEDS if feeds is None else feeds)
         self._fetcher = fetcher  # callable(url) -> xml text; None ⇒ live WebAgent
+        # A shared WebAgent (lazy-created once, reused across fetches) so RSS
+        # egress goes through the same guardrail/cache as the rest of the app.
+        self._agent = web_agent
         self._snippet_chars = snippet_chars
 
     def _fetch(self, url: str) -> str:
@@ -520,9 +534,14 @@ class RssSource:
                 return self._fetcher(url) or ""
             except Exception:  # noqa: BLE001 — a dead feed must not sink the source
                 return ""
-        from pradyos.core.web_agent import WebAgent
+        if self._agent is None:
+            from pradyos.core.web_agent import WebAgent
 
-        r = WebAgent().fetch(url)
+            self._agent = WebAgent()
+        try:
+            r = self._agent.fetch(url)
+        except Exception:  # noqa: BLE001 — a dead feed must not sink the source
+            return ""
         if getattr(r, "error", "") or getattr(r, "status_code", 0) != 200:
             return ""
         return getattr(r, "body_text", "")

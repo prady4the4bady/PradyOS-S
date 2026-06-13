@@ -25,12 +25,15 @@ that this pipeline gates.
 
 from __future__ import annotations
 
+import logging
 import threading
 from dataclasses import dataclass
 from typing import Any
 
 from pradyos.fortify import FortifyEngine
 from pradyos.review import ReviewGate
+
+log = logging.getLogger("pradyos.evolve")
 
 
 class EvolveError(RuntimeError):
@@ -146,7 +149,9 @@ class EvolveEngine:
         try:
             after = self._proposer(before, directive)
         except Exception as exc:  # noqa: BLE001 — a dead/absent LLM must not crash the plane
-            return {**base, "note": f"proposer unavailable: {exc}"}
+            # Log internally; keep the client-facing note generic (no transport leak).
+            log.warning("evolve proposer failed for %s: %s", path, exc)
+            return {**base, "note": "proposer unavailable"}
         if not isinstance(after, str) or not after.strip():
             return {**base, "note": "proposer returned no code"}
 

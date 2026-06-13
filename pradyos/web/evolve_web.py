@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from pradyos.evolve import EvolveEngine, EvolveError
@@ -46,7 +47,9 @@ def register_evolve_routes(app: Any, evolve: Any | None = None) -> Any:
         if not isinstance(before, str):
             return JSONResponse({"error": "before must be a string"}, status_code=422)
         try:
-            return JSONResponse(eng.propose(body["path"], body["directive"], before))
+            # propose() may call a (blocking) local LLM — keep it off the event loop.
+            result = await run_in_threadpool(eng.propose, body["path"], body["directive"], before)
+            return JSONResponse(result)
         except EvolveError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
 

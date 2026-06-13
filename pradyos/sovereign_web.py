@@ -3743,6 +3743,7 @@ def main() -> None:
 
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
+    from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, OllamaProposer
     from pradyos.imperium.checkpoint import CheckpointStore
     from pradyos.research import ResearchEngine, RssSource, WebAgentSource
@@ -3751,10 +3752,14 @@ def main() -> None:
     registry = CampaignRegistry()
     checkpoint = CheckpointStore()
     # Live intelligence gathering: register the web + RSS feed sources so the
-    # booted OS can research the open web and monitor feeds in real time. Reading
-    # is low-risk and the WebAgent's guardrail gate still applies. The default
-    # create_app() used by tests registers no source and stays deterministic.
-    research = ResearchEngine(sources=[WebAgentSource(), RssSource()])
+    # booted OS can research the open web and monitor feeds in real time. Both
+    # share ONE WebAgent so egress flows through a single guardrail/cache. The
+    # default create_app() used by tests registers no source and stays
+    # deterministic.
+    web_agent = WebAgent()
+    research = ResearchEngine(
+        sources=[WebAgentSource(web_agent=web_agent), RssSource(web_agent=web_agent)]
+    )
     # Live self-improvement: wire a LOCAL Ollama proposer so EVOLVE can generate
     # candidate fixes (zero API credits). If Ollama is absent, propose() degrades
     # gracefully. The default create_app() used by tests wires no proposer.
