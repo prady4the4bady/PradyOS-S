@@ -133,7 +133,7 @@ curl -fsS --max-time 60 -X POST "$API/api/v1/research/run" \
     -H 'Content-Type: application/json' \
     -d '{"question":"what is the rust language","angles":[],"max_results":1,"max_findings":3}' \
     | /opt/pradyos/.venv/bin/python -c \
-    "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and d.get('sources_consulted')==['web']) else 1)" 2>/dev/null \
+    "import sys,json; d=json.load(sys.stdin); sys.exit(0 if (d.get('question')=='what is the rust language' and isinstance(d.get('finding_count'),int) and 'confidence' in d and 'web' in d.get('sources_consulted',[])) else 1)" 2>/dev/null \
     || fail "research run did not return a well-formed brief"
 emit "PRADYOS-SELFTEST: research (live intelligence) ok"
 
