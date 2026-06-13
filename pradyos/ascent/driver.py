@@ -38,6 +38,10 @@ log = logging.getLogger("pradyos.ascent.driver")
 # targets for an unattended pass (the web adapters are thin; the TUI is large).
 _DEFAULT_EXCLUDE = ("web", "aurora_throne", "ascent")
 
+# Bounded wait on shutdown — a tick blocked in the (non-cancellable) threadpool
+# must not stall lifespan teardown; we log and proceed, leaving the orphan thread.
+_STOP_TIMEOUT_S = 5.0
+
 
 class OwnModuleSource:
     """A rotating provider of the agent's own module sources.
@@ -148,7 +152,13 @@ class AscentDriver:
         if self._task is not None:
             self._task.cancel()
             try:
-                await self._task
+                # Bounded: a tick blocked in the non-cancellable threadpool must
+                # not hang shutdown — log and proceed if it overruns.
+                await asyncio.wait_for(self._task, timeout=_STOP_TIMEOUT_S)
+            except TimeoutError:
+                log.warning(
+                    "ascent driver stop timed out after %ss; continuing shutdown", _STOP_TIMEOUT_S
+                )
             except asyncio.CancelledError:
                 pass
             self._task = None

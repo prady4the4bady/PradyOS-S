@@ -3796,7 +3796,14 @@ def main() -> None:
     # Make the loop AUTONOMOUS: a background heartbeat surveys the OS's own
     # modules and runs ASCENT cycles in real time (read-only; promotes only queue
     # for the Sovereign). The lifespan starts/stops it; tests attach no driver.
-    ascent_interval = float(os.environ.get("PRADYOS_ASCENT_INTERVAL") or 300.0)
+    raw_ascent_interval = os.environ.get("PRADYOS_ASCENT_INTERVAL")
+    try:
+        ascent_interval = float(raw_ascent_interval) if raw_ascent_interval else 300.0
+    except (TypeError, ValueError):
+        log.warning(
+            "Invalid PRADYOS_ASCENT_INTERVAL=%r; falling back to 300.0s", raw_ascent_interval
+        )
+        ascent_interval = 300.0
     ascent_driver = AscentDriver(ascent, OwnModuleSource(), interval_s=ascent_interval)
     app.state.ascent_driver = ascent_driver
 
