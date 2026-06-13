@@ -180,6 +180,76 @@ def test_non_apply_verdict_does_not_queue_pending():
     assert loop.pending() == []
 
 
+# ── Sovereign review (queue / resolve / decisions) ─────────────────────────────
+
+
+def test_review_queue_mirrors_pending():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    assert loop.review_queue() == loop.pending()
+    assert loop.review_queue()[0]["module"] == "a.py"
+
+
+def test_resolve_approve_records_and_dequeues():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    seq = loop.pending()[0]["seq"]
+    rec = loop.resolve(seq, "approve", by="sovereign")
+    assert rec["status"] == "approved" and rec["by"] == "sovereign" and rec["after"] == "x = 1\n"
+    assert loop.pending() == []  # dequeued
+    assert loop.decisions()[-1]["seq"] == seq
+    assert loop.stats()["decisions"] == 1
+
+
+def test_resolve_reject_drops_without_apply():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    seq = loop.pending()[0]["seq"]
+    rec = loop.resolve(seq, "REJECT")  # case-insensitive
+    assert rec["status"] == "rejected"
+    assert loop.pending() == [] and loop.decisions()[-1]["status"] == "rejected"
+
+
+def test_resolve_unknown_seq_raises():
+    loop = AscentLoop()
+    with pytest.raises(AscentError, match="unknown"):
+        loop.resolve(999, "approve")
+
+
+@pytest.mark.parametrize("bad", ["", "maybe", "applied", None])
+def test_resolve_bad_decision_raises(bad):
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    seq = loop.pending()[0]["seq"]
+    with pytest.raises(AscentError):
+        loop.resolve(seq, bad)
+
+
+@pytest.mark.parametrize("bad", [True, "1", 1.0])
+def test_resolve_bad_seq_type_raises(bad):
+    with pytest.raises(AscentError, match="seq must be an integer"):
+        AscentLoop().resolve(bad, "approve")
+
+
+def test_resolve_twice_is_unknown_second_time():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    seq = loop.pending()[0]["seq"]
+    loop.resolve(seq, "approve")
+    with pytest.raises(AscentError, match="unknown"):
+        loop.resolve(seq, "approve")
+
+
+def test_decisions_limit_validation_and_reset_clears():
+    loop = AscentLoop(evolve=_FakeEvolve(verdict="promote"))
+    loop.run_cycle({"a.py": WEAK_HIGH})
+    loop.resolve(loop.pending()[0]["seq"], "approve")
+    with pytest.raises(AscentError):
+        loop.decisions(limit=0)
+    loop.reset()
+    assert loop.decisions() == [] and loop.stats()["decisions"] == 0
+
+
 def test_proposer_unavailable_records_skip_with_note():
     loop = AscentLoop(evolve=_FakeEvolve(proposed=False, note="proposer unavailable"))
     [cyc] = loop.run_cycle({"a.py": WEAK_HIGH})

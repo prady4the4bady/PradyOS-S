@@ -16,6 +16,27 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
+# Shared ASCENT self-forge display contract — the single source of truth so the
+# Rich --once snapshot (forge_panel) and the live Textual pane (AscentForgePane)
+# can never drift on how many proposals/decisions they show or how they truncate.
+FORGE_QUEUE_LIMIT = 10
+FORGE_DECISIONS_LIMIT = 6
+FORGE_DIRECTIVE_TRUNC = 70
+EMPTY_CELL = "—"
+
+
+def forge_format_risk(item: dict[str, Any]) -> str:
+    """Render a proposal's risk as ``before→after`` (or just before / em-dash)."""
+    rb = item.get("risk_before")
+    ra = item.get("risk_after")
+    if rb is not None and ra is not None:
+        return f"{rb}→{ra}"
+    return str(rb) if rb is not None else EMPTY_CELL
+
+
+def forge_truncate_directive(text: str | None, n: int = FORGE_DIRECTIVE_TRUNC) -> str:
+    return (text or EMPTY_CELL)[:n]
+
 
 def _bar(label: str, pct: float, width: int = 28) -> Group:
     color = "green" if pct < 70 else "yellow" if pct < 90 else "red"
@@ -178,6 +199,68 @@ def audit_panel(records: list[dict[str, Any]]) -> Panel:
             ex_text = f"[red]{ex}[/red]"
         tbl.add_row(ts, r.get("agent_id", "?"), r.get("kind", "?"), ex_text, r.get("summary", ""))
     return Panel(tbl, title="AUDIT TAIL — LAST 10 ACTIONS", border_style="magenta", box=box.HEAVY)
+
+
+def forge_panel(
+    queue: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    driver: dict[str, Any] | None,
+) -> Panel:
+    """ASCENT self-improvement review — the autonomous proposals awaiting the
+    Sovereign's approve/reject, the driver heartbeat, and recent decisions."""
+    if driver and driver.get("running"):
+        beat = (
+            f"[green]● live[/green]  ticks: [cyan]{driver.get('ticks', 0)}[/cyan]  "
+            f"interval: [cyan]{driver.get('interval_s', '—')}s[/cyan]"
+        )
+    elif driver is not None:
+        beat = "[yellow]○ idle[/yellow]"
+    else:
+        beat = "[dim]driver offline[/dim]"
+
+    qtbl = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_DOUBLE_HEAD)
+    qtbl.add_column("seq", style="dim", justify="right")
+    qtbl.add_column("module", style="cyan", overflow="fold")
+    qtbl.add_column("risk", justify="right")
+    qtbl.add_column("directive", overflow="fold")
+    if queue:
+        for item in queue[:FORGE_QUEUE_LIMIT]:
+            qtbl.add_row(
+                str(item.get("seq", "?")),
+                item.get("module", "?"),
+                forge_format_risk(item),
+                forge_truncate_directive(item.get("directive")),
+            )
+    else:
+        qtbl.add_row(EMPTY_CELL, "[dim]no proposals awaiting review[/dim]", EMPTY_CELL, EMPTY_CELL)
+
+    dtbl = Table(show_header=True, header_style="bold cyan", box=box.MINIMAL)
+    dtbl.add_column("seq", style="dim", justify="right")
+    dtbl.add_column("module", overflow="fold")
+    dtbl.add_column("decision")
+    dtbl.add_column("by")
+    for d in decisions[-FORGE_DECISIONS_LIMIT:]:
+        status = d.get("status", "?")
+        color = {"approved": "green", "rejected": "red"}.get(status, "white")
+        dtbl.add_row(
+            str(d.get("seq", "?")),
+            d.get("module", "?"),
+            f"[{color}]{status}[/{color}]",
+            d.get("by", "—"),
+        )
+
+    body = Group(
+        Text.from_markup(f"heartbeat: {beat}"),
+        Text(""),
+        Text.from_markup(
+            "[bold]Proposals awaiting Sovereign approval[/bold] — `ascent approve|reject <seq>`"
+        ),
+        qtbl,
+        Text(""),
+        Text.from_markup("[bold]Recent decisions[/bold]"),
+        dtbl,
+    )
+    return Panel(body, title="ASCENT — SELF-FORGE", border_style="green", box=box.HEAVY)
 
 
 def header_banner() -> Panel:

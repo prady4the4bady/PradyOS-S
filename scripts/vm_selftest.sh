@@ -242,6 +242,14 @@ json_check "$API/api/v1/ascent/stats" \
     || fail "ascent loop is not wired to the live EVOLVE engine + proposer"
 emit "PRADYOS-SELFTEST: ascent (self-improvement loop) ok"
 
+# The Sovereign review surface: autonomous proposals are surfaced for approve/
+# reject (never auto-applied). Confirm the queue + decisions log answer.
+json_check "$API/api/v1/ascent/queue" "isinstance(d.get('queue'), list)" \
+    || fail "ascent review queue did not answer"
+json_check "$API/api/v1/ascent/decisions" "isinstance(d.get('decisions'), list)" \
+    || fail "ascent decisions log did not answer"
+emit "PRADYOS-SELFTEST: ascent sovereign review surface ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"
