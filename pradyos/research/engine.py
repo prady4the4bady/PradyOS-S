@@ -566,3 +566,85 @@ class RssSource:
                 if len(docs) >= limit:
                     return docs
         return docs
+
+
+class GitHubSource:
+    """Searches GitHub repositories for the query (the Agent-Reach code-host idea).
+
+    Hits the GitHub repository-search API (unauthenticated by default — free,
+    rate-limited; pass a token for higher limits). JSON parsing is pure; the
+    fetch is behind an injectable ``fetcher`` so it is unit-tested with canned
+    JSON and never needs the network in tests. GitHub's API needs a User-Agent
+    header (and JSON), so this source fetches directly rather than via WebAgent.
+    """
+
+    name = "github"
+
+    def __init__(
+        self,
+        fetcher: Any | None = None,
+        token: str | None = None,
+        snippet_chars: int = 300,
+    ) -> None:
+        self._fetcher = fetcher  # callable(url) -> JSON text; None ⇒ live HTTP
+        self._token = token
+        self._snippet_chars = snippet_chars
+
+    def _fetch(self, url: str) -> str:
+        if self._fetcher is not None:
+            try:
+                return self._fetcher(url) or ""
+            except Exception:  # noqa: BLE001 — a dead API must not sink the source
+                return ""
+        import urllib.request
+
+        headers = {
+            "User-Agent": "pradyos-research",
+            "Accept": "application/vnd.github+json",
+        }
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except Exception:  # noqa: BLE001 — network/rate-limit failures degrade to no docs
+            return ""
+
+    def search(self, query: str, limit: int) -> list[SourceDoc]:
+        import json
+        from urllib.parse import quote_plus
+
+        url = (
+            "https://api.github.com/search/repositories?"
+            f"q={quote_plus(query)}&sort=stars&order=desc&per_page={min(limit, 10)}"
+        )
+        raw = self._fetch(url)
+        if not raw.strip():
+            return []
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+        # Degrade gracefully on any unexpected JSON shape (non-dict, no item list).
+        if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+            return []
+        docs: list[SourceDoc] = []
+        for item in data["items"][:limit]:
+            if not isinstance(item, dict):
+                continue
+            html_url = (item.get("html_url") or "").strip()
+            if not html_url:
+                continue
+            desc = item.get("description") or ""
+            topics = " ".join(t for t in (item.get("topics") or []) if isinstance(t, str))
+            docs.append(
+                SourceDoc(
+                    url=html_url,
+                    title=item.get("full_name") or html_url,
+                    snippet=desc[: self._snippet_chars],
+                    content=f"{desc} {topics}".strip()[:4000],
+                    source=self.name,
+                )
+            )
+        return docs
