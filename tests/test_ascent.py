@@ -140,7 +140,8 @@ def test_run_cycle_skips_modules_without_findings():
     assert [c["module"] for c in cycles] == ["a.py"]  # only the one with findings
 
 
-@pytest.mark.parametrize("bad", [0, -1, "x", 1.5])
+# True/False are int subclasses — must be rejected, not read as 1/0.
+@pytest.mark.parametrize("bad", [0, -1, "x", 1.5, True, False])
 def test_run_cycle_max_targets_validation(bad):
     with pytest.raises(AscentError):
         AscentLoop().run_cycle({"a.py": WEAK_HIGH}, max_targets=bad)
@@ -184,6 +185,22 @@ def test_proposer_unavailable_records_skip_with_note():
     [cyc] = loop.run_cycle({"a.py": WEAK_HIGH})
     assert cyc["verdict"] == "skipped" and cyc["decision"] == "skipped"
     assert cyc["rationale"] == "proposer unavailable"
+
+
+def test_proposer_raising_records_skip_not_crash():
+    # A raising/dead proposer must degrade to a recorded skip, never bubble out
+    # (the web route only maps AscentError, so an escape would be a 500).
+    class _RaisingEvolve:
+        def propose(self, path: str, directive: str, before: str = "") -> dict:
+            raise RuntimeError("llm offline")
+
+        def stats(self) -> dict:
+            return {"proposer_configured": True}
+
+    loop = AscentLoop(evolve=_RaisingEvolve())
+    [cyc] = loop.run_cycle({"a.py": WEAK_HIGH})
+    assert cyc["verdict"] == "skipped" and cyc["decision"] == "skipped"
+    assert cyc["rationale"] == "evolve proposer failed"
 
 
 def test_evolve_called_with_target_directive_and_source():

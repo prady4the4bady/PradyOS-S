@@ -31,11 +31,14 @@ never pollutes the live planes, and it degrades gracefully when no EVOLVE engine
 
 from __future__ import annotations
 
+import logging
 import threading
 from dataclasses import dataclass
 from typing import Any
 
 from pradyos.fortify import FortifyEngine
+
+log = logging.getLogger("pradyos.ascent")
 
 # verdict (from EVOLVE) → (autonomous decision, rationale). The single source of
 # truth for what ASCENT does with a gated candidate.
@@ -144,7 +147,8 @@ class AscentLoop:
         created (most-recent last). With no EVOLVE engine (or no proposer) wired,
         each cycle is recorded as ``skipped`` but still names its target + directive.
         """
-        if not isinstance(max_targets, int) or max_targets <= 0:
+        # bool is an int subclass — reject it so JSON ``true`` isn't read as 1.
+        if isinstance(max_targets, bool) or not isinstance(max_targets, int) or max_targets <= 0:
             raise AscentError("max_targets must be a positive integer")
         ranked = self.survey(candidates)  # validates candidates
         targets = [e for e in ranked if e["finding_count"] > 0][:max_targets]
@@ -164,8 +168,14 @@ class AscentLoop:
                 note = "no EVOLVE engine wired — target identified only"
             else:
                 # propose() may call a (blocking) local LLM; ASCENT is sync, the
-                # web surface runs run_cycle off the event loop.
-                res = self._evolve.propose(module, directive, before=candidates[module])
+                # web surface runs run_cycle off the event loop. A raising/dead
+                # proposer must NOT crash the loop — degrade to a recorded skip
+                # (log details server-side; keep the cycle note generic).
+                try:
+                    res = self._evolve.propose(module, directive, before=candidates[module])
+                except Exception as exc:  # noqa: BLE001 — a raising proposer must not crash the loop
+                    log.warning("ascent: evolve.propose failed for %s: %s", module, exc)
+                    res = {"proposed": False, "note": "evolve proposer failed"}
                 if res.get("proposed"):
                     evaluation = res.get("evaluation") or {}
                     verdict = evaluation.get("verdict", "skipped")
@@ -175,11 +185,19 @@ class AscentLoop:
                     note = res.get("note") or "proposer produced no candidate"
 
             decision, rationale = self._decide(verdict, note)
+            # Record + (if promoted) enqueue under ONE lock so a concurrent
+            # reset() cannot interleave and orphan a pending entry.
             cycle = self._record(
-                module, directive, verdict, decision, risk_before, risk_after, rationale, evaluation
+                module,
+                directive,
+                verdict,
+                decision,
+                risk_before,
+                risk_after,
+                rationale,
+                evaluation,
+                after_source,
             )
-            if decision == "apply":
-                self._queue_pending(cycle, after_source)
             results.append(cycle.to_dict())
         return results
 
@@ -199,6 +217,7 @@ class AscentLoop:
         risk_after: int | None,
         rationale: str,
         evaluation: dict[str, Any] | None,
+        after_source: str | None,
     ) -> Cycle:
         with self._lock:
             self._seq += 1
@@ -214,20 +233,20 @@ class AscentLoop:
                 evaluation=evaluation,
             )
             self._cycles.append(cycle)
+            # Enqueue the promoted change in the SAME lock section so the cycle
+            # and its pending entry can never be split by a concurrent reset().
+            if decision == "apply":
+                self._pending.append(
+                    {
+                        "seq": cycle.seq,
+                        "module": cycle.module,
+                        "directive": cycle.directive,
+                        "risk_before": cycle.risk_before,
+                        "risk_after": cycle.risk_after,
+                        "after": after_source,
+                    }
+                )
             return cycle
-
-    def _queue_pending(self, cycle: Cycle, after_source: str | None) -> None:
-        with self._lock:
-            self._pending.append(
-                {
-                    "seq": cycle.seq,
-                    "module": cycle.module,
-                    "directive": cycle.directive,
-                    "risk_before": cycle.risk_before,
-                    "risk_after": cycle.risk_after,
-                    "after": after_source,
-                }
-            )
 
     # ── introspection ──────────────────────────────────────────────────────────
 
