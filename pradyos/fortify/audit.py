@@ -219,8 +219,9 @@ class FortifyEngine:
     def _regex_findings(source: str) -> list[Finding]:
         out: list[Finding] = []
         for i, line in enumerate(source.splitlines(), start=1):
-            if _DEBT.search(line):
-                marker = _DEBT.search(line).group(1)  # type: ignore[union-attr]
+            match = _DEBT.search(line)
+            if match:
+                marker = match.group(1)
                 out.append(_mk("debt_marker", i, f"{marker} marker — tracked tech debt"))
         return out
 
