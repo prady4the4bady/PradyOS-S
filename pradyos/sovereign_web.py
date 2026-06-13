@@ -372,7 +372,14 @@ def create_app(
     async def _lifespan(app):
         if heartbeat is not None:
             await heartbeat.start()
+        # ASCENT autonomous driver — started only if main() attached one, so the
+        # default create_app() used by tests stays deterministic/offline.
+        ascent_driver = getattr(app.state, "ascent_driver", None)
+        if ascent_driver is not None:
+            ascent_driver.start()
         yield
+        if ascent_driver is not None:
+            await ascent_driver.stop()
         if heartbeat is not None:
             await heartbeat.stop()
 
@@ -3745,7 +3752,7 @@ def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
 
-    from pradyos.ascent import AscentLoop
+    from pradyos.ascent import AscentDriver, AscentLoop, OwnModuleSource
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.bus import get_bus
     from pradyos.core.web_agent import WebAgent
@@ -3786,6 +3793,17 @@ def main() -> None:
         evolve=evolve,
         ascent=ascent,
     )
+    # Make the loop AUTONOMOUS: a background heartbeat surveys the OS's own
+    # modules and runs ASCENT cycles in real time (read-only; promotes only queue
+    # for the Sovereign). The lifespan starts/stops it; tests attach no driver.
+    ascent_interval = float(os.environ.get("PRADYOS_ASCENT_INTERVAL") or 300.0)
+    ascent_driver = AscentDriver(ascent, OwnModuleSource(), interval_s=ascent_interval)
+    app.state.ascent_driver = ascent_driver
+
+    @app.get("/api/v1/ascent/driver", include_in_schema=True)
+    async def _api_ascent_driver_status() -> JSONResponse:
+        return JSONResponse(ascent_driver.status())
+
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
 

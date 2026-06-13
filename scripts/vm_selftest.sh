@@ -220,6 +220,12 @@ emit "PRADYOS-SELFTEST: evolve propose (live LLM step) ok"
 # drives EVOLVE's propose+gate, then decides the outcome (apply/defer/escalate/
 # discard). The survey/decide core is deterministic; a full cycle is probed
 # structurally since the proposer degrades gracefully if the local model is absent.
+# First prove the loop runs AUTONOMOUSLY: a background heartbeat surveys the OS's
+# own modules every PRADYOS_ASCENT_INTERVAL seconds with no API trigger, so by the
+# time the selftest runs the driver has already ticked.
+json_check "$API/api/v1/ascent/driver" "d.get('running') is True and d.get('ticks',0) >= 1" \
+    || fail "ascent autonomous driver is not running (no self-survey heartbeat)"
+emit "PRADYOS-SELFTEST: ascent autonomous driver (real-time self-survey) ok"
 json_post "$API/api/v1/ascent/survey" \
     '{"candidates":{"pradyos/weak.py":"def f(x=[]):\n    try:\n        g()\n    except:\n        pass\n","pradyos/clean.py":"x = 1\n"}}' \
     "d['survey'][0]['module']=='pradyos/weak.py' and d['survey'][0]['risk']>=6 and 'mutable_default' in (d['survey'][0]['directive'] or '')" \
