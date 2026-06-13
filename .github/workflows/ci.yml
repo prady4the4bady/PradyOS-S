@@ -12,6 +12,11 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
+  # Run every JS action — and their transitive sub-actions — on Node.js 24.
+  # Node 20 is deprecated on GitHub-hosted runners; opting in here silences the
+  # deprecation warnings at the root without risky major-version bumps to a
+  # working pipeline, and covers sub-actions we don't pin directly.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # --------------------------------------------------------------------------
