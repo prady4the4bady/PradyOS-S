@@ -28,6 +28,12 @@ def test_widgets_render_without_data():
     Console().print(forge_panel([], [], None))
 
 
+def _render_text(renderable) -> str:
+    c = Console(record=True, width=140)
+    c.print(renderable)
+    return c.export_text()
+
+
 def test_forge_panel_renders_with_data():
     queue = [
         {
@@ -40,8 +46,17 @@ def test_forge_panel_renders_with_data():
     ]
     decisions = [{"seq": 2, "module": "pradyos/y.py", "status": "approved", "by": "sovereign"}]
     driver = {"running": True, "ticks": 7, "interval_s": 20.0}
-    Console().print(forge_panel(queue, decisions, driver))
-    Console().print(forge_panel([], [], {"running": False, "ticks": 0}))
+
+    live = _render_text(forge_panel(queue, decisions, driver))
+    assert "pradyos/x.py" in live and "6→1" in live  # queued proposal + risk delta
+    assert "approved" in live and "pradyos/y.py" in live  # decision row
+    assert "live" in live  # heartbeat state
+
+    idle = _render_text(forge_panel([], [], {"running": False, "ticks": 0}))
+    assert "idle" in idle and "no proposals awaiting review" in idle  # empty-state
+
+    offline = _render_text(forge_panel([], [], None))
+    assert "offline" in offline  # no driver wired
 
 
 def test_widgets_render_with_data():

@@ -65,9 +65,14 @@ from textual.widgets import (
 )
 
 from pradyos.aurora_throne.widgets import (
+    EMPTY_CELL,
+    FORGE_DECISIONS_LIMIT,
+    FORGE_QUEUE_LIMIT,
     approvals_panel,
     audit_panel,
+    forge_format_risk,
     forge_panel,
+    forge_truncate_directive,
     header_banner,
     health_panel,
     incidents_panel,
@@ -227,6 +232,13 @@ def _api_post(
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
             return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        # Preserve the backend's reason (e.g. 404 unknown seq / 422 bad input) so
+        # callers can surface it instead of a generic failure.
+        try:
+            return json.loads(e.read().decode("utf-8"))  # backend {"error": "..."} body
+        except Exception:  # noqa: BLE001
+            return {"error": f"HTTP {e.code}"}
     except Exception:  # noqa: BLE001
         return None
 
@@ -829,22 +841,24 @@ class AscentForgePane(TabPane):
         try:
             qt = self.query_one("#forge-queue", DataTable)
             qt.clear()
-            for item in (queue or [])[:12]:
-                rb, ra = item.get("risk_before"), item.get("risk_after")
-                risk = f"{rb}→{ra}" if rb is not None and ra is not None else str(rb or "—")
-                qt.add_row(
-                    str(item.get("seq", "?")),
-                    item.get("module", "?"),
-                    risk,
-                    (item.get("directive") or "—")[:60],
-                )
+            rows = (queue or [])[:FORGE_QUEUE_LIMIT]
+            if rows:
+                for item in rows:
+                    qt.add_row(
+                        str(item.get("seq", "?")),
+                        item.get("module", "?"),
+                        forge_format_risk(item),
+                        forge_truncate_directive(item.get("directive")),
+                    )
+            else:
+                qt.add_row(EMPTY_CELL, "no proposals awaiting review", EMPTY_CELL, EMPTY_CELL)
         except NoMatches:
             pass
 
         try:
             dt = self.query_one("#forge-decisions", DataTable)
             dt.clear()
-            for d in (decisions or [])[-8:]:
+            for d in (decisions or [])[-FORGE_DECISIONS_LIMIT:]:
                 status = d.get("status", "?")
                 color = {"approved": "green", "rejected": "red"}.get(status, "white")
                 dt.add_row(
@@ -1085,6 +1099,8 @@ class ThroneApp(App):
                         f"ASCENT {res['status']} seq {seq}",
                         severity="information" if sub == "approve" else "warning",
                     )
+                elif res and res.get("error"):
+                    self.notify(f"ASCENT: {res['error']}", severity="error")
                 else:
                     self.notify(f"Cannot {sub} ascent seq {seq}", severity="error")
         else:
