@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pradyos.evolve import EvolveEngine, EvolveError
+from pradyos.evolve import EvolveEngine, EvolveError, OllamaProposer
 
 # before: a bare-except weakness (FORTIFY risk 3). after: fixed (risk 0).
 _WEAK = "def f():\n    try:\n        g()\n    except:\n        pass\n"
@@ -90,3 +90,51 @@ def test_private_engines_are_isolated():
     e.evaluate("pradyos/x.py", after=_WEAK)
     d = e.evaluate("pradyos/x.py", after=_FIXED)
     assert d["fortify_after"]["risk"] == 0  # only reflects this call's 'after'
+
+
+# ── propose: turn the judge into a doer (injected proposer) ────────────────────
+
+
+def test_propose_generates_and_promotes_a_fix():
+    # A proposer that fixes the bare-except weakness; EVOLVE judges its output.
+    engine = EvolveEngine(proposer=lambda before, directive: _FIXED)
+    d = engine.propose("pradyos/x.py", "replace the bare except", before=_WEAK)
+    assert d["proposed"] is True
+    assert d["after"] == _FIXED
+    assert d["evaluation"]["verdict"] == "promote" and d["evaluation"]["risk_delta"] == -3
+
+
+def test_propose_without_proposer_is_graceful():
+    d = _e().propose("pradyos/x.py", "do something", before=_WEAK)
+    assert d["proposed"] is False and "no code proposer" in d["note"]
+
+
+def test_propose_proposer_failure_is_graceful():
+    def _boom(before, directive):
+        raise RuntimeError("ollama down")
+
+    d = EvolveEngine(proposer=_boom).propose("pradyos/x.py", "fix it", before=_WEAK)
+    assert d["proposed"] is False and "unavailable" in d["note"]
+
+
+def test_propose_empty_output_is_graceful():
+    d = EvolveEngine(proposer=lambda b, dve: "   ").propose("pradyos/x.py", "fix it")
+    assert d["proposed"] is False and "no code" in d["note"]
+
+
+def test_propose_validation():
+    e = EvolveEngine(proposer=lambda b, d: "x = 1\n")
+    with pytest.raises(EvolveError):
+        e.propose("", "directive")
+    with pytest.raises(EvolveError):
+        e.propose("p", "")
+
+
+def test_stats_reports_proposer_configured():
+    assert _e().stats()["proposer_configured"] is False
+    assert EvolveEngine(proposer=lambda b, d: "x").stats()["proposer_configured"] is True
+
+
+def test_ollama_proposer_constructs_without_network():
+    p = OllamaProposer(model="qwen2.5-coder:7b")
+    assert p.name == "ollama" and callable(p) and p.model == "qwen2.5-coder:7b"

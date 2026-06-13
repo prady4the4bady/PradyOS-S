@@ -9,10 +9,25 @@ import pytest
 from pradyos.research import (
     ResearchEngine,
     ResearchError,
+    RssSource,
     SourceDoc,
     WebAgentSource,
     strip_html,
 )
+
+_RSS = """<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Tech</title>
+  <item><title>Rust async runtimes compared</title><link>https://ex.com/rust</link>
+    <description>A look at tokio and async-std.</description></item>
+  <item><title>Bread recipes</title><link>https://ex.com/bread</link>
+    <description>sourdough tips</description></item>
+</channel></rss>"""
+
+_ATOM = """<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry><title>Python typing news</title><link href="https://ex.com/typing"/>
+    <summary>PEP updates for typing.</summary></entry>
+</feed>"""
 
 
 class FakeSource:
@@ -250,3 +265,40 @@ def test_web_agent_source_adapter_maps_results():
 
 def test_strip_html():
     assert strip_html("<p>hello <b>world</b></p>") == "hello world"
+
+
+# ── RssSource (no live I/O — fake fetcher) ─────────────────────────────────────
+
+
+def test_rss_source_parses_rss_and_filters_by_query():
+    src = RssSource(feeds=["http://feed"], fetcher=lambda url: _RSS)
+    docs = src.search("rust async runtimes", 5)
+    assert [d.url for d in docs] == ["https://ex.com/rust"]  # 'Bread recipes' filtered out
+    assert docs[0].source == "rss" and "tokio" in docs[0].content
+
+
+def test_rss_source_parses_atom_link_href():
+    src = RssSource(feeds=["http://feed"], fetcher=lambda url: _ATOM)
+    docs = src.search("python typing", 5)
+    assert docs and docs[0].url == "https://ex.com/typing"
+
+
+def test_rss_source_no_overlap_returns_empty():
+    src = RssSource(feeds=["http://feed"], fetcher=lambda url: _RSS)
+    assert src.search("quantum chromodynamics", 5) == []
+
+
+def test_rss_source_bad_xml_and_dead_feed_are_safe():
+    assert RssSource(feeds=["http://feed"], fetcher=lambda url: "not xml").search("rust", 5) == []
+
+    def _boom(url):
+        raise RuntimeError("feed down")
+
+    assert RssSource(feeds=["http://feed"], fetcher=_boom).search("rust", 5) == []
+
+
+def test_rss_source_via_engine():
+    eng = ResearchEngine(sources=[RssSource(feeds=["http://feed"], fetcher=lambda url: _RSS)])
+    brief = eng.research("rust async runtimes", angles=())
+    assert brief.to_dict()["sources_consulted"] == ["rss"]
+    assert any("ex.com/rust" in f["url"] for f in brief.to_dict()["findings"])

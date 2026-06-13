@@ -33,6 +33,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
+from xml.etree import ElementTree as ET
 
 # Small, deterministic English stop-word set — enough to stop common words from
 # dominating term-overlap scoring without pulling in a dependency.
@@ -436,3 +437,113 @@ class WebAgentSource:
     def _title(html: str) -> str:
         m = re.search(r"<title[^>]*>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
         return _WS.sub(" ", m.group(1)).strip() if m else ""
+
+
+def _parse_feed(xml_text: str) -> list[dict[str, str]]:
+    """Parse RSS or Atom XML into ``{title, link, summary}`` items (deterministic)."""
+    if not xml_text.strip():
+        return []
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return []
+
+    def _localtext(elem: Any, name: str) -> str:
+        for child in elem:
+            if child.tag.split("}")[-1].lower() == name:
+                return (child.text or "").strip()
+        return ""
+
+    items: list[dict[str, str]] = []
+    for node in root.iter():
+        tag = node.tag.split("}")[-1].lower()
+        if tag == "item":  # RSS
+            items.append(
+                {
+                    "title": _localtext(node, "title"),
+                    "link": _localtext(node, "link"),
+                    "summary": strip_html(_localtext(node, "description")),
+                }
+            )
+        elif tag == "entry":  # Atom
+            link = ""
+            for child in node:
+                if child.tag.split("}")[-1].lower() == "link":
+                    link = child.get("href", "") or _localtext(node, "link")
+                    break
+            items.append(
+                {
+                    "title": _localtext(node, "title"),
+                    "link": link,
+                    "summary": strip_html(
+                        _localtext(node, "summary") or _localtext(node, "content")
+                    ),
+                }
+            )
+    return [i for i in items if i["link"]]
+
+
+# Default feeds for the live RSS source — stable, low-risk tech feeds the
+# Sovereign can reconfigure. Reading is autonomous; egress still flows through
+# the WebAgent guardrail gate.
+_DEFAULT_FEEDS: tuple[str, ...] = (
+    "https://hnrss.org/frontpage",
+    "https://www.python.org/blogs/news/rss/",
+)
+
+
+class RssSource:
+    """Monitors RSS/Atom feeds; surfaces items matching the research query.
+
+    The Agent-Reach "feed monitoring" idea behind the deterministic engine: it
+    fetches a configured set of feeds and returns the items whose title/summary
+    overlap the query. Parsing is pure (stdlib ``xml.etree``); the fetch is
+    behind an injectable ``fetcher`` (the live default uses ``WebAgent``), so it
+    is unit-tested with canned feed XML and never needs the network in tests.
+    """
+
+    name = "rss"
+
+    def __init__(
+        self,
+        feeds: list[str] | tuple[str, ...] | None = None,
+        fetcher: Any | None = None,
+        snippet_chars: int = 300,
+    ) -> None:
+        self._feeds = list(_DEFAULT_FEEDS if feeds is None else feeds)
+        self._fetcher = fetcher  # callable(url) -> xml text; None ⇒ live WebAgent
+        self._snippet_chars = snippet_chars
+
+    def _fetch(self, url: str) -> str:
+        if self._fetcher is not None:
+            try:
+                return self._fetcher(url) or ""
+            except Exception:  # noqa: BLE001 — a dead feed must not sink the source
+                return ""
+        from pradyos.core.web_agent import WebAgent
+
+        r = WebAgent().fetch(url)
+        if getattr(r, "error", "") or getattr(r, "status_code", 0) != 200:
+            return ""
+        return getattr(r, "body_text", "")
+
+    def search(self, query: str, limit: int) -> list[SourceDoc]:
+        terms = _term_set(query)
+        docs: list[SourceDoc] = []
+        for feed_url in self._feeds:
+            for item in _parse_feed(self._fetch(feed_url)):
+                haystack = _term_set(f"{item['title']} {item['summary']}")
+                if terms and not (terms & haystack):
+                    continue
+                docs.append(
+                    SourceDoc(
+                        url=item["link"],
+                        title=item["title"] or item["link"],
+                        snippet=item["summary"][: self._snippet_chars],
+                        content=item["summary"][:4000],
+                        source=self.name,
+                    )
+                )
+                if len(docs) >= limit:
+                    return docs
+        return docs

@@ -37,6 +37,19 @@ def register_evolve_routes(app: Any, evolve: Any | None = None) -> Any:
         except EvolveError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
 
+    @app.post("/api/v1/evolve/propose")
+    async def api_evolve_propose(request: Request) -> JSONResponse:
+        body = await _json(request)
+        if not isinstance(body, dict) or "path" not in body or "directive" not in body:
+            return JSONResponse({"error": "path and directive are required"}, status_code=422)
+        before = body.get("before", "")
+        if not isinstance(before, str):
+            return JSONResponse({"error": "before must be a string"}, status_code=422)
+        try:
+            return JSONResponse(eng.propose(body["path"], body["directive"], before))
+        except EvolveError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+
     @app.get("/api/v1/evolve/evaluation")
     async def api_evolve_evaluation(seq: int = Query(...)) -> JSONResponse:
         try:
