@@ -7,8 +7,10 @@ See :mod:`pradyos.research.engine`.
 from __future__ import annotations
 
 from pradyos.research.engine import (
+    ArxivSource,
     Finding,
     GitHubSource,
+    HackerNewsSource,
     ResearchBrief,
     ResearchEngine,
     ResearchError,
@@ -19,8 +21,10 @@ from pradyos.research.engine import (
 )
 
 __all__ = [
+    "ArxivSource",
     "Finding",
     "GitHubSource",
+    "HackerNewsSource",
     "ResearchBrief",
     "ResearchEngine",
     "ResearchError",
