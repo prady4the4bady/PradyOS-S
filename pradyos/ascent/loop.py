@@ -87,7 +87,12 @@ class Cycle:
 class AscentLoop:
     """Decide *what* to harden, drive EVOLVE's propose→gate, decide the outcome."""
 
-    def __init__(self, evolve: Any | None = None, fortify: Any | None = None) -> None:
+    def __init__(
+        self,
+        evolve: Any | None = None,
+        fortify: Any | None = None,
+        applier: Any | None = None,
+    ) -> None:
         # A PRIVATE FORTIFY engine for surveying — target selection must not
         # pollute the live FORTIFY plane's reports.
         self._fortify = fortify if fortify is not None else FortifyEngine()
@@ -95,9 +100,13 @@ class AscentLoop:
         # with the live plane) so cycles flow through the real local-LLM
         # proposer; tests inject a fake. None ⇒ survey/direct only.
         self._evolve = evolve
+        # Optional applier: writes a Sovereign-approved change to disk (staged +
+        # re-gated). None ⇒ the loop can survey/decide but cannot apply.
+        self._applier = applier
         self._cycles: list[Cycle] = []
         self._pending: list[dict[str, Any]] = []  # promoted changes queued for apply
         self._decisions: list[dict[str, Any]] = []  # the Sovereign's approve/reject log
+        self._applied: list[dict[str, Any]] = []  # changes staged to disk by the applier
         self._seq = 0
         self._lock = threading.RLock()
 
@@ -318,6 +327,54 @@ class AscentLoop:
         with self._lock:
             return [dict(d) for d in self._decisions[-limit:]]
 
+    def apply(self, seq: int) -> dict[str, Any]:
+        """Stage an APPROVED change to disk via the applier (the only write path).
+
+        Requires the decision to have been ``approved`` (and not already applied).
+        The applier re-gates against the current on-disk source and stages the
+        change; the loop records the outcome and marks the decision ``applied``.
+        """
+        if isinstance(seq, bool) or not isinstance(seq, int):
+            raise AscentError("seq must be an integer")
+        if self._applier is None:
+            raise AscentError("no applier configured")
+        with self._lock:
+            dec = next((d for d in self._decisions if d["seq"] == seq), None)
+            if dec is None:
+                raise AscentError(f"unknown approved decision seq={seq}")
+            if dec["status"] == "applied":
+                raise AscentError(f"decision seq={seq} already applied")
+            if dec["status"] != "approved":
+                raise AscentError(f"decision seq={seq} is not approved (status={dec['status']})")
+            module = dec["module"]
+            after = dec.get("after") or ""
+
+        # Apply OUTSIDE the lock — disk I/O + re-gate must not hold the lock.
+        result = self._applier.apply(module, after)
+
+        record = {
+            "seq": seq,
+            "module": module,
+            "applied": result["applied"],
+            "gate_decision": result["gate_decision"],
+            "reason": result["reason"],
+            "path": result["path"],
+            "bytes": result["bytes"],
+        }
+        with self._lock:
+            self._applied.append(record)
+            for d in self._decisions:
+                if d["seq"] == seq:
+                    d["status"] = "applied" if result["applied"] else "apply_refused"
+        return record
+
+    def applied(self, limit: int = 20) -> list[dict[str, Any]]:
+        """The changes staged to disk by the applier (most recent last)."""
+        if not isinstance(limit, int) or limit <= 0:
+            raise AscentError("limit must be a positive integer")
+        with self._lock:
+            return [dict(a) for a in self._applied[-limit:]]
+
     def stats(self) -> dict[str, Any]:
         proposer_configured = False
         if self._evolve is not None:
@@ -337,8 +394,10 @@ class AscentLoop:
                 "by_decision": by_decision,
                 "pending": len(self._pending),
                 "decisions": len(self._decisions),
+                "applied": len(self._applied),
                 "evolve_wired": self._evolve is not None,
                 "proposer_configured": proposer_configured,
+                "applier_configured": self._applier is not None,
             }
 
     @staticmethod
@@ -356,5 +415,6 @@ class AscentLoop:
             self._cycles.clear()
             self._pending.clear()
             self._decisions.clear()
+            self._applied.clear()
             self._seq = 0
             self._fortify.reset()

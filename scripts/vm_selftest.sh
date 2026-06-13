@@ -251,6 +251,16 @@ json_check "$API/api/v1/ascent/decisions" "isinstance(d.get('decisions'), list)"
     || fail "ascent decisions log did not answer"
 emit "PRADYOS-SELFTEST: ascent sovereign review surface ok"
 
+# The apply-gate: an approved change is STAGED to disk (re-gated + audited),
+# never overwriting the running source. Confirm the applier is wired and the
+# staged-changes log answers. (The full apply needs an LLM-produced promote +
+# approval, exercised in unit tests; here we assert the surface + wiring.)
+json_check "$API/api/v1/ascent/stats" "d.get('applier_configured') is True" \
+    || fail "ascent apply-gate has no applier configured"
+json_check "$API/api/v1/ascent/applied" "isinstance(d.get('applied'), list)" \
+    || fail "ascent applied log did not answer"
+emit "PRADYOS-SELFTEST: ascent apply-gate (staged self-modification) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"

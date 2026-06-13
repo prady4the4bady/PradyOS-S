@@ -130,3 +130,42 @@ def test_resolve_bad_decision_422(client):
     seq = client.get("/api/v1/ascent/queue").json()["queue"][0]["seq"]
     resp = client.post("/api/v1/ascent/resolve", json={"seq": seq, "decision": "applied"})
     assert resp.status_code == 422
+
+
+# ── apply-gate route ────────────────────────────────────────────────────────────
+
+
+class _FakeApplier:
+    def apply(self, module: str, after: str) -> dict:
+        return {
+            "applied": True,
+            "module": module,
+            "gate_decision": "approve",
+            "reason": "staged",
+            "path": f"/staged/{module}",
+            "bytes": len(after.encode("utf-8")),
+        }
+
+
+@pytest.fixture()
+def apply_client():
+    app = FastAPI()
+    register_ascent_routes(app, AscentLoop(evolve=_FakeEvolve(), applier=_FakeApplier()))
+    return TestClient(app)
+
+
+def test_apply_flow(apply_client):
+    apply_client.post("/api/v1/ascent/cycle", json={"candidates": {"a.py": WEAK}})
+    seq = apply_client.get("/api/v1/ascent/queue").json()["queue"][0]["seq"]
+    apply_client.post("/api/v1/ascent/resolve", json={"seq": seq, "decision": "approve"})
+    rec = apply_client.post("/api/v1/ascent/apply", json={"seq": seq}).json()
+    assert rec["applied"] is True and rec["seq"] == seq
+    assert apply_client.get("/api/v1/ascent/applied").json()["applied"][-1]["seq"] == seq
+
+
+def test_apply_missing_seq_422(apply_client):
+    assert apply_client.post("/api/v1/ascent/apply", json={}).status_code == 422
+
+
+def test_apply_unknown_seq_404(apply_client):
+    assert apply_client.post("/api/v1/ascent/apply", json={"seq": 999}).status_code == 404

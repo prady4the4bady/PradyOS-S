@@ -7,7 +7,15 @@ EVOLVE's propose→gate, and decides what to do with the verdict. See
 
 from __future__ import annotations
 
+from pradyos.ascent.apply import AscentApplier
 from pradyos.ascent.driver import AscentDriver, OwnModuleSource
 from pradyos.ascent.loop import AscentError, AscentLoop, Cycle
 
-__all__ = ["AscentDriver", "AscentError", "AscentLoop", "Cycle", "OwnModuleSource"]
+__all__ = [
+    "AscentApplier",
+    "AscentDriver",
+    "AscentError",
+    "AscentLoop",
+    "Cycle",
+    "OwnModuleSource",
+]
