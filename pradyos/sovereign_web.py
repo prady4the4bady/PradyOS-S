@@ -3763,7 +3763,7 @@ def main() -> None:
     from pradyos.core.llm import resolve_provider
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, LLMProposer
-    from pradyos.guild import GuildOrg, LLMGuildWorker
+    from pradyos.guild import GuildOrg, LLMGuildWorker, research_tool
     from pradyos.imperium.checkpoint import CheckpointStore
     from pradyos.research import (
         ArxivSource,
@@ -3814,8 +3814,15 @@ def main() -> None:
         applier=AscentApplier(apply_root=apply_root, audit=get_audit_log()),
     )
     # A working organization of specialist agents (planner/researcher/engineer/
-    # analyst/critic/synthesizer) on the same shared LLM provider. Tests wire none.
-    guild = GuildOrg(worker=LLMGuildWorker(llm))
+    # analyst/critic/synthesizer) on the same shared LLM provider, equipped with
+    # OS tools: the researcher runs LIVE RESEARCH on the objective and posts its
+    # findings to the team's blackboard — agents that act, not just talk. Tests
+    # wire neither worker nor tools.
+    guild = GuildOrg(
+        worker=LLMGuildWorker(llm),
+        toolbox=[research_tool(research)],
+        role_tools={"researcher": ["research"]},
+    )
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,

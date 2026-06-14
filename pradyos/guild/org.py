@@ -77,6 +77,43 @@ DEFAULT_ROLES: tuple[Role, ...] = (
 )
 
 
+class Tool:
+    """A capability a guild role can use mid-task — the bridge that lets the team
+    *act*, not just talk. ``run(objective)`` turns the objective into a text
+    result that is placed on the shared blackboard before the role contributes,
+    so the role (and everyone after) reasons over real OS output (e.g. live
+    research) rather than the model's memory alone."""
+
+    def __init__(self, name: str, description: str, fn: Any) -> None:
+        if not _is_str(name):
+            raise GuildError("tool name must be a non-empty string")
+        self.name = name
+        self.description = description
+        self._fn = fn
+
+    def run(self, objective: str) -> str:
+        out = self._fn(objective)
+        return out if isinstance(out, str) else ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"name": self.name, "description": self.description}
+
+
+def research_tool(engine: Any, limit: int = 3) -> Tool:
+    """A GUILD tool that runs live RESEARCH on the objective and returns a short
+    cited digest. ``engine`` is duck-typed (anything with ``.research(objective)``
+    returning a brief / ``.to_dict()``-able), so the GUILD stays decoupled."""
+
+    def _run(objective: str) -> str:
+        brief = engine.research(objective)
+        data = brief.to_dict() if hasattr(brief, "to_dict") else brief
+        findings = (data or {}).get("findings", [])[:limit]
+        lines = [f"- {f.get('title') or f.get('url', '')}: {f.get('url', '')}" for f in findings]
+        return "Live research:\n" + "\n".join(lines) if lines else ""
+
+    return Tool("research", "live web/code/paper research on the objective", _run)
+
+
 @dataclass(frozen=True)
 class Contribution:
     seq: int
@@ -95,6 +132,7 @@ class Project:
     status: str  # complete (a role produced content) | charter (no worker/output)
     contributions: tuple[Contribution, ...]
     synthesis: str
+    tool_uses: tuple[dict[str, str], ...] = ()  # which role invoked which tool
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -104,26 +142,42 @@ class Project:
             "status": self.status,
             "contributions": [c.to_dict() for c in self.contributions],
             "synthesis": self.synthesis,
+            "tool_uses": [dict(t) for t in self.tool_uses],
         }
 
 
 class GuildOrg:
     """Runs an objective through a roster of specialist roles on a blackboard."""
 
-    def __init__(self, worker: Any | None = None, roles: tuple[Role, ...] | None = None) -> None:
+    def __init__(
+        self,
+        worker: Any | None = None,
+        roles: tuple[Role, ...] | None = None,
+        toolbox: list[Tool] | dict[str, Tool] | None = None,
+        role_tools: dict[str, list[str]] | None = None,
+    ) -> None:
         # worker(role, objective, context) -> str. None ⇒ charter-only (no content).
         self._worker = worker
         roster = roles if roles is not None else DEFAULT_ROLES
         self._roles: tuple[Role, ...] = tuple(roster)
         self._role_map: dict[str, Role] = {r.name: r for r in self._roles}
+        # Tools a role may use mid-task, and the role→tool-names mapping.
+        if isinstance(toolbox, dict):
+            self._toolbox: dict[str, Tool] = dict(toolbox)
+        else:
+            self._toolbox = {t.name: t for t in (toolbox or [])}
+        self._role_tools: dict[str, list[str]] = {k: list(v) for k, v in (role_tools or {}).items()}
         self._projects: list[Project] = []
         self._seq = 0
         self._lock = threading.RLock()
 
-    # ── the roster ──────────────────────────────────────────────────────────────
+    # ── the roster + toolbox ──────────────────────────────────────────────────────
 
     def roles(self) -> list[dict[str, Any]]:
         return [r.to_dict() for r in self._roles]
+
+    def tools(self) -> list[dict[str, Any]]:
+        return [t.to_dict() for t in self._toolbox.values()]
 
     # ── run an objective through the guild ───────────────────────────────────────
 
@@ -151,7 +205,22 @@ class GuildOrg:
 
         contributions: list[Contribution] = []
         context: list[dict[str, str]] = []  # the blackboard handed to each worker
+        tool_uses: list[dict[str, str]] = []
         for i, role in enumerate(selected, start=1):
+            # This role's tools act on the objective and post their output to the
+            # blackboard BEFORE the role speaks, so it reasons over real OS output.
+            for tname in self._role_tools.get(role.name, []):
+                tool = self._toolbox.get(tname)
+                if tool is None:
+                    continue
+                try:
+                    out = tool.run(objective)
+                except Exception as exc:  # noqa: BLE001 — a dead tool must not sink the project
+                    log.warning("guild tool %s failed: %s", tname, exc)
+                    out = ""
+                if isinstance(out, str) and out.strip():
+                    context.append({"role": f"tool:{tname}", "content": out})
+                    tool_uses.append({"role": role.name, "tool": tname})
             content = ""
             if self._worker is not None:
                 try:
@@ -166,7 +235,9 @@ class GuildOrg:
                 context.append({"role": role.name, "content": content})
 
         synthesis = self._synthesize(contributions)
-        status = "complete" if context else "charter"
+        # Status reflects whether a ROLE produced content (tool output alone is not
+        # a completed project).
+        status = "complete" if any(c.content.strip() for c in contributions) else "charter"
         with self._lock:
             self._seq += 1
             project = Project(
@@ -176,6 +247,7 @@ class GuildOrg:
                 status=status,
                 contributions=tuple(contributions),
                 synthesis=synthesis,
+                tool_uses=tuple(tool_uses),
             )
             self._projects.append(project)
         return project.to_dict()
@@ -212,6 +284,7 @@ class GuildOrg:
                 "projects": len(self._projects),
                 "contributions": total_contribs,
                 "roles": len(self._roles),
+                "tools": len(self._toolbox),
                 "worker_configured": self._worker is not None,
             }
 

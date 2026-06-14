@@ -15,6 +15,8 @@ from pradyos.guild.org import (
     OllamaGuildWorker,
     Project,
     Role,
+    Tool,
+    research_tool,
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     "OllamaGuildWorker",
     "Project",
     "Role",
+    "Tool",
+    "research_tool",
 ]
