@@ -155,9 +155,13 @@ class GuildOrg:
         roles: tuple[Role, ...] | None = None,
         toolbox: list[Tool] | dict[str, Tool] | None = None,
         role_tools: dict[str, list[str]] | None = None,
+        memory: Any | None = None,
     ) -> None:
         # worker(role, objective, context) -> str. None ⇒ charter-only (no content).
         self._worker = worker
+        # Optional long-term memory (ExperienceStore): the guild stores each
+        # project's synthesis and can recall relevant past work. None ⇒ no memory.
+        self._memory = memory
         roster = roles if roles is not None else DEFAULT_ROLES
         self._roles: tuple[Role, ...] = tuple(roster)
         self._role_map: dict[str, Role] = {r.name: r for r in self._roles}
@@ -250,7 +254,20 @@ class GuildOrg:
                 tool_uses=tuple(tool_uses),
             )
             self._projects.append(project)
+        # Store-after: remember a completed project's synthesis so future
+        # objectives can recall it (continual learning). Never sink the run.
+        if self._memory is not None and synthesis.strip():
+            try:
+                self._memory.remember(objective, synthesis, tags=tuple(names))
+            except Exception as exc:  # noqa: BLE001 — memory failure must not sink the project
+                log.warning("guild memory.remember failed: %s", exc)
         return project.to_dict()
+
+    def recall(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
+        """Relevant past work the guild remembers ([] when no memory is wired)."""
+        if self._memory is None:
+            return []
+        return self._memory.recall(query, limit=limit)
 
     @staticmethod
     def _synthesize(contributions: list[Contribution]) -> str:
@@ -280,11 +297,19 @@ class GuildOrg:
             total_contribs = sum(
                 1 for p in self._projects for c in p.contributions if c.content.strip()
             )
+            memory_count = 0
+            if self._memory is not None:
+                try:
+                    memory_count = int(self._memory.stats().get("experiences", 0))
+                except Exception:  # noqa: BLE001
+                    memory_count = 0
             return {
                 "projects": len(self._projects),
                 "contributions": total_contribs,
                 "roles": len(self._roles),
                 "tools": len(self._toolbox),
+                "memory": memory_count,
+                "memory_wired": self._memory is not None,
                 "worker_configured": self._worker is not None,
             }
 

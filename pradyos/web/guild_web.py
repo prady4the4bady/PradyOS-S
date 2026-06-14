@@ -31,6 +31,13 @@ def register_guild_routes(app: Any, guild: Any | None = None) -> Any:
     async def api_guild_tools() -> JSONResponse:
         return JSONResponse({"tools": org.tools()})
 
+    @app.get("/api/v1/guild/memory")
+    async def api_guild_memory(q: str = Query(...), limit: int = Query(5)) -> JSONResponse:
+        try:
+            return JSONResponse({"memory": org.recall(q, limit=limit)})
+        except GuildError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422)
+
     @app.post("/api/v1/guild/run")
     async def api_guild_run(request: Request) -> JSONResponse:
         body = await _json(request)
