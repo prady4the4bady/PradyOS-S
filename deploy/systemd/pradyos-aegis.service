@@ -1,0 +1,41 @@
+# PradyOS — AEGIS boot-time integrity check.
+#
+# Runs once early in boot, after the filesystem is mounted, to verify the OS's
+# own files against the signed manifest (Secure Boot guarantees the kernel +
+# bootloader; AEGIS extends the chain of trust up into the PradyOS payload).
+# A 'tampered' result (exit 1) is recorded and the running OS drops to the free
+# tier — tamper-EVIDENT, never tamper-punishing.
+#
+# Enable on the installed system:
+#   systemctl enable pradyos-aegis.service
+[Unit]
+Description=PradyOS AEGIS integrity check
+DefaultDependencies=no
+After=local-fs.target
+Before=pradyos-imperium.service multi-user.target
+ConditionPathExists=/etc/pradyos/integrity.manifest
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=PRADYOS_INTEGRITY_MANIFEST=/etc/pradyos/integrity.manifest
+Environment=PRADYOS_INTEGRITY_PUBKEY=/etc/pradyos/aegis_pub.pem
+Environment=PRADYOS_INTEGRITY_RESULT=/run/pradyos/aegis-result.json
+ExecStartPre=/usr/bin/mkdir -p /run/pradyos
+ExecStart=/usr/bin/python3 -m pradyos.aegis verify
+# A failed integrity check must not wedge boot — it is recorded and the OS
+# degrades itself; the system still comes up (read-only result in /run).
+SuccessExitStatus=0 1
+# Hardening for the check itself.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/pradyos
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
