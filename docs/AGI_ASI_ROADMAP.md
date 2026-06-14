@@ -156,9 +156,13 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
 - ✅ **LLM-backed critic** (`critic/llm_critic.py`) — a holistic, fail-soft judge
   added to the L4 panel when `PRADYOS_CRITIC_LLM` is set; catches risks the
   regexes miss without ever vetoing on model unavailability.
-- 🎯 **The five-layer roadmap (L1–L5) is complete.** Next is hardening &
-  integration: feed FORESIGHT/Guild outcomes into CAUSALITY automatically, let
-  CAUSALITY re-weight FORESIGHT priors, and the legitimate security pass.
+- 🎯 **The five-layer roadmap (L1–L5) is complete.**
+- ✅ **Cross-plane integration wired**: FORESIGHT outcomes auto-feed CAUSALITY
+  (action→success trials); the planner (`/api/v1/plan`) re-weights matched skills
+  by causal strength; the console surfaces the loop (REVERIE insights + DRIVE
+  goals with approve/run). Repo organized (legacy phase patches archived).
+- ▶️ Next (L6 / hardening): an LLM-backed REVERIE, memory consolidation of
+  insights, and the legitimate security pass (signing / Secure Boot / TPM).
 - Tests: foresight (+llm), plan, guild-distill, reverie (+driver), drive, critic
   (+llm), causality — the full loop end-to-end.
 

@@ -1,0 +1,27 @@
+feat: cross-plane integration + console cognition panel + README & repo cleanup
+
+Loop integration (autonomy planes now learn from each other)
+- FORESIGHT gains an on_observe hook; create_app feeds every observed outcome to
+  CAUSALITY as a trial (action = cause, "success" = effect when value >= 0.6), so
+  the OS learns which actions *cause* good outcomes, not merely correlate.
+- The planner (/api/v1/plan) re-weights matched skills by causal strength — a
+  proven cause is boosted, a bystander is not.
+
+Console — surface the autonomy loop
+- New sovereign-only "Cognition" panel: REVERIE's latest curiosity goal, a Reflect
+  button, and DRIVE proposed goals with APPROVE / RUN actions, wired to the live
+  /api/v1/reverie and /api/v1/drive endpoints.
+
+README — full feature map
+- Components table extended with all planes; new sections: the OS Shell (console),
+  the Autonomy Stack (L1-L5 status table + honest framing), Monetization & Security,
+  and an updated repo layout.
+
+Repo organization
+- Archived 142 historical one-off scripts/patch_web_phase*.py into
+  scripts/phase_patches/ (+ README); scripts/ is now clean. They are unreferenced
+  by build/tests/runtime.
+
+Tests: test_integration_loop.py (2). 117-test sweep green.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>

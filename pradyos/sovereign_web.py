@@ -3753,22 +3753,33 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
-    register_causality_routes(app)  # CAUSALITY — counterfactual credit assignment (autonomy L5)
+    causal_engine = register_causality_routes(app)  # CAUSALITY — counterfactual credit assignment (L5)
 
     # FORESIGHT — predict/act/compare/learn. L2: when PRADYOS_FORESIGHT_LLM is set,
     # back the world-model with the pluggable model (semantic prediction for novel
     # states); fail-soft to the heuristic. Default stays fast + offline.
-    _fs_engine = None
+    # Loop integration: every observed outcome is also fed to CAUSALITY as a trial
+    # (the action is the cause; "success" the effect when value ≥ 0.6), so the OS
+    # learns which actions *cause* good outcomes, not merely correlate with them.
+    from pradyos.foresight import ForesightEngine
+
+    def _feed_causality(ep: dict[str, Any]) -> None:
+        action = ep.get("action", "")
+        success = ["success"] if (ep.get("outcome", {}).get("value", 0.0) >= 0.6) else []
+        causal_engine.observe([action] if action else [], success)
+
+    _fs_world_model = None
     if os.environ.get("PRADYOS_FORESIGHT_LLM", "").strip().lower() in ("1", "true", "yes", "on"):
         try:
             from pradyos.core.llm import resolve_provider
-            from pradyos.foresight import ForesightEngine
             from pradyos.foresight.llm_model import make_llm_world_model
 
-            _fs_engine = ForesightEngine(world_model=make_llm_world_model(resolve_provider()))
-        except Exception:  # noqa: BLE001 — any wiring issue ⇒ default heuristic engine
-            _fs_engine = None
-    foresight_engine = register_foresight_routes(app, _fs_engine)
+            _fs_world_model = make_llm_world_model(resolve_provider())
+        except Exception:  # noqa: BLE001 — any wiring issue ⇒ default heuristic world-model
+            _fs_world_model = None
+    foresight_engine = register_foresight_routes(
+        app, ForesightEngine(world_model=_fs_world_model, on_observe=_feed_causality)
+    )
 
     # CRITIC (L4) — the adversarial critic ensemble that scores proposals across
     # safety/correctness/value; any safety blocker is a veto. When PRADYOS_CRITIC_LLM
@@ -3810,9 +3821,10 @@ def create_app(
         ),
     )
 
-    # L1 integration: the OS PLANS by matching learned skills (skill library) to an
-    # intent, then DELIBERATING over them with FORESIGHT (predicted value × the
-    # skill's proven confidence). Glues two existing planes — no new skill store.
+    # L1+L5 integration: the OS PLANS by matching learned skills (skill library) to
+    # an intent, DELIBERATING over them with FORESIGHT (value × proven confidence),
+    # then RE-WEIGHTING by CAUSALITY — an action that demonstrably *causes* success
+    # is boosted, a mere bystander is not. Glues four planes; no new store.
     @app.post("/api/v1/plan")
     async def api_plan(request: Request) -> JSONResponse:
         body = await request.json()
@@ -3827,8 +3839,15 @@ def create_app(
             return JSONResponse({"intent": intent, "chosen": None, "ranked": [], "steps": []})
         actions = [sk["name"] for sk in matched]
         decision = foresight_engine.deliberate(intent, actions)
+        # Causal re-weighting: blend each action's causal strength for "success".
+        for row in decision["ranked"]:
+            strength = causal_engine.strength(row["action"], "success")
+            row["causal_strength"] = round(strength, 4)
+            row["score"] = round(row["score"] + 0.5 * strength, 4)
+        decision["ranked"].sort(key=lambda r: r["score"], reverse=True)
+        chosen_name = decision["ranked"][0]["action"]
         by_name = {sk["name"]: sk for sk in matched}
-        chosen = by_name.get(decision["chosen"], matched[0])
+        chosen = by_name.get(chosen_name, matched[0])
         return JSONResponse(
             {
                 "intent": intent,
