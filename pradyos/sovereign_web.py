@@ -384,7 +384,13 @@ def create_app(
         ascent_driver = getattr(app.state, "ascent_driver", None)
         if ascent_driver is not None:
             ascent_driver.start()
+        # REVERIE cognition driver — likewise opt-in via main(); tests stay quiet.
+        reverie_driver = getattr(app.state, "reverie_driver", None)
+        if reverie_driver is not None:
+            reverie_driver.start()
         yield
+        if reverie_driver is not None:
+            await reverie_driver.stop()
         if ascent_driver is not None:
             await ascent_driver.stop()
         if heartbeat is not None:
@@ -3744,13 +3750,30 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
-    foresight_engine = register_foresight_routes(app)  # FORESIGHT — predict/act/compare/learn
+    # FORESIGHT — predict/act/compare/learn. L2: when PRADYOS_FORESIGHT_LLM is set,
+    # back the world-model with the pluggable model (semantic prediction for novel
+    # states); fail-soft to the heuristic. Default stays fast + offline.
+    _fs_engine = None
+    if os.environ.get("PRADYOS_FORESIGHT_LLM", "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from pradyos.core.llm import resolve_provider
+            from pradyos.foresight import ForesightEngine
+            from pradyos.foresight.llm_model import make_llm_world_model
+
+            _fs_engine = ForesightEngine(world_model=make_llm_world_model(resolve_provider()))
+        except Exception:  # noqa: BLE001 — any wiring issue ⇒ default heuristic engine
+            _fs_engine = None
+    foresight_engine = register_foresight_routes(app, _fs_engine)
 
     # REVERIE — the idle cognition loop: reflects on FORESIGHT calibration + the
     # skill library to surface blind spots and self-proposed curiosity goals.
     from pradyos.reverie import Reverie
 
-    register_reverie_routes(app, Reverie(foresight=foresight_engine, skills=skills_lib))
+    # Expose the engine on app.state so the production entrypoint can attach a
+    # background ReverieDriver (the cognition heartbeat); tests never start one.
+    app.state.reverie = register_reverie_routes(
+        app, Reverie(foresight=foresight_engine, skills=skills_lib)
+    )
 
     # L1 integration: the OS PLANS by matching learned skills (skill library) to an
     # intent, then DELIBERATING over them with FORESIGHT (predicted value × the
@@ -3925,6 +3948,27 @@ def main() -> None:
     @app.get("/api/v1/ascent/driver", include_in_schema=True)
     async def _api_ascent_driver_status() -> JSONResponse:
         return JSONResponse(ascent_driver.status())
+
+    # REVERIE cognition heartbeat — the mind-ouroboros companion to ASCENT's code
+    # loop. Reflects on the OS's own thinking on an interval; the lifespan runs it.
+    from pradyos.reverie import ReverieDriver
+
+    raw_reverie_interval = os.environ.get("PRADYOS_REVERIE_INTERVAL")
+    try:
+        reverie_interval = float(raw_reverie_interval) if raw_reverie_interval else 240.0
+    except (TypeError, ValueError):
+        log.warning(
+            "Invalid PRADYOS_REVERIE_INTERVAL=%r; falling back to 240.0s", raw_reverie_interval
+        )
+        reverie_interval = 240.0
+    reverie_engine = getattr(app.state, "reverie", None)
+    if reverie_engine is not None:
+        reverie_driver = ReverieDriver(reverie_engine, interval_s=reverie_interval)
+        app.state.reverie_driver = reverie_driver
+
+        @app.get("/api/v1/reverie/driver", include_in_schema=True)
+        async def _api_reverie_driver_status() -> JSONResponse:
+            return JSONResponse(reverie_driver.status())
 
     @app.get("/api/v1/llm/info", include_in_schema=True)
     async def _api_llm_info() -> JSONResponse:
