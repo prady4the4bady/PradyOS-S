@@ -621,6 +621,9 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_guild.py",
     "tests/test_guild_web.py",
     "tests/test_guild_memory.py",
+    # LICENSING — signed offline tiers + entitlements
+    "tests/test_licensing.py",
+    "tests/test_licensing_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
