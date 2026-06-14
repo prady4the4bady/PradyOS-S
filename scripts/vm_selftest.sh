@@ -215,6 +215,13 @@ json_post "$API/api/v1/evolve/propose" \
     || fail "evolve /propose did not return a well-formed response"
 emit "PRADYOS-SELFTEST: evolve propose (live LLM step) ok"
 
+# The pluggable LLM provider every agent shares — defaults to local Ollama,
+# switchable to a stronger model via PRADYOS_LLM_* with no code change. Confirm a
+# provider is wired (the API key, if any, is never exposed here).
+json_check "$API/api/v1/llm/info" "isinstance(d.get('provider'), str) and d.get('provider') != ''" \
+    || fail "llm provider info did not answer with an active provider"
+emit "PRADYOS-SELFTEST: llm provider (pluggable model) ok"
+
 # --- Phase 11: ASCENT — the autonomous self-improvement LOOP (capstone orchestrator)
 # ASCENT closes the loop EVOLVE leaves open: it decides WHAT to harden (surveys
 # its own modules by FORTIFY risk), synthesises a directive from the worst finding,

@@ -225,13 +225,39 @@ def _strip_code_fences(text: str) -> str:
     return (m.group(1) if m else text).strip() + "\n"
 
 
-class OllamaProposer:
-    """A code proposer backed by a LOCAL Ollama model — zero API credits.
+class LLMProposer:
+    """A code proposer backed by any LLM provider (see :mod:`pradyos.core.llm`).
 
-    Constructed lazily and never contacted at import time. If Ollama is not
-    running, ``__call__`` raises and :meth:`EvolveEngine.propose` degrades
-    gracefully. Used as the live proposer in production; tests inject a fake.
+    The model is a configuration choice — local Ollama by default, a stronger
+    model when the Sovereign opts in — so the same proposer gets smarter without
+    a code change. Never contacted at import time; if the model is unreachable,
+    ``__call__`` raises and :meth:`EvolveEngine.propose` degrades gracefully.
+    Tests inject a fake provider (or a fake proposer).
     """
+
+    name = "llm"
+
+    def __init__(self, provider: Any | None = None) -> None:
+        if provider is None:
+            from pradyos.core.llm import OllamaProvider
+
+            provider = OllamaProvider()
+        self._provider = provider
+
+    def __call__(self, before: str, directive: str) -> str:
+        prompt = (
+            "You are refactoring a single Python module. "
+            f"{directive}\n"
+            "Return ONLY the complete revised module as Python code — no prose, "
+            "no explanation. Preserve every public function/class name.\n\n"
+            f"{before}"
+        )
+        return _strip_code_fences(self._provider.generate(prompt))
+
+
+class OllamaProposer(LLMProposer):
+    """Back-compatible local-Ollama proposer (``LLMProposer`` over an
+    :class:`~pradyos.core.llm.OllamaProvider`)."""
 
     name = "ollama"
 
@@ -241,29 +267,10 @@ class OllamaProposer:
         model: str = "qwen2.5-coder:7b",
         timeout: int = 120,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.model = model
-        self.timeout = timeout
+        from pradyos.core.llm import OllamaProvider
 
-    def __call__(self, before: str, directive: str) -> str:
-        import json
-        import urllib.request
-
-        prompt = (
-            "You are refactoring a single Python module. "
-            f"{directive}\n"
-            "Return ONLY the complete revised module as Python code — no prose, "
-            "no explanation. Preserve every public function/class name.\n\n"
-            f"{before}"
-        )
-        payload = json.dumps({"model": self.model, "prompt": prompt, "stream": False}).encode(
-            "utf-8"
-        )
-        req = urllib.request.Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        return _strip_code_fences(data.get("response", ""))
+        super().__init__(OllamaProvider(base_url=base_url, model=model, timeout=timeout))
+        # Back-compat surface (these used to live on the proposer directly).
+        self.base_url = self._provider.base_url
+        self.model = self._provider.model
+        self.timeout = self._provider.timeout

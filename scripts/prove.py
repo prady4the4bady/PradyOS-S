@@ -607,6 +607,8 @@ DEFAULT_MODULES: list[str] = [
     # FORTIFY — self-hardening audit
     "tests/test_fortify.py",
     "tests/test_fortify_web.py",
+    # LLM — pluggable model provider (local default, config-switchable)
+    "tests/test_llm.py",
     # EVOLVE — autonomous self-improvement pipeline
     "tests/test_evolve.py",
     "tests/test_evolve_web.py",

@@ -3760,9 +3760,10 @@ def main() -> None:
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.audit import get_audit_log
     from pradyos.core.bus import get_bus
+    from pradyos.core.llm import resolve_provider
     from pradyos.core.web_agent import WebAgent
-    from pradyos.evolve import EvolveEngine, OllamaProposer
-    from pradyos.guild import GuildOrg, OllamaGuildWorker
+    from pradyos.evolve import EvolveEngine, LLMProposer
+    from pradyos.guild import GuildOrg, LLMGuildWorker
     from pradyos.imperium.checkpoint import CheckpointStore
     from pradyos.research import (
         ArxivSource,
@@ -3793,10 +3794,12 @@ def main() -> None:
             ArxivSource(web_agent=web_agent),
         ]
     )
-    # Live self-improvement: wire a LOCAL Ollama proposer so EVOLVE can generate
-    # candidate fixes (zero API credits). If Ollama is absent, propose() degrades
-    # gracefully. The default create_app() used by tests wires no proposer.
-    evolve = EvolveEngine(proposer=OllamaProposer())
+    # One pluggable LLM provider for ALL agents — defaults to local, free Ollama;
+    # switchable to a stronger model via PRADYOS_LLM_* env (the Sovereign opts in
+    # to spend). EVOLVE + the GUILD share it, so one config change makes every
+    # agent smarter. If the model is absent, callers degrade gracefully.
+    llm = resolve_provider()
+    evolve = EvolveEngine(proposer=LLMProposer(llm))
     # Close the loop: ASCENT shares the live EVOLVE engine, so its autonomous
     # cycles flow through the same local-LLM proposer + gate. The default
     # create_app() used by tests wires no loop (survey/decide stays deterministic).
@@ -3811,9 +3814,8 @@ def main() -> None:
         applier=AscentApplier(apply_root=apply_root, audit=get_audit_log()),
     )
     # A working organization of specialist agents (planner/researcher/engineer/
-    # analyst/critic/synthesizer) backed by the LOCAL Ollama worker (zero API
-    # credits; degrades gracefully if absent). Tests wire no worker.
-    guild = GuildOrg(worker=OllamaGuildWorker())
+    # analyst/critic/synthesizer) on the same shared LLM provider. Tests wire none.
+    guild = GuildOrg(worker=LLMGuildWorker(llm))
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,
@@ -3840,6 +3842,12 @@ def main() -> None:
     @app.get("/api/v1/ascent/driver", include_in_schema=True)
     async def _api_ascent_driver_status() -> JSONResponse:
         return JSONResponse(ascent_driver.status())
+
+    @app.get("/api/v1/llm/info", include_in_schema=True)
+    async def _api_llm_info() -> JSONResponse:
+        # The active model the agents run on (no API key — never exposed).
+        info = llm.info() if hasattr(llm, "info") else {"provider": getattr(llm, "name", "unknown")}
+        return JSONResponse(info)
 
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")
