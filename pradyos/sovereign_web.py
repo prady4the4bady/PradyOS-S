@@ -82,6 +82,7 @@ from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT —
 from pradyos.web.reverie_web import register_reverie_routes  # REVERIE — idle cognition loop (reflection+curiosity)
 from pradyos.web.drive_web import register_drive_routes  # DRIVE — goal/drive manager (self-direction, gated)
 from pradyos.web.critic_web import register_critic_routes  # CRITIC — adversarial critic ensemble (L4 judgment gate)
+from pradyos.web.causality_web import register_causality_routes  # CAUSALITY — counterfactual credit assignment (L5)
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3752,6 +3753,8 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
+    register_causality_routes(app)  # CAUSALITY — counterfactual credit assignment (autonomy L5)
+
     # FORESIGHT — predict/act/compare/learn. L2: when PRADYOS_FORESIGHT_LLM is set,
     # back the world-model with the pluggable model (semantic prediction for novel
     # states); fail-soft to the heuristic. Default stays fast + offline.
@@ -3768,10 +3771,20 @@ def create_app(
     foresight_engine = register_foresight_routes(app, _fs_engine)
 
     # CRITIC (L4) — the adversarial critic ensemble that scores proposals across
-    # safety/correctness/value; any safety blocker is a veto.
-    from pradyos.critic import CriticEnsemble
+    # safety/correctness/value; any safety blocker is a veto. When PRADYOS_CRITIC_LLM
+    # is set, add a holistic LLM-backed critic (fail-soft) to the heuristic panel.
+    from pradyos.critic import CriticEnsemble, default_critics
 
-    critic_panel = register_critic_routes(app, CriticEnsemble())
+    _critics = default_critics()
+    if os.environ.get("PRADYOS_CRITIC_LLM", "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from pradyos.core.llm import resolve_provider
+            from pradyos.critic.llm_critic import make_llm_critic
+
+            _critics.append(make_llm_critic(resolve_provider()))
+        except Exception:  # noqa: BLE001 — any wiring issue ⇒ heuristic panel only
+            pass
+    critic_panel = register_critic_routes(app, CriticEnsemble(_critics))
 
     # DRIVE (L3) — the goal/drive manager. REVERIE proposes curiosity goals here;
     # the Sovereign approves (the gate); an approved goal is judged by the CRITIC
