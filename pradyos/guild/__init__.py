@@ -6,6 +6,7 @@ and produce a synthesized result. See :mod:`pradyos.guild.org`.
 
 from __future__ import annotations
 
+from pradyos.guild.memory import Experience, ExperienceStore, memory_tool
 from pradyos.guild.org import (
     DEFAULT_ROLES,
     Contribution,
@@ -22,6 +23,8 @@ from pradyos.guild.org import (
 __all__ = [
     "DEFAULT_ROLES",
     "Contribution",
+    "Experience",
+    "ExperienceStore",
     "GuildError",
     "GuildOrg",
     "LLMGuildWorker",
@@ -29,5 +32,6 @@ __all__ = [
     "Project",
     "Role",
     "Tool",
+    "memory_tool",
     "research_tool",
 ]

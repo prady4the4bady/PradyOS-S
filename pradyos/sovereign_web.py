@@ -3763,7 +3763,7 @@ def main() -> None:
     from pradyos.core.llm import resolve_provider
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, LLMProposer
-    from pradyos.guild import GuildOrg, LLMGuildWorker, research_tool
+    from pradyos.guild import ExperienceStore, GuildOrg, LLMGuildWorker, memory_tool, research_tool
     from pradyos.imperium.checkpoint import CheckpointStore
     from pradyos.research import (
         ArxivSource,
@@ -3818,10 +3818,15 @@ def main() -> None:
     # OS tools: the researcher runs LIVE RESEARCH on the objective and posts its
     # findings to the team's blackboard — agents that act, not just talk. Tests
     # wire neither worker nor tools.
+    # Continual learning: a long-term experience store lets the guild recall
+    # relevant past work before it starts (planner uses the memory tool) and
+    # remember each project's synthesis after — so the team improves with use.
+    guild_memory = ExperienceStore()
     guild = GuildOrg(
         worker=LLMGuildWorker(llm),
-        toolbox=[research_tool(research)],
-        role_tools={"researcher": ["research"]},
+        toolbox=[research_tool(research), memory_tool(guild_memory)],
+        role_tools={"researcher": ["research"], "planner": ["memory"]},
+        memory=guild_memory,
     )
     app = create_app(
         campaign_registry=registry,

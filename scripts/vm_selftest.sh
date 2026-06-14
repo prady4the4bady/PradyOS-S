@@ -286,6 +286,13 @@ json_check "$API/api/v1/guild/tools" \
     "any(t.get('name')=='research' for t in d.get('tools',[]))" \
     || fail "guild has no research tool wired"
 emit "PRADYOS-SELFTEST: guild tools (agents use the OS) ok"
+# Continual learning: the guild has a long-term memory (recall-before-act,
+# store-after) — confirm it is wired and the recall surface answers.
+json_check "$API/api/v1/guild/stats" "d.get('memory_wired') is True" \
+    || fail "guild long-term memory not wired"
+json_check "$API/api/v1/guild/memory?q=test" "isinstance(d.get('memory'), list)" \
+    || fail "guild memory recall surface did not answer"
+emit "PRADYOS-SELFTEST: guild memory (continual learning) ok"
 
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do

@@ -620,6 +620,7 @@ DEFAULT_MODULES: list[str] = [
     # GUILD — a working organization of specialist agents
     "tests/test_guild.py",
     "tests/test_guild_web.py",
+    "tests/test_guild_memory.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
