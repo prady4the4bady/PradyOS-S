@@ -1,4 +1,4 @@
-.PHONY: install test lint format run throne titan warden imperium clean iso vm verify-os
+.PHONY: install test lint format run throne titan warden imperium clean iso vm verify-os inspect-os
 
 install:
 	python3 -m pip install -e ".[dev]"
@@ -47,3 +47,8 @@ vm:
 # in-guest selftest + host-side API probes.
 verify-os:
 	bash scripts/verify_boot.sh
+
+# Offline inspection of an installed disk image (loop-mount, no boot). Fast
+# complement to verify_install.sh:  make inspect-os DISK=path/to/disk.qcow2
+inspect-os:
+	sudo bash scripts/inspect_install.sh "$(DISK)"

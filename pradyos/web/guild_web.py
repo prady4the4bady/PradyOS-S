@@ -19,9 +19,14 @@ from pradyos.web._responses import err_response as _err
 from pradyos.web._responses import read_json as _json
 
 
-def register_guild_routes(app: Any, guild: Any | None = None) -> Any:
-    """Register the ``/api/v1/guild`` routes on ``app``; return the org used."""
+def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any | None = None) -> Any:
+    """Register the ``/api/v1/guild`` routes on ``app``; return the org used.
+
+    ``on_complete(project_dict)`` is an optional hook fired after a completed
+    project — used to distil it into a reusable skill (autonomy L1)."""
     org: GuildOrg = guild if guild is not None else GuildOrg()
+    if on_complete is not None:
+        org.set_on_complete(on_complete)
 
     @app.get("/api/v1/guild/roles")
     async def api_guild_roles() -> JSONResponse:
