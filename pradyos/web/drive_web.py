@@ -18,10 +18,15 @@ from pradyos.web._responses import read_json as _json
 
 
 def register_drive_routes(
-    app: Any, drive: Any | None = None, guild_runner: Any | None = None
+    app: Any,
+    drive: Any | None = None,
+    guild_runner: Any | None = None,
+    critic: Any | None = None,
 ) -> Any:
     """Register ``/api/v1/drive`` routes; return the manager. ``guild_runner`` is an
-    optional callable(objective:str)->dict used to execute an approved goal."""
+    optional callable(objective:str)->dict used to execute an approved goal.
+    ``critic`` is an optional CriticEnsemble that vetoes a run on a safety blocker —
+    so even a Sovereign-approved goal can't execute if it's dangerous (L4 gate)."""
     mgr: DriveManager = drive if drive is not None else DriveManager()
 
     @app.post("/api/v1/drive/propose")
@@ -73,6 +78,14 @@ def register_drive_routes(
             )
         if guild_runner is None:
             return JSONResponse({"error": "no guild runner wired"}, status_code=503)
+        # L4 gate: the critic ensemble vetoes a dangerous goal even if approved.
+        if critic is not None:
+            verdict = critic.judge(goal["text"])
+            if verdict["verdict"] == "reject":
+                return JSONResponse(
+                    {"error": "critic ensemble vetoed this goal", "verdict": verdict},
+                    status_code=403,
+                )
         mgr.activate(goal_id)
         try:
             result = await run_in_threadpool(guild_runner, goal["text"])
