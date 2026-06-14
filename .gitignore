@@ -45,3 +45,4 @@ htmlcov/
 
 # stray local log
 excalidraw.log
+var/commitmsg.txt

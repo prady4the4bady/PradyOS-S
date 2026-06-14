@@ -215,6 +215,44 @@ var/                 # audit log + checkpoint state (gitignored)
 
 ## Status
 
+### Latest — Autonomy program complete (L1–L6) + OS shell + monetization + security
+
+Shipped across PRs #29–#41 and merged to `main`:
+
+- ✅ **Pluggable model provider** — local Ollama → NVIDIA NIM (`llama` / `nemotron`
+  / `minimax` → MiniMax-M3) or any OpenAI-compatible endpoint; one env switch.
+- ✅ **The Guild** — multi-agent organization with continual memory, OS tools, and
+  **auto-distillation** (a completed project becomes a reusable skill).
+- ✅ **Sovereign Command Console** (`/`) — glassmorphic OS shell, dual SOVEREIGN /
+  MANUAL views, four time-of-day themes (dawn/day/dusk/night) auto-switched from
+  the clock, real OS telemetry + filesystem, "Ask PRADYOS" wired to the Guild, and
+  a **Cognition panel** (REVERIE insights + DRIVE goals with approve/run).
+- ✅ **Autonomy stack, integrated & Sovereign-gated:**
+  - **L1** skill library + planner (`/api/v1/plan`) + Guild auto-distill
+  - **L2** FORESIGHT metacognition + optional LLM world-model
+  - **L3** DRIVE — self-directed goals, approved before any action
+  - **L4** CRITIC — adversarial ensemble (+ optional LLM critic); safety = veto
+  - **L5** CAUSALITY — counterfactual credit assignment
+  - **L6** REVERIE — idle cognition loop, LLM reflector + insight consolidation
+  - Cross-plane wiring: FORESIGHT outcomes feed CAUSALITY; the planner re-weights
+    skills by causal strength.
+- ✅ **Two background "ouroboros" loops** — ASCENT (self-improves the code) and
+  REVERIE (self-reflects on the mind), both heartbeat-driven in production.
+- ✅ **Monetization** — signed offline licenses; tiers Free / Pro $5 / Sovereign
+  $25 / Enterprise $50; **Stripe** Checkout + verified webhook; **open-mode** master
+  switch (all features free, toggleable).
+- ✅ **Security — AEGIS** — signed-manifest integrity + tamper-evident self-disable
+  (drops to free on tamper; never harms the machine). Boot-level hardening
+  (Secure Boot / TPM) is the remaining work, in the ISO pipeline.
+- ✅ **OS image** — bootable Sovereign Edition ISO; install-to-disk + offline
+  disk inspector (`make inspect-os`). Repo organized (legacy phase patches
+  archived under `scripts/phase_patches/`).
+
+Full design notes: [`docs/AGI_ASI_ROADMAP.md`](docs/AGI_ASI_ROADMAP.md). The
+phase-by-phase history below is retained for provenance.
+
+---
+
 **Phase 7 — Complete.** All 35 test modules green (82.7 s). Audit hooks,
 metrics hooks, retry hooks, config watcher, REPL extensions, and deploy
 pipeline are provably wired.
