@@ -221,31 +221,25 @@ class GuildOrg:
             self._seq = 0
 
 
-class OllamaGuildWorker:
-    """A guild worker backed by a LOCAL Ollama model — zero API credits.
+class LLMGuildWorker:
+    """A guild worker backed by any LLM provider (see :mod:`pradyos.core.llm`).
 
-    Constructed lazily and never contacted at import time. If Ollama is not
-    running, ``__call__`` raises and :meth:`GuildOrg.run` degrades the role's
-    contribution to empty. Used as the live worker in production; tests inject a
-    fake callable.
+    The model is a configuration choice — local Ollama by default, a stronger
+    model when the Sovereign opts in. Never contacted at import time; if the model
+    is unreachable, ``__call__`` raises and :meth:`GuildOrg.run` degrades the
+    role's contribution to empty. Tests inject a fake provider (or worker).
     """
 
-    name = "ollama"
+    name = "llm"
 
-    def __init__(
-        self,
-        base_url: str = "http://localhost:11434",
-        model: str = "qwen2.5-coder:7b",
-        timeout: int = 120,
-    ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.model = model
-        self.timeout = timeout
+    def __init__(self, provider: Any | None = None) -> None:
+        if provider is None:
+            from pradyos.core.llm import OllamaProvider
+
+            provider = OllamaProvider()
+        self._provider = provider
 
     def __call__(self, role: Role, objective: str, context: list[dict[str, str]]) -> str:
-        import json
-        import urllib.request
-
         prior = "\n".join(f"[{c['role']}] {c['content']}" for c in context) or "(you are first)"
         prompt = (
             f"You are the {role.name} of an expert team. Expertise: {role.expertise}. "
@@ -255,14 +249,25 @@ class OllamaGuildWorker:
             "Add your contribution as the "
             f"{role.name}. Be concrete and build on the prior work; no preamble."
         )
-        payload = json.dumps({"model": self.model, "prompt": prompt, "stream": False}).encode(
-            "utf-8"
-        )
-        req = urllib.request.Request(
-            f"{self.base_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        return (data.get("response") or "").strip()
+        return self._provider.generate(prompt)
+
+
+class OllamaGuildWorker(LLMGuildWorker):
+    """Back-compatible local-Ollama guild worker (``LLMGuildWorker`` over an
+    :class:`~pradyos.core.llm.OllamaProvider`)."""
+
+    name = "ollama"
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:11434",
+        model: str = "qwen2.5-coder:7b",
+        timeout: int = 120,
+    ) -> None:
+        from pradyos.core.llm import OllamaProvider
+
+        super().__init__(OllamaProvider(base_url=base_url, model=model, timeout=timeout))
+        # Back-compat surface (these used to live on the worker directly).
+        self.base_url = self._provider.base_url
+        self.model = self._provider.model
+        self.timeout = self._provider.timeout

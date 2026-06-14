@@ -5,6 +5,12 @@ See :mod:`pradyos.evolve.pipeline`.
 
 from __future__ import annotations
 
-from pradyos.evolve.pipeline import Evaluation, EvolveEngine, EvolveError, OllamaProposer
+from pradyos.evolve.pipeline import (
+    Evaluation,
+    EvolveEngine,
+    EvolveError,
+    LLMProposer,
+    OllamaProposer,
+)
 
-__all__ = ["Evaluation", "EvolveEngine", "EvolveError", "OllamaProposer"]
+__all__ = ["Evaluation", "EvolveEngine", "EvolveError", "LLMProposer", "OllamaProposer"]
