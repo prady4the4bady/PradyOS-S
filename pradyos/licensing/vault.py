@@ -51,6 +51,44 @@ FEATURE_MIN_TIER: dict[str, str] = {
     "priority_support": TIER_ENTERPRISE,
 }
 
+# Public price book (yearly, USD). The Sovereign elects a tier; the higher the
+# tier the smarter/more-autonomous the OS. Spans $0 → $1000 so the console's
+# upgrade modal renders directly from this single source of truth. Enterprise is
+# per-seat (``seat: True``) — the displayed figure is the starting annual seat.
+PRICING: dict[str, dict[str, Any]] = {
+    TIER_FREE: {
+        "name": "Free",
+        "price_year": 0,
+        "tagline": "The desktop, on the house.",
+        "perks": ["Manual desktop", "Local on-device agents", "Community support"],
+    },
+    TIER_PRO: {
+        "name": "Pro",
+        "price_year": 5,
+        "tagline": "Smarter, with live intelligence.",
+        "perks": ["Live research sources", "The Guild (multi-agent)", "Agent memory"],
+    },
+    TIER_SOVEREIGN: {
+        "name": "Sovereign",
+        "price_year": 120,
+        "featured": True,
+        "tagline": "The machine governs. You approve.",
+        "perks": [
+            "Full Sovereign autonomy",
+            "Cloud AI (stronger models)",
+            "Self-improvement loop",
+            "Approved-edit apply-gate",
+        ],
+    },
+    TIER_ENTERPRISE: {
+        "name": "Enterprise",
+        "price_year": 1000,
+        "seat": True,
+        "tagline": "Fleet-scale, with a human throat to choke.",
+        "perks": ["Multi-seat management", "Priority support", "Private cloud keys / BYO-model"],
+    },
+}
+
 
 class LicenseError(RuntimeError):
     """Base class for LICENSING failures."""
@@ -179,6 +217,23 @@ class LicenseVault:
             t: sorted(f for f, m in FEATURE_MIN_TIER.items() if _TIER_ORDER[m] <= _TIER_ORDER[t])
             for t in _TIER_ORDER
         }
+
+    @staticmethod
+    def pricing() -> list[dict[str, Any]]:
+        """The price book as an ordered list (free→enterprise) for the upgrade UI."""
+        return [
+            {
+                "tier": t,
+                "name": PRICING[t]["name"],
+                "price": PRICING[t]["price_year"],
+                "feat": bool(PRICING[t].get("featured")),
+                "seat": bool(PRICING[t].get("seat")),
+                "tagline": PRICING[t].get("tagline", ""),
+                "perks": list(PRICING[t].get("perks", [])),
+                "features": LicenseVault.tiers()[t],
+            }
+            for t in sorted(_TIER_ORDER, key=lambda x: _TIER_ORDER[x])
+        ]
 
     def clear(self) -> dict[str, Any]:
         with self._lock:

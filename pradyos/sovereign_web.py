@@ -77,6 +77,8 @@ from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 1
 from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
 from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
 from pradyos.web.licensing_web import register_license_routes  # LICENSING — tiers + entitlements
+from pradyos.web.system_web import register_system_routes  # SYSTEM — real OS telemetry + filesystem
+from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT — predict/act/compare/learn
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3732,6 +3734,10 @@ def create_app(
 
     register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
 
+    register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
+
+    register_foresight_routes(app)  # FORESIGHT — predict/act/compare/learn (metacognition autonomy layer)
+
     return app
 
 
@@ -3753,7 +3759,10 @@ def _read_checkpoint_summary(checkpoint_store: Any) -> dict[str, Any]:
     return {"status": "available"}
 
 
-_DASHBOARD_HTML = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>PRADY OS -- Sovereign Dashboard</title>\n  <style>\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n    body { background: #0a0a0f; color: #e0e0f0; font-family: \'Courier New\', monospace; }\n    header { background: #12121e; border-bottom: 1px solid #2a2a4a; padding: 1rem 2rem;\n             display: flex; align-items: center; justify-content: space-between; }\n    header h1 { font-size: 1.4rem; color: #7b8fff; letter-spacing: 2px; }\n    header .badge { font-size: 0.75rem; color: #4caf50; border: 1px solid #4caf50;\n                    padding: 2px 8px; border-radius: 4px; }\n    main { padding: 2rem; max-width: 1200px; margin: 0 auto; }\n    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }\n    .card { background: #12121e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 1.2rem; }\n    .card h2 { font-size: 0.85rem; color: #7b8fff; text-transform: uppercase;\n                letter-spacing: 1px; margin-bottom: 0.8rem; }\n    .stat { display: flex; justify-content: space-between; padding: 4px 0;\n            border-bottom: 1px solid #1e1e32; font-size: 0.85rem; }\n    .stat:last-child { border-bottom: none; }\n    .stat .val { color: #a0cfff; }\n    #log { background: #0d0d16; border: 1px solid #2a2a4a; border-radius: 8px;\n           padding: 1rem; margin-top: 1rem; height: 200px; overflow-y: auto;\n           font-size: 0.8rem; color: #6a6a9a; }\n    #log p { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }\n  </style>\n</head>\n<body>\n  <header>\n    <h1>PRADY OS -- SOVEREIGN</h1>\n    <span class="badge" id="status-badge">ONLINE</span>\n  </header>\n  <main>\n    <div class="grid">\n      <div class="card" id="status-card">\n        <h2>System Status</h2>\n        <div class="stat"><span>Kernel</span><span class="val" id="s-kernel">--</span></div>\n        <div class="stat"><span>Warden</span><span class="val" id="s-warden">--</span></div>\n        <div class="stat"><span>Campaigns</span><span class="val" id="s-campaigns">--</span></div>\n        <div class="stat"><span>Last refresh</span><span class="val" id="s-ts">--</span></div>\n      </div>\n      <div class="card">\n        <h2>Event Stream</h2>\n        <div id="log"><p>Connecting...</p></div>\n      </div>\n    </div>\n  </main>\n  <script>\n    async function fetchStatus() {\n      try {\n        const r = await fetch(\'/api/status\');\n        const d = await r.json();\n        document.getElementById(\'s-kernel\').textContent =\n          d.checkpoint && d.checkpoint.file ? \'checkpoint ok\' : \'active\';\n        document.getElementById(\'s-warden\').textContent =\n          d.warden ? d.warden.status : \'unknown\';\n        document.getElementById(\'s-campaigns\').textContent =\n          d.active_campaigns ? d.active_campaigns.length : \'0\';\n        document.getElementById(\'s-ts\').textContent =\n          new Date(d.timestamp * 1000).toLocaleTimeString();\n      } catch(e) { console.error(e); }\n    }\n    fetchStatus();\n    setInterval(fetchStatus, 5000);\n    const log = document.getElementById(\'log\');\n    log.innerHTML = \'\';\n    const es = new EventSource(\'/stream\');\n    es.onmessage = e => {\n      const p = document.createElement(\'p\');\n      p.textContent = e.data.slice(0, 120);\n      log.prepend(p);\n      if (log.children.length > 50) log.removeChild(log.lastChild);\n    };\n    es.onerror = () => {\n      const p = document.createElement(\'p\');\n      p.textContent = \'[stream disconnected]\';\n      log.prepend(p);\n    };\n  </script>\n</body>\n</html>'
+# The Sovereign Command Console (the glassmorphic OS face: dual SOVEREIGN/MANUAL
+# views + four time-of-day themes). Kept in its own module so this string-heavy
+# UI doesn't bloat the web app; served verbatim at "/".
+from pradyos.web.console import CONSOLE_HTML as _DASHBOARD_HTML
 
 
 def main() -> None:

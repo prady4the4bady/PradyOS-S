@@ -35,6 +35,25 @@ _DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b"
 _NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1"
 _NVIDIA_DEFAULT_MODEL = "meta/llama-3.3-70b-instruct"
 
+# Friendly aliases → exact NIM model ids, so the Sovereign can switch the whole
+# OS's brain with one short word (``PRADYOS_LLM_MODEL=minimax``). ``minimax`` maps
+# to the multimodal MiniMax-M3 — the documented working fallback when other NIM
+# models error. Any unknown value is passed through verbatim (a full model id).
+_NVIDIA_MODEL_ALIASES: dict[str, str] = {
+    "llama": "meta/llama-3.3-70b-instruct",
+    "llama-70b": "meta/llama-3.3-70b-instruct",
+    "nemotron": "nvidia/llama-3.1-nemotron-70b-instruct",
+    "minimax": "minimaxai/minimax-m3",
+    "minimax-m3": "minimaxai/minimax-m3",
+}
+
+
+def _resolve_model(name: str | None) -> str:
+    """Map a friendly alias to its exact NIM model id (pass through unknowns)."""
+    if not name:
+        return _NVIDIA_DEFAULT_MODEL
+    return _NVIDIA_MODEL_ALIASES.get(name.strip().lower(), name.strip())
+
 
 class LLMError(RuntimeError):
     """Base class for LLM provider failures."""
@@ -92,6 +111,8 @@ class OpenAICompatProvider:
         model: str,
         api_key: str | None = None,
         timeout: int = 120,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
     ) -> None:
         if not (isinstance(base_url, str) and base_url.strip()):
             raise LLMError("OpenAICompatProvider needs a base_url")
@@ -101,15 +122,26 @@ class OpenAICompatProvider:
         self.model = model
         self._api_key = api_key or None
         self.timeout = timeout
+        self.max_tokens = max_tokens
+        self.top_p = top_p
 
     def generate(self, prompt: str, *, system: str = "", temperature: float = 0.2) -> str:
         messages: list[dict[str, str]] = []
         if system.strip():
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        payload = json.dumps(
-            {"model": self.model, "messages": messages, "temperature": temperature}
-        ).encode("utf-8")
+        body: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        # Optional generation controls (e.g. MiniMax-M3 / Nemotron tuning). Only
+        # sent when configured, so the simple default request stays unchanged.
+        if self.max_tokens is not None:
+            body["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            body["top_p"] = self.top_p
+        payload = json.dumps(body).encode("utf-8")
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
@@ -134,21 +166,39 @@ def resolve_provider(env: Mapping[str, str] | None = None) -> Any:
     ``PRADYOS_LLM_PROVIDER``:
       * ``ollama`` (default) — local, free. ``PRADYOS_OLLAMA_URL``, ``PRADYOS_LLM_MODEL``.
       * ``nvidia`` / ``nim`` — NVIDIA NIM hosted models (Llama-70B, Nemotron, …).
-        Needs ``PRADYOS_LLM_API_KEY``; ``PRADYOS_LLM_MODEL`` (default llama-3.3-70b)
-        and ``PRADYOS_LLM_BASE_URL`` (default NVIDIA's) are optional.
+        Needs ``PRADYOS_LLM_API_KEY``; ``PRADYOS_LLM_MODEL`` accepts a short alias
+        (``llama`` / ``nemotron`` / ``minimax`` → MiniMax-M3, the working fallback)
+        or a full model id (default llama-3.3-70b). ``PRADYOS_LLM_BASE_URL``
+        (default NVIDIA's), ``PRADYOS_LLM_MAX_TOKENS`` and ``PRADYOS_LLM_TOP_P``
+        are optional.
       * ``openai`` / ``openai-compat`` — any other OpenAI-compatible API. Requires
         ``PRADYOS_LLM_BASE_URL`` + ``PRADYOS_LLM_MODEL``; optional ``PRADYOS_LLM_API_KEY``.
       Misconfigured ⇒ falls back to local Ollama (never fails open).
     """
     env = env if env is not None else os.environ
     kind = (env.get("PRADYOS_LLM_PROVIDER") or "ollama").strip().lower()
+
+    def _opt_int(key: str) -> int | None:
+        try:
+            return int(env[key]) if env.get(key) else None
+        except (TypeError, ValueError):
+            return None
+
+    def _opt_float(key: str) -> float | None:
+        try:
+            return float(env[key]) if env.get(key) else None
+        except (TypeError, ValueError):
+            return None
+
     if kind in ("nvidia", "nim"):
         api_key = env.get("PRADYOS_LLM_API_KEY")
         if api_key:
             return OpenAICompatProvider(
                 base_url=env.get("PRADYOS_LLM_BASE_URL", _NVIDIA_NIM_URL),
-                model=env.get("PRADYOS_LLM_MODEL", _NVIDIA_DEFAULT_MODEL),
+                model=_resolve_model(env.get("PRADYOS_LLM_MODEL")),
                 api_key=api_key,
+                max_tokens=_opt_int("PRADYOS_LLM_MAX_TOKENS"),
+                top_p=_opt_float("PRADYOS_LLM_TOP_P"),
             )
         log.warning(
             "PRADYOS_LLM_PROVIDER=nvidia but PRADYOS_LLM_API_KEY missing; using local Ollama"
@@ -158,7 +208,11 @@ def resolve_provider(env: Mapping[str, str] | None = None) -> Any:
         model = env.get("PRADYOS_LLM_MODEL")
         if base_url and model:
             return OpenAICompatProvider(
-                base_url=base_url, model=model, api_key=env.get("PRADYOS_LLM_API_KEY")
+                base_url=base_url,
+                model=model,
+                api_key=env.get("PRADYOS_LLM_API_KEY"),
+                max_tokens=_opt_int("PRADYOS_LLM_MAX_TOKENS"),
+                top_p=_opt_float("PRADYOS_LLM_TOP_P"),
             )
         log.warning(
             "PRADYOS_LLM_PROVIDER=%s but base_url/model missing; falling back to local Ollama",
