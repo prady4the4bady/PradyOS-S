@@ -30,6 +30,11 @@ log = logging.getLogger("pradyos.llm")
 _DEFAULT_OLLAMA_URL = "http://localhost:11434"
 _DEFAULT_LOCAL_MODEL = "qwen2.5-coder:7b"
 
+# NVIDIA NIM — OpenAI-compatible hosted models (Llama-70B, Nemotron, …). The
+# Sovereign opts in by supplying a key; the model is named in the request body.
+_NVIDIA_NIM_URL = "https://integrate.api.nvidia.com/v1"
+_NVIDIA_DEFAULT_MODEL = "meta/llama-3.3-70b-instruct"
+
 
 class LLMError(RuntimeError):
     """Base class for LLM provider failures."""
@@ -128,13 +133,27 @@ def resolve_provider(env: Mapping[str, str] | None = None) -> Any:
 
     ``PRADYOS_LLM_PROVIDER``:
       * ``ollama`` (default) — local, free. ``PRADYOS_OLLAMA_URL``, ``PRADYOS_LLM_MODEL``.
-      * ``openai`` / ``openai-compat`` — a stronger model over an OpenAI-compatible
-        API. Requires ``PRADYOS_LLM_BASE_URL`` + ``PRADYOS_LLM_MODEL``; optional
-        ``PRADYOS_LLM_API_KEY``. Misconfigured ⇒ falls back to local (never fails open).
+      * ``nvidia`` / ``nim`` — NVIDIA NIM hosted models (Llama-70B, Nemotron, …).
+        Needs ``PRADYOS_LLM_API_KEY``; ``PRADYOS_LLM_MODEL`` (default llama-3.3-70b)
+        and ``PRADYOS_LLM_BASE_URL`` (default NVIDIA's) are optional.
+      * ``openai`` / ``openai-compat`` — any other OpenAI-compatible API. Requires
+        ``PRADYOS_LLM_BASE_URL`` + ``PRADYOS_LLM_MODEL``; optional ``PRADYOS_LLM_API_KEY``.
+      Misconfigured ⇒ falls back to local Ollama (never fails open).
     """
     env = env if env is not None else os.environ
     kind = (env.get("PRADYOS_LLM_PROVIDER") or "ollama").strip().lower()
-    if kind in ("openai", "openai-compat", "http"):
+    if kind in ("nvidia", "nim"):
+        api_key = env.get("PRADYOS_LLM_API_KEY")
+        if api_key:
+            return OpenAICompatProvider(
+                base_url=env.get("PRADYOS_LLM_BASE_URL", _NVIDIA_NIM_URL),
+                model=env.get("PRADYOS_LLM_MODEL", _NVIDIA_DEFAULT_MODEL),
+                api_key=api_key,
+            )
+        log.warning(
+            "PRADYOS_LLM_PROVIDER=nvidia but PRADYOS_LLM_API_KEY missing; using local Ollama"
+        )
+    elif kind in ("openai", "openai-compat", "http"):
         base_url = env.get("PRADYOS_LLM_BASE_URL")
         model = env.get("PRADYOS_LLM_MODEL")
         if base_url and model:

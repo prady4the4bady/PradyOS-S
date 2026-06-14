@@ -59,6 +59,31 @@ def test_resolve_openai_misconfigured_falls_back_to_local():
     assert p.name == "ollama"
 
 
+def test_resolve_nvidia_nim_with_key():
+    p = resolve_provider({"PRADYOS_LLM_PROVIDER": "nvidia", "PRADYOS_LLM_API_KEY": "nvapi-x"})
+    assert p.name == "openai-compat"
+    assert p.base_url == "https://integrate.api.nvidia.com/v1"  # NVIDIA default
+    assert p.model == "meta/llama-3.3-70b-instruct"  # default model
+    assert "nvapi-x" not in str(p.info())  # key never exposed
+
+
+def test_resolve_nvidia_model_override():
+    p = resolve_provider(
+        {
+            "PRADYOS_LLM_PROVIDER": "nim",
+            "PRADYOS_LLM_API_KEY": "nvapi-x",
+            "PRADYOS_LLM_MODEL": "nvidia/llama-3.1-nemotron-70b-instruct",
+        }
+    )
+    assert p.model == "nvidia/llama-3.1-nemotron-70b-instruct"
+
+
+def test_resolve_nvidia_without_key_falls_back_to_local():
+    # NVIDIA needs a key; without one, never fail open → local.
+    p = resolve_provider({"PRADYOS_LLM_PROVIDER": "nvidia"})
+    assert p.name == "ollama"
+
+
 def test_openai_provider_requires_base_url_and_model():
     with pytest.raises(LLMError):
         OpenAICompatProvider(base_url="", model="x")
