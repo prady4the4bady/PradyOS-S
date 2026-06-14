@@ -43,10 +43,14 @@ class Reverie:
         skills: Any | None = None,
         capacity: int = 50,
         clock: Callable[[], float] | None = None,
+        on_curiosity: Callable[[str], Any] | None = None,
     ) -> None:
         self._fs = foresight
         self._skills = skills
         self._insights: deque[dict[str, Any]] = deque(maxlen=capacity)
+        # Optional hook(curiosity_goal:str) — fired on each reflection so a higher
+        # layer (DRIVE) can propose the goal for Sovereign approval. Best-effort.
+        self._on_curiosity = on_curiosity
         self._lock = threading.RLock()
         import time as _t
 
@@ -125,6 +129,12 @@ class Reverie:
         }
         with self._lock:
             self._insights.append(insight)
+        # Surface the curiosity goal to DRIVE (proposed for Sovereign approval).
+        if self._on_curiosity is not None:
+            try:
+                self._on_curiosity(curiosity)
+            except Exception:  # noqa: BLE001 — proposing must not break reflection
+                pass
         return insight
 
     # ── introspection ────────────────────────────────────────────────────────

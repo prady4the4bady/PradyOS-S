@@ -80,6 +80,7 @@ from pradyos.web.licensing_web import register_license_routes  # LICENSING — t
 from pradyos.web.system_web import register_system_routes  # SYSTEM — real OS telemetry + filesystem
 from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT — predict/act/compare/learn
 from pradyos.web.reverie_web import register_reverie_routes  # REVERIE — idle cognition loop (reflection+curiosity)
+from pradyos.web.drive_web import register_drive_routes  # DRIVE — goal/drive manager (self-direction, gated)
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3742,7 +3743,7 @@ def create_app(
     # Guild calls this hook best-effort; it never sinks a run.
     from pradyos.guild.distill import distill_project as _distill
 
-    register_guild_routes(
+    guild_org = register_guild_routes(
         app, guild, on_complete=lambda project: _distill(skills_lib, project)
     )  # GUILD + L1 auto-distill → skill library
 
@@ -3765,14 +3766,27 @@ def create_app(
             _fs_engine = None
     foresight_engine = register_foresight_routes(app, _fs_engine)
 
+    # DRIVE (L3) — the goal/drive manager. REVERIE proposes curiosity goals here;
+    # the Sovereign approves (the gate); an approved goal is run through the Guild.
+    from pradyos.drive import DriveManager
+
+    drive_mgr = DriveManager()
+    register_drive_routes(app, drive_mgr, guild_runner=guild_org.run)
+
     # REVERIE — the idle cognition loop: reflects on FORESIGHT calibration + the
-    # skill library to surface blind spots and self-proposed curiosity goals.
+    # skill library to surface blind spots and self-proposed curiosity goals, and
+    # PROPOSES each one to DRIVE for Sovereign approval (self-direction, gated).
     from pradyos.reverie import Reverie
 
     # Expose the engine on app.state so the production entrypoint can attach a
     # background ReverieDriver (the cognition heartbeat); tests never start one.
     app.state.reverie = register_reverie_routes(
-        app, Reverie(foresight=foresight_engine, skills=skills_lib)
+        app,
+        Reverie(
+            foresight=foresight_engine,
+            skills=skills_lib,
+            on_curiosity=lambda text: drive_mgr.propose(text, source="reverie"),
+        ),
     )
 
     # L1 integration: the OS PLANS by matching learned skills (skill library) to an

@@ -143,9 +143,13 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
   fail-soft prediction via the pluggable model; opt-in via `PRADYOS_FORESIGHT_LLM`.
 - ✅ **ReverieDriver** (`reverie/driver.py`) — the cognition heartbeat now runs
   unattended in production (`PRADYOS_REVERIE_INTERVAL`, default 240s), beside ASCENT.
-- ▶️ Next: **L3 goal/drive manager** (promote curiosity goals into approved
-  objectives), then **L4 critic ensemble** before the apply-gate.
+- ✅ **L3 goal/drive manager** (`pradyos/drive/`) — REVERIE proposes curiosity
+  goals → the Sovereign approves (the gate) → an approved goal runs through the
+  Guild. The OS never acts on an unapproved goal. `/api/v1/drive/*`. This closes
+  the loop: the OS now pursues what it's curious about, with your approval.
+- ▶️ Next: **L4 critic ensemble** — adversarial scoring of self-edits before the
+  apply-gate, then **L5 causal reasoning** over the event bus.
 - Tests: `test_foresight.py`, `test_foresight_llm.py`, `test_plan_integration.py`,
-  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`.
+  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`, `test_drive.py`.
 
 *References are named for traceability only; no external text is reproduced here.*
