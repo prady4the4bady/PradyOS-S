@@ -136,11 +136,15 @@ class ForesightEngine:
         risk_aversion: float = 0.35,
         capacity: int = 500,
         clock: Callable[[], float] | None = None,
+        on_observe: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self._wm = world_model or WorldModel()
         self._risk = float(risk_aversion)
         self._clock = clock or time.time
         self._episodes: deque[Episode] = deque(maxlen=capacity)
+        # Optional hook(episode_dict) fired after each observation — used to feed
+        # CAUSALITY (action→outcome trials). Best-effort; never sinks an observe.
+        self._on_observe = on_observe
         self._lock = threading.RLock()
 
     # ── priors / recall ──────────────────────────────────────────────────────
@@ -213,6 +217,12 @@ class ForesightEngine:
         )
         with self._lock:
             self._episodes.append(ep)
+        # Feed the outcome to a downstream learner (CAUSALITY). Best-effort.
+        if self._on_observe is not None:
+            try:
+                self._on_observe(ep.to_dict())
+            except Exception:  # noqa: BLE001 — a bad hook must not sink the observation
+                pass
         return ep
 
     @staticmethod

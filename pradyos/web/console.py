@@ -383,6 +383,13 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
       <h4>AI Agents <span id="agCount" style="color:var(--accent)">8 Active</span></h4>
       <div class="agents" id="agents"></div>
     </div>
+    <div class="panel glass sovereign-only">
+      <h4>Cognition <span id="cogReflect" onclick="reflectNow()" style="color:var(--accent);cursor:pointer">⟳ reflect</span></h4>
+      <div style="font-size:.72rem;color:var(--dim);margin-bottom:4px">Latest curiosity</div>
+      <div id="cogGoal" style="font-size:.8rem;line-height:1.4;margin-bottom:12px">—</div>
+      <div style="font-size:.72rem;color:var(--dim);margin-bottom:6px">Proposed goals <span id="cogCount" style="color:var(--accent)"></span></div>
+      <div id="cogGoals" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
     <div class="panel glass manual-only">
       <h4>Quick Settings</h4>
       <div class="qrow">
@@ -545,6 +552,34 @@ function refresh(){
     }
   });
   gj('/api/v1/license/status').then(function(d){ if(d){document.getElementById('tierBadge').textContent=d.open_mode?'OPEN':(d.tier?d.tier.toUpperCase():'FREE'); setOpenModeBtn(d.open_mode);} });
+  loadCognition();
+}
+// ---------- Cognition panel: REVERIE insights + DRIVE goals ----------
+function loadCognition(){
+  var goalEl=document.getElementById('cogGoal'); if(!goalEl)return;
+  gj('/api/v1/reverie/stats').then(function(s){ if(s&&s.latest_goal)goalEl.textContent=s.latest_goal; });
+  gj('/api/v1/drive/goals?status=proposed').then(function(d){
+    var box=document.getElementById('cogGoals'), cnt=document.getElementById('cogCount');
+    var goals=(d&&d.goals)||[];
+    if(cnt)cnt.textContent=goals.length?('('+goals.length+')'):'';
+    if(!box)return;
+    box.innerHTML = goals.slice(0,4).map(function(g){
+      return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass)">'+
+        '<div style="font-size:.72rem;margin-bottom:6px">'+escapeHtml(g.text)+'</div>'+
+        '<div style="display:flex;gap:6px">'+
+        '<button onclick="approveGoal(\''+g.id+'\')" style="flex:1;border:1px solid var(--brd);cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:var(--accent-soft);color:var(--accent)">APPROVE</button>'+
+        '<button onclick="runGoal(\''+g.id+'\')" style="flex:1;border:0;cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff">RUN</button>'+
+        '</div></div>';
+    }).join('') || '<div style="font-size:.7rem;color:var(--dim)">No proposed goals yet — reflect to generate one.</div>';
+  });
+}
+function reflectNow(){ fetch('/api/v1/reverie/reflect',{method:'POST'}).then(function(){loadCognition();}); }
+function approveGoal(id){ fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){loadCognition();}); }
+function runGoal(id){
+  fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){
+    return fetch('/api/v1/drive/'+id+'/run',{method:'POST'}); }).then(function(r){return r.json();})
+    .then(function(d){ launch(d&&d.error?('Vetoed: '+(d.error||'')):'Goal executed'); loadCognition(); })
+    .catch(function(){ loadCognition(); });
 }
 function setOpenModeBtn(on){var b=document.getElementById('openModeBtn');if(!b)return;b.textContent=on?'ON':'OFF';
   b.style.background=on?'linear-gradient(135deg,var(--accent),var(--accent2))':'var(--accent-soft)';b.style.color=on?'#fff':'var(--accent)';}

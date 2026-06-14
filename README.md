@@ -55,9 +55,81 @@ Everything else executes autonomously within policy envelopes.
 | `pradyos.proving_ground` | Constitutional admission gate | Safety |
 | `pradyos.memory_citadel` | Persistent vector memory | Memory |
 | `pradyos.sovereign` | Sovereign Web UI + CLI + REPL | Experience |
+| `pradyos.guild` | Multi-agent organization (specialist roles, blackboard) + continual memory | Intelligence |
+| `pradyos.skills` | Skill library — learn / match / reinforce / prune from experience | Learning |
+| `pradyos.foresight` | Predict → deliberate → observe → learn (metacognition); optional LLM world-model | Autonomy (L1/L2) |
+| `pradyos.drive` | Goal/drive manager — self-direction, **Sovereign-gated** | Autonomy (L3) |
+| `pradyos.critic` | Adversarial critic ensemble (safety/correctness/value); optional LLM critic | Autonomy / Safety (L4) |
+| `pradyos.causality` | Counterfactual credit assignment (cause vs. bystander) | Autonomy (L5) |
+| `pradyos.reverie` | Idle cognition loop — reflection + curiosity (the "mind" ouroboros) | Autonomy |
+| `pradyos.ascent` | Self-improvement loop + autonomous driver (the "code" ouroboros) | Autonomy |
+| `pradyos.licensing` | Signed offline licenses, tiered entitlements, Stripe billing, open-mode | Monetization |
+| `pradyos.core.llm` | Pluggable model provider (local Ollama → NVIDIA NIM / OpenAI-compatible) | Foundational |
+| `pradyos.web.console` | Sovereign Command Console (glassmorphic OS shell served at `/`) | Experience |
+| `pradyos.web.system_web` | Real OS telemetry + filesystem for the shell | Experience |
 
-The raw CLI is never the user surface. `pradyos-throne` is the only sanctioned
-entrypoint.
+The raw CLI is never the user surface. `pradyos-throne` (terminal) and the
+**Sovereign Command Console** at `/` (web shell) are the sanctioned entrypoints.
+
+---
+
+## The OS Shell — Sovereign Command Console
+
+Served at `/` by `pradyos.web.console`, the console is the OS face: a self-contained,
+offline (no CDN) glassmorphic shell with **two views** (SOVEREIGN / MANUAL) and
+**four time-of-day themes** (dawn / day / dusk / night) that switch **automatically
+from the clock** and drive both views at once. It binds to real OS endpoints —
+live CPU/RAM/disk/net, processes, real filesystem, the Guild, license tier, the
+event stream — and surfaces the autonomy loop (REVERIE insights + DRIVE goals you
+can approve/run). Launch it:
+
+```bash
+python -m pradyos.sovereign_web      # console on http://localhost:8000
+```
+
+---
+
+## Autonomy Stack (L1–L5) — toward AGI/ASI, gated
+
+> **Honest framing.** "AGI/ASI" here means *progressively more general, self-directed
+> autonomy* engineered in measurable layers — not a claim of human-level intelligence.
+> Capability and **oversight advance together**: the Sovereign approves; the machine
+> executes. Full design notes in [`docs/AGI_ASI_ROADMAP.md`](docs/AGI_ASI_ROADMAP.md).
+
+The OS runs a closed cognitive loop and two self-referential background "ouroboros"
+loops (ASCENT improves the *code*; REVERIE improves the *mind*):
+
+**perceive → plan → predict → act → compare → reflect → distill → self-direct → vet → attribute cause → improve code**
+
+| Layer | Plane | What it adds | Status |
+|------:|-------|--------------|:------:|
+| **L1** | `skills` + planner (`/api/v1/plan`) + Guild auto-distill | accumulate & reuse competence | ✅ |
+| **L2** | `foresight` + `foresight.llm_model` | predict an action's value; semantic prediction for novel states | ✅ |
+| **L3** | `drive` | self-proposed goals, approved by the Sovereign before any action | ✅ |
+| **L4** | `critic` (+ LLM critic) | adversarial veto on dangerous/low-quality proposals | ✅ |
+| **L5** | `causality` | counterfactual credit assignment ("what if I hadn't?") | ✅ |
+| — | `reverie` + `ascent` drivers | two background ouroboros loops (mind + code) | ✅ |
+| **L6** | (planned) | tighter loop fusion + an LLM-backed reverie + memory consolidation | ▶️ |
+
+Cross-plane integration is wired: FORESIGHT outcomes auto-feed CAUSALITY, and the
+planner re-weights skills by causal strength. **Opt-in env:** `PRADYOS_FORESIGHT_LLM`,
+`PRADYOS_CRITIC_LLM`, `PRADYOS_REVERIE_INTERVAL`, `PRADYOS_OPEN_MODE`.
+
+---
+
+## Monetization & Security
+
+- **Tiered licensing** (`pradyos.licensing`): signed, offline Ed25519 licenses;
+  tiers Free / Pro ($5) / Sovereign ($25) / Enterprise ($50), gated per feature.
+- **Stripe billing**: hosted Checkout + signature-verified webhook → tier
+  activation (`STRIPE_SECRET_KEY` etc.); `scripts/stripe_setup.py` provisions the
+  catalogue in test or live mode.
+- **Open mode**: a Sovereign master switch (`/api/v1/license/open-mode`) that makes
+  every feature free for all users, and back.
+- **Tamper-EVIDENT, never tamper-punishing.** An invalid/expired license drops to
+  the free tier; the OS **never harms the inspecting machine**. The L4 critic
+  actively blocks machine-locking / exfiltration / destructive proposals. Planned
+  hardening: code signing, Secure Boot / TPM-sealed keys, self-disable-on-tamper.
 
 ---
 
@@ -108,13 +180,28 @@ sudo systemctl enable --now pradyos-titan.service \
 
 ```
 pradyos/
-├── core/            # shared substrate
+├── core/            # shared substrate (bus, audit, constitution, llm provider)
 ├── titan_ops/       # hidden command runner (Plane 2)
 ├── warden_grid/     # health telemetry + incident mesh (Plane 1/9)
 ├── imperium/        # orchestration kernel (Plane 3)
-└── aurora_throne/   # governance terminal (Plane 10)
-docs/                # architecture + API contracts
+├── aurora_throne/   # governance terminal (Plane 10)
+├── oracle/          # planning + autonomous proposal loop
+├── guild/           # multi-agent organization + continual memory + auto-distill
+├── skills/          # skill library (learn/match/reinforce)
+├── foresight/       # L1/L2 metacognition (+ LLM world-model)
+├── drive/           # L3 goal/drive manager (Sovereign-gated)
+├── critic/          # L4 adversarial critic ensemble (+ LLM critic)
+├── causality/       # L5 counterfactual credit assignment
+├── reverie/         # idle cognition loop (+ background driver)
+├── ascent/          # self-improvement loop (+ background driver)
+├── licensing/       # signed licenses + tiers + Stripe billing + open-mode
+└── web/             # FastAPI route modules incl. console (the OS shell)
+docs/                # architecture, API contracts, AGI_ASI_ROADMAP
 deploy/              # systemd units + Dockerfile
+scripts/             # build/ISO/VM/install tooling
+│   ├── stripe_setup.py      # provision the Stripe catalogue (test or live)
+│   ├── inspect_install.sh   # offline installed-disk inspector
+│   └── phase_patches/       # historical one-off web-phase patch scripts (archive)
 tests/               # pytest suite
 var/                 # audit log + checkpoint state (gitignored)
 ```
