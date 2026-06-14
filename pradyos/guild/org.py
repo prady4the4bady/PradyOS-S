@@ -156,12 +156,17 @@ class GuildOrg:
         toolbox: list[Tool] | dict[str, Tool] | None = None,
         role_tools: dict[str, list[str]] | None = None,
         memory: Any | None = None,
+        on_complete: Any | None = None,
     ) -> None:
         # worker(role, objective, context) -> str. None ⇒ charter-only (no content).
         self._worker = worker
         # Optional long-term memory (ExperienceStore): the guild stores each
         # project's synthesis and can recall relevant past work. None ⇒ no memory.
         self._memory = memory
+        # Optional post-run hook(project_dict) — fired after a COMPLETED project so
+        # a higher layer can distil it into a reusable skill (autonomy L1). Failures
+        # here never sink the run. None ⇒ no distillation.
+        self._on_complete = on_complete
         roster = roles if roles is not None else DEFAULT_ROLES
         self._roles: tuple[Role, ...] = tuple(roster)
         self._role_map: dict[str, Role] = {r.name: r for r in self._roles}
@@ -176,6 +181,10 @@ class GuildOrg:
         self._lock = threading.RLock()
 
     # ── the roster + toolbox ──────────────────────────────────────────────────────
+
+    def set_on_complete(self, callback: Any | None) -> None:
+        """Set/replace the post-completion distillation hook (autonomy L1)."""
+        self._on_complete = callback
 
     def roles(self) -> list[dict[str, Any]]:
         return [r.to_dict() for r in self._roles]
@@ -261,7 +270,14 @@ class GuildOrg:
                 self._memory.remember(objective, synthesis, tags=tuple(names))
             except Exception as exc:  # noqa: BLE001 — memory failure must not sink the project
                 log.warning("guild memory.remember failed: %s", exc)
-        return project.to_dict()
+        # Distil a COMPLETED project into a reusable skill (autonomy L1). Best-effort.
+        result = project.to_dict()
+        if self._on_complete is not None and status == "complete":
+            try:
+                self._on_complete(result)
+            except Exception as exc:  # noqa: BLE001 — distillation must not sink the project
+                log.warning("guild on_complete (distill) failed: %s", exc)
+        return result
 
     def recall(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Relevant past work the guild remembers ([] when no memory is wired)."""

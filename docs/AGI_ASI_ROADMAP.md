@@ -116,14 +116,32 @@ Each entry: **what**, **why it raises autonomy**, **prior art**, **rough scope**
 
 ---
 
+## 4b. The two ouroboros loops (background "thinking")
+
+PradyOS runs two self-referential background loops — the OS continually turns on
+itself to improve:
+
+1. **ASCENT driver (code loop).** A heartbeat (`pradyos/ascent/driver.py`,
+   default 300 s, wired in `sovereign_web.main`) reads the OS's *own source* in
+   rotating batches and queues self-hardening proposals for Sovereign approval —
+   read-only, bounded, crash-proof. This is the literal code ouroboros.
+2. **REVERIE (cognition loop).** A new pass (`pradyos/reverie/`) reflects on the
+   OS's *own thinking*: FORESIGHT calibration + the skill library → its biggest
+   **blind spot** (most-surprising action) and weakest skill → a self-proposed
+   **curiosity goal** (intrinsic motivation). Surfaced at `/api/v1/reverie/*`.
+
+Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both only
+*propose* — the Sovereign still approves.
+
 ## 5. Status
 
 - ✅ Shipped: perception, planning, guild, pluggable model, self-heal, memory,
-  ascent self-improvement, **FORESIGHT metacognition**, the **skill library**
-  (`pradyos/skills`), and the **L1 planner bridge** (`/api/v1/plan`) joining them.
-- ▶️ Next: **L1 auto-distillation** (Guild success → new skill + reinforce), then
-  **L2 LLM world-model** for FORESIGHT.
-- Tests: `test_foresight.py` (13) proves the predict/learn loop calibrates;
-  `test_plan_integration.py` proves skill-match + foresight pick the best move.
+  **ASCENT** code-ouroboros, **FORESIGHT** metacognition, the **skill library**,
+  the **L1 planner bridge** (`/api/v1/plan`), **L1 auto-distillation** (completed
+  Guild project → reusable skill / reinforce), and **REVERIE** (cognition loop).
+- ▶️ Next: **L2 LLM world-model** for FORESIGHT (semantic prediction), then a
+  ReverieDriver heartbeat so the cognition loop runs unattended like ASCENT.
+- Tests: `test_foresight.py` (13), `test_plan_integration.py`,
+  `test_guild_distill.py`, `test_reverie.py` cover the loop end-to-end.
 
 *References are named for traceability only; no external text is reproduced here.*

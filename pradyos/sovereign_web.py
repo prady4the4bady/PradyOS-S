@@ -79,6 +79,7 @@ from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
 from pradyos.web.licensing_web import register_license_routes  # LICENSING — tiers + entitlements
 from pradyos.web.system_web import register_system_routes  # SYSTEM — real OS telemetry + filesystem
 from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT — predict/act/compare/learn
+from pradyos.web.reverie_web import register_reverie_routes  # REVERIE — idle cognition loop (reflection+curiosity)
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3730,13 +3731,26 @@ def create_app(
 
     register_ascent_routes(app, ascent)  # ASCENT — autonomous self-improvement loop (orchestrator)
 
-    register_guild_routes(app, guild)  # GUILD — organization of specialist agents
+    # L1 auto-distillation: when the Guild COMPLETES a project, turn it into a
+    # reusable skill (new objective) or reinforce the existing one (repeat). The
+    # Guild calls this hook best-effort; it never sinks a run.
+    from pradyos.guild.distill import distill_project as _distill
+
+    register_guild_routes(
+        app, guild, on_complete=lambda project: _distill(skills_lib, project)
+    )  # GUILD + L1 auto-distill → skill library
 
     register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
     foresight_engine = register_foresight_routes(app)  # FORESIGHT — predict/act/compare/learn
+
+    # REVERIE — the idle cognition loop: reflects on FORESIGHT calibration + the
+    # skill library to surface blind spots and self-proposed curiosity goals.
+    from pradyos.reverie import Reverie
+
+    register_reverie_routes(app, Reverie(foresight=foresight_engine, skills=skills_lib))
 
     # L1 integration: the OS PLANS by matching learned skills (skill library) to an
     # intent, then DELIBERATING over them with FORESIGHT (predicted value × the
