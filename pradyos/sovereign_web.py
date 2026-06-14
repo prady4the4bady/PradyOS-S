@@ -3718,7 +3718,7 @@ def create_app(
 
     register_research_routes(app, research)  # RESEARCH — autonomous intelligence gathering
 
-    register_skills_routes(app, skills)  # SKILL LIBRARY — learn-from-experience self-improvement
+    skills_lib = register_skills_routes(app, skills)  # SKILL LIBRARY — learn-from-experience self-improvement
 
     register_codemap_routes(app, codemap)  # CODEMAP — structural self-knowledge of own code
 
@@ -3736,7 +3736,36 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
-    register_foresight_routes(app)  # FORESIGHT — predict/act/compare/learn (metacognition autonomy layer)
+    foresight_engine = register_foresight_routes(app)  # FORESIGHT — predict/act/compare/learn
+
+    # L1 integration: the OS PLANS by matching learned skills (skill library) to an
+    # intent, then DELIBERATING over them with FORESIGHT (predicted value × the
+    # skill's proven confidence). Glues two existing planes — no new skill store.
+    @app.post("/api/v1/plan")
+    async def api_plan(request: Request) -> JSONResponse:
+        body = await request.json()
+        if not isinstance(body, dict) or not body.get("intent"):
+            return JSONResponse({"error": "intent is required"}, status_code=422)
+        intent = str(body["intent"])
+        try:
+            matched = skills_lib.match(intent, int(body.get("limit", 5)))
+        except Exception as exc:  # noqa: BLE001
+            return JSONResponse({"error": str(exc)}, status_code=422)
+        if not matched:
+            return JSONResponse({"intent": intent, "chosen": None, "ranked": [], "steps": []})
+        actions = [sk["name"] for sk in matched]
+        decision = foresight_engine.deliberate(intent, actions)
+        by_name = {sk["name"]: sk for sk in matched}
+        chosen = by_name.get(decision["chosen"], matched[0])
+        return JSONResponse(
+            {
+                "intent": intent,
+                "chosen": chosen.get("name"),
+                "skill_id": chosen.get("id"),
+                "steps": chosen.get("steps", []),
+                "ranked": decision["ranked"],
+            }
+        )
 
     return app
 

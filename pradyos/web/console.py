@@ -323,6 +323,7 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
         <input id="ask" placeholder="Ask PRADYOS anything..." onkeydown="if(event.key==='Enter')askPradyos()">
         <button class="go" onclick="askPradyos()">→</button>
       </div>
+      <div id="askResp" class="glass" style="display:none;max-width:600px;margin:0 auto 22px;padding:16px 20px;text-align:left;font-size:.86rem;line-height:1.55"></div>
       <div class="launch">
         <div class="app" onclick="launch('AI Terminal')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l5 6-5 6M12 18h8"/></svg><b>AI Terminal</b></div>
         <div class="app" onclick="setView('manual')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v10H3z"/></svg><b>Files</b></div>
@@ -413,7 +414,11 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
     <h2>Unlock <b>PRADYOS Sovereign</b></h2>
     <p class="sub">Pick the intelligence tier that fits you. Licensed yearly · works fully offline · cancel anytime.</p>
     <div class="plans" id="plans"></div>
-    <p class="note" id="modalNote">Licenses are cryptographically signed and verified offline — no phone-home. An expired or invalid key simply drops to the Free tier; PRADYOS never harms the machine.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:13px 16px;border-radius:13px;background:var(--glass2);border:1px solid var(--brd)">
+      <div><b style="font-size:.82rem">Open mode — all features free</b><div style="color:var(--dim);font-size:.7rem;margin-top:2px">Temporarily unlock every feature for all users (beta / promo). Flip off to resume paid tiers + Stripe.</div></div>
+      <button id="openModeBtn" onclick="toggleOpenMode()" style="border:1px solid var(--brd);cursor:pointer;border-radius:22px;padding:9px 18px;font-weight:800;font-size:.72rem;letter-spacing:1px;background:var(--accent-soft);color:var(--accent)">OFF</button>
+    </div>
+    <p class="note" id="modalNote">Licenses are cryptographically signed and verified offline — no phone-home. Paid tiers use Stripe; an expired/invalid key drops to Free. PRADYOS never harms the machine.</p>
   </div>
 </div>
 
@@ -539,7 +544,16 @@ function refresh(){
       renderAgents(live);
     }
   });
-  gj('/api/v1/license/status').then(function(d){ if(d&&d.tier)document.getElementById('tierBadge').textContent=d.tier.toUpperCase(); });
+  gj('/api/v1/license/status').then(function(d){ if(d){document.getElementById('tierBadge').textContent=d.open_mode?'OPEN':(d.tier?d.tier.toUpperCase():'FREE'); setOpenModeBtn(d.open_mode);} });
+}
+function setOpenModeBtn(on){var b=document.getElementById('openModeBtn');if(!b)return;b.textContent=on?'ON':'OFF';
+  b.style.background=on?'linear-gradient(135deg,var(--accent),var(--accent2))':'var(--accent-soft)';b.style.color=on?'#fff':'var(--accent)';}
+function toggleOpenMode(){
+  gj('/api/v1/license/open-mode').then(function(s){
+    var next=!(s&&s.open_mode);
+    fetch('/api/v1/license/open-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:next})})
+      .then(function(r){return r.json();}).then(function(d){setOpenModeBtn(d&&d.open_mode);refresh();});
+  });
 }
 loadInfo(); refresh(); setInterval(refresh,5000);
 
@@ -554,7 +568,27 @@ function spark(){
 spark(); setInterval(spark,1600);
 
 // ---------- search / actions ----------
-function askPradyos(){var v=document.getElementById('ask').value.trim();if(!v)return;document.getElementById('ask').value='';launch('Ask: '+v);}
+function escapeHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function askPradyos(){
+  var v=document.getElementById('ask').value.trim(); if(!v)return;
+  document.getElementById('ask').value='';
+  var box=document.getElementById('askResp');
+  box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">VEGA · COORDINATING THE GUILD</div><div style="color:var(--dim)">▰▰▰ working on: '+escapeHtml(v)+'</div>';
+  fetch('/api/v1/guild/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({objective:v})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var txt;
+      if(d&&d.error){txt=d.error;}
+      else if(d&&(d.summary||d.result||d.answer)){txt=d.summary||d.result||d.answer;}
+      else if(d&&d.blackboard){txt=(typeof d.blackboard==='string')?d.blackboard:JSON.stringify(d.blackboard,null,1).slice(0,900);}
+      else if(d){txt=JSON.stringify(d,null,1).slice(0,900);}
+      else{txt='The Guild produced no output. Configure a model (PRADYOS_LLM_PROVIDER) — it defaults to local Ollama.';}
+      if(typeof txt!=='string')txt=JSON.stringify(txt).slice(0,900);
+      box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">PRADYOS · GUILD RESPONSE</div><div style="white-space:pre-wrap">'+escapeHtml(txt)+'</div>';
+    })
+    .catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">PRADYOS</div><div style="color:var(--dim)">Could not reach the Guild service. Is the OS backend running?</div>';});
+}
 function launch(name){var s=document.getElementById('splash');s.textContent='▸ '+name;s.style.opacity='1';s.style.display='grid';
   setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.style.display='none';},700);},650);}
 
@@ -562,8 +596,8 @@ function launch(name){var s=document.getElementById('splash');s.textContent='▸
 var FALLBACK_PLANS=[
   {tier:'free',name:'Free',price:0,feat:false,perks:['Manual desktop','Local agents','Community support']},
   {tier:'pro',name:'Pro',price:5,feat:false,perks:['Live research','The Guild','Agent memory']},
-  {tier:'sovereign',name:'Sovereign',price:120,feat:true,perks:['Sovereign autonomy','Cloud AI','Self-improvement','Apply-gate']},
-  {tier:'enterprise',name:'Enterprise',price:1000,feat:false,perks:['Multi-seat','Priority support','Private cloud keys']}
+  {tier:'sovereign',name:'Sovereign',price:25,feat:true,perks:['Sovereign autonomy','Cloud AI','Self-improvement','Apply-gate']},
+  {tier:'enterprise',name:'Enterprise',price:50,feat:false,perks:['Multi-seat','Priority support','Private cloud keys']}
 ];
 function renderPlans(plans){
   document.getElementById('plans').innerHTML=plans.map(function(p){

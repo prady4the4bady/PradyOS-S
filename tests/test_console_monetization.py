@@ -33,11 +33,12 @@ def test_pricing_has_four_ordered_tiers():
     assert [p["tier"] for p in plans] == ["free", "pro", "sovereign", "enterprise"]
 
 
-def test_pricing_spans_zero_to_thousand():
+def test_pricing_in_5_to_50_band():
     prices = {p["tier"]: p["price"] for p in LicenseVault.pricing()}
     assert prices["free"] == 0
     assert prices["pro"] == 5
-    assert prices["enterprise"] == 1000
+    assert prices["sovereign"] == 25
+    assert prices["enterprise"] == 50
 
 
 def test_pricing_sovereign_is_featured():
@@ -64,12 +65,14 @@ def test_checkout_free_is_active_no_url():
     assert resp.json()["checkout_url"] is None
 
 
-def test_checkout_paid_pending_without_processor():
+def test_checkout_paid_pending_without_processor(monkeypatch):
+    monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
+    monkeypatch.delenv("PRADYOS_BILLING_CHECKOUT_URL", raising=False)
     resp = _client().post("/api/v1/billing/checkout", json={"tier": "sovereign"})
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "pending"
-    assert body["price"] == 120
+    assert body["price"] == 25
     assert body["checkout_url"] is None
 
 

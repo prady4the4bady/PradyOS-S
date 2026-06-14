@@ -55,15 +55,21 @@ LLM-backed estimator without touching callers.
 
 Each entry: **what**, **why it raises autonomy**, **prior art**, **rough scope**.
 
-### L1 — Skill Library (self-extending capability)
-- **What.** When the Guild solves a novel task, distil the working procedure into
-  a reusable, named *skill* stored in `memory_citadel`; retrieve & compose skills
-  on future tasks.
-- **Why.** Moves from "re-derive every time" → "accumulate competence" — the core
-  of open-ended capability growth.
-- **Prior art.** Voyager (Wang et al., 2023) skill library; Generative Agents
-  (Park et al., 2023) memory/reflection.
-- **Scope.** New `pradyos/skillforge` plane + Guild hook + tests. Medium.
+### L1 — Skill Library  ✅ ALREADY EXISTS — integrated this round
+- **Status.** A full skill library already ships as **`pradyos/skills`**
+  (`/api/v1/skills/*`): `learn` (id/name/trigger/steps), `match` (intent
+  retrieval), `reinforce` (success→confidence), `revise`, `prune`, `recall`,
+  `stats`. Building a second one (`skillforge`) was started, found to **duplicate**
+  this, and removed — per the OS's no-duplicates rule.
+- **What was added instead — the bridge.** `POST /api/v1/plan`: match learned
+  skills to an intent (skill library) → **deliberate** over them with FORESIGHT
+  (predicted value × proven confidence) → return the chosen skill + its steps.
+  Two existing planes now plan together; no new store.
+- **Why.** Turns the dormant skill library into an actual decision: experience
+  (skills) + foresight (calibration) jointly pick the next move.
+- **Prior art.** Voyager (Wang et al., 2023); Generative Agents (Park et al., 2023).
+- **Next within L1.** Auto-*distillation*: hook the Guild so a solved task writes a
+  new skill automatically, and an outcome calls `skills.reinforce`. Medium.
 
 ### L2 — LLM-backed World Model for FORESIGHT
 - **What.** Replace the heuristic predictor with the pluggable LLM (cheap local
@@ -113,8 +119,11 @@ Each entry: **what**, **why it raises autonomy**, **prior art**, **rough scope**
 ## 5. Status
 
 - ✅ Shipped: perception, planning, guild, pluggable model, self-heal, memory,
-  ascent self-improvement, **FORESIGHT metacognition** (this layer), licensing.
-- ▶️ Next: **L1 Skill Library**, then **L2 LLM world-model**.
-- Tests: `tests/test_foresight.py` (13) proves the predict/learn loop calibrates.
+  ascent self-improvement, **FORESIGHT metacognition**, the **skill library**
+  (`pradyos/skills`), and the **L1 planner bridge** (`/api/v1/plan`) joining them.
+- ▶️ Next: **L1 auto-distillation** (Guild success → new skill + reinforce), then
+  **L2 LLM world-model** for FORESIGHT.
+- Tests: `test_foresight.py` (13) proves the predict/learn loop calibrates;
+  `test_plan_integration.py` proves skill-match + foresight pick the best move.
 
 *References are named for traceability only; no external text is reproduced here.*

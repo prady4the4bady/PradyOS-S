@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -52,9 +53,10 @@ FEATURE_MIN_TIER: dict[str, str] = {
 }
 
 # Public price book (yearly, USD). The Sovereign elects a tier; the higher the
-# tier the smarter/more-autonomous the OS. Spans $0 → $1000 so the console's
-# upgrade modal renders directly from this single source of truth. Enterprise is
-# per-seat (``seat: True``) — the displayed figure is the starting annual seat.
+# tier the smarter/more-autonomous the OS. Kept in the $5–$50 band so the
+# console's upgrade modal renders directly from this single source of truth.
+# ``stripe_price`` maps a tier to its live Stripe Price id (override per env in
+# ``stripe_billing``); a tier with no price needs no Stripe product.
 PRICING: dict[str, dict[str, Any]] = {
     TIER_FREE: {
         "name": "Free",
@@ -65,13 +67,15 @@ PRICING: dict[str, dict[str, Any]] = {
     TIER_PRO: {
         "name": "Pro",
         "price_year": 5,
+        "stripe_price": "price_1TiEL3Pq3dHffIt6Wgz8IxYp",
         "tagline": "Smarter, with live intelligence.",
         "perks": ["Live research sources", "The Guild (multi-agent)", "Agent memory"],
     },
     TIER_SOVEREIGN: {
         "name": "Sovereign",
-        "price_year": 120,
+        "price_year": 25,
         "featured": True,
+        "stripe_price": "price_1TiELGPq3dHffIt6C9kqIQBv",
         "tagline": "The machine governs. You approve.",
         "perks": [
             "Full Sovereign autonomy",
@@ -82,8 +86,9 @@ PRICING: dict[str, dict[str, Any]] = {
     },
     TIER_ENTERPRISE: {
         "name": "Enterprise",
-        "price_year": 1000,
+        "price_year": 50,
         "seat": True,
+        "stripe_price": "price_1TiELOPq3dHffIt65UeMKw8d",
         "tagline": "Fleet-scale, with a human throat to choke.",
         "perks": ["Multi-seat management", "Priority support", "Private cloud keys / BYO-model"],
     },
@@ -124,13 +129,36 @@ class License:
 class LicenseVault:
     """Holds the active license and answers entitlement questions."""
 
-    def __init__(self, verifier: Any | None = None, clock: Any | None = None) -> None:
+    def __init__(
+        self,
+        verifier: Any | None = None,
+        clock: Any | None = None,
+        open_mode: bool = False,
+    ) -> None:
         # verifier.verify(payload: bytes, signature: bytes) -> bool. None ⇒ no
         # license can be trusted ⇒ the OS stays on the free tier.
         self._verifier = verifier
         self._clock = clock or time.time
         self._license: License | None = None
+        # OPEN MODE — the Sovereign's master switch: when on, EVERY feature is
+        # unlocked for everyone regardless of tier (a temporary "all free" promo /
+        # beta). Flip it back off and paid gating resumes instantly. Defaults from
+        # PRADYOS_OPEN_MODE so it can be set at boot, overridable at runtime.
+        env_open = os.environ.get("PRADYOS_OPEN_MODE", "").strip().lower()
+        self._open_mode = bool(open_mode) or env_open in ("1", "true", "yes", "on")
         self._lock = threading.RLock()
+
+    # ── open mode (master switch) ───────────────────────────────────────────────
+
+    def set_open_mode(self, enabled: bool) -> dict[str, Any]:
+        """Turn the all-features-free master switch on/off; return status."""
+        with self._lock:
+            self._open_mode = bool(enabled)
+        return self.status()
+
+    def open_mode(self) -> bool:
+        with self._lock:
+            return self._open_mode
 
     # ── install / inspect ──────────────────────────────────────────────────────
 
@@ -168,6 +196,18 @@ class LicenseVault:
             self._license = lic
         return self.status()
 
+    def grant_tier(self, tier: str, holder: str = "", expires: str | None = None) -> dict[str, Any]:
+        """Activate a tier from a TRUSTED server-side event (a verified Stripe
+        webhook after payment). Unlike :meth:`install` this needs no signature —
+        callers MUST gate it behind their own trust check (webhook signature)."""
+        tier = str(tier).strip().lower()
+        if tier not in _TIER_ORDER:
+            raise LicenseError(f"unknown tier {tier!r}")
+        lic = License(tier=tier, holder=holder, issued="", expires=expires, raw={"source": "stripe"})
+        with self._lock:
+            self._license = lic
+        return self.status()
+
     def _expired(self, lic: License) -> bool:
         if not lic.expires:
             return False
@@ -185,6 +225,8 @@ class LicenseVault:
 
     def entitled(self, feature: str) -> bool:
         """Is ``feature`` unlocked at the active tier? (Unknown features ungated.)"""
+        if self.open_mode():  # master switch: everything free for everyone
+            return True
         min_tier = FEATURE_MIN_TIER.get(feature)
         if min_tier is None:
             return True
@@ -207,6 +249,7 @@ class LicenseVault:
             "holder": lic.holder if lic else "",
             "expires": lic.expires if lic else None,
             "valid": valid,
+            "open_mode": self.open_mode(),
             "entitlements": {f: self.entitled(f) for f in FEATURE_MIN_TIER},
         }
 
