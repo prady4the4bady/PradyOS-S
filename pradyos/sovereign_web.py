@@ -81,6 +81,7 @@ from pradyos.web.system_web import register_system_routes  # SYSTEM — real OS 
 from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT — predict/act/compare/learn
 from pradyos.web.reverie_web import register_reverie_routes  # REVERIE — idle cognition loop (reflection+curiosity)
 from pradyos.web.drive_web import register_drive_routes  # DRIVE — goal/drive manager (self-direction, gated)
+from pradyos.web.critic_web import register_critic_routes  # CRITIC — adversarial critic ensemble (L4 judgment gate)
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3766,12 +3767,19 @@ def create_app(
             _fs_engine = None
     foresight_engine = register_foresight_routes(app, _fs_engine)
 
+    # CRITIC (L4) — the adversarial critic ensemble that scores proposals across
+    # safety/correctness/value; any safety blocker is a veto.
+    from pradyos.critic import CriticEnsemble
+
+    critic_panel = register_critic_routes(app, CriticEnsemble())
+
     # DRIVE (L3) — the goal/drive manager. REVERIE proposes curiosity goals here;
-    # the Sovereign approves (the gate); an approved goal is run through the Guild.
+    # the Sovereign approves (the gate); an approved goal is judged by the CRITIC
+    # ensemble (L4 veto on danger) and then run through the Guild.
     from pradyos.drive import DriveManager
 
     drive_mgr = DriveManager()
-    register_drive_routes(app, drive_mgr, guild_runner=guild_org.run)
+    register_drive_routes(app, drive_mgr, guild_runner=guild_org.run, critic=critic_panel)
 
     # REVERIE — the idle cognition loop: reflects on FORESIGHT calibration + the
     # skill library to surface blind spots and self-proposed curiosity goals, and

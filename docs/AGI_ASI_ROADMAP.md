@@ -147,9 +147,13 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
   goals → the Sovereign approves (the gate) → an approved goal runs through the
   Guild. The OS never acts on an unapproved goal. `/api/v1/drive/*`. This closes
   the loop: the OS now pursues what it's curious about, with your approval.
-- ▶️ Next: **L4 critic ensemble** — adversarial scoring of self-edits before the
-  apply-gate, then **L5 causal reasoning** over the event bus.
+- ✅ **L4 critic ensemble** (`pradyos/critic/`) — skeptical critics score a
+  proposal on safety/correctness/value; any safety blocker is a veto. Gates DRIVE:
+  a dangerous goal can't run even after Sovereign approval. `/api/v1/critic/*`.
+- ▶️ Next: **L5 causal reasoning** over the event bus (counterfactual credit
+  assignment), and an LLM-backed critic to complement the heuristic panel.
 - Tests: `test_foresight.py`, `test_foresight_llm.py`, `test_plan_integration.py`,
-  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`, `test_drive.py`.
+  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`,
+  `test_drive.py`, `test_critic.py`.
 
 *References are named for traceability only; no external text is reproduced here.*
