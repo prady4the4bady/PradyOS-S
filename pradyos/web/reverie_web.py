@@ -31,6 +31,10 @@ def register_reverie_routes(app: Any, reverie: Any | None = None) -> Any:
     async def api_reverie_stats() -> JSONResponse:
         return JSONResponse(rev.stats())
 
+    @app.get("/api/v1/reverie/consolidate")
+    async def api_reverie_consolidate(limit: int = Query(20)) -> JSONResponse:
+        return JSONResponse(rev.consolidate(limit))
+
     @app.delete("/api/v1/reverie/reset")
     async def api_reverie_reset() -> JSONResponse:
         rev.reset()

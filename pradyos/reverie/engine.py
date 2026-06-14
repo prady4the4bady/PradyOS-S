@@ -44,6 +44,7 @@ class Reverie:
         capacity: int = 50,
         clock: Callable[[], float] | None = None,
         on_curiosity: Callable[[str], Any] | None = None,
+        reflector: Callable[[dict[str, Any]], str | None] | None = None,
     ) -> None:
         self._fs = foresight
         self._skills = skills
@@ -51,6 +52,9 @@ class Reverie:
         # Optional hook(curiosity_goal:str) — fired on each reflection so a higher
         # layer (DRIVE) can propose the goal for Sovereign approval. Best-effort.
         self._on_curiosity = on_curiosity
+        # Optional reflector(context)->str|None (L6) — an LLM that writes a sharper
+        # curiosity goal from the signals; None ⇒ the deterministic heuristic.
+        self._reflector = reflector
         self._lock = threading.RLock()
         import time as _t
 
@@ -117,16 +121,26 @@ class Reverie:
             curiosity = "Consolidate: rehearse a proven skill to keep calibration high"
             focus = "consolidate"
 
-        insight = {
-            "ts": self._clock(),
+        context = {
             "focus": focus,
             "calibration": fs_stats.get("calibration"),
             "episodes": fs_stats.get("episodes", 0),
             "blind_spot": blind,
             "weakest_skill": weak,
             "skills": sk_stats.get("skills", 0),
-            "curiosity_goal": curiosity,
         }
+        # L6: let an LLM reflector write a sharper goal; fall back to the heuristic.
+        source = "heuristic"
+        if self._reflector is not None:
+            try:
+                llm_goal = self._reflector(context)
+            except Exception:  # noqa: BLE001
+                llm_goal = None
+            if llm_goal:
+                curiosity = llm_goal
+                source = "llm"
+
+        insight = {**context, "ts": self._clock(), "curiosity_goal": curiosity, "source": source}
         with self._lock:
             self._insights.append(insight)
         # Surface the curiosity goal to DRIVE (proposed for Sovereign approval).
@@ -153,6 +167,34 @@ class Reverie:
             "reflections": len(items),
             "by_focus": foci,
             "latest_goal": items[-1]["curiosity_goal"] if items else None,
+        }
+
+    def consolidate(self, limit: int = 20) -> dict[str, Any]:
+        """Memory consolidation (L6): distil recent insights into one standing
+        directive — the dominant recurring focus + its most recent goal — so the
+        OS keeps a stable theme instead of chasing each reflection in isolation."""
+        with self._lock:
+            recent = list(self._insights)[-limit:]
+        if not recent:
+            return {"status": "empty", "dominant_focus": None, "themes": [], "standing_directive": None}
+        by_focus: dict[str, int] = {}
+        latest_goal_for: dict[str, str] = {}
+        for ins in recent:
+            f = ins["focus"]
+            by_focus[f] = by_focus.get(f, 0) + 1
+            latest_goal_for[f] = ins["curiosity_goal"]
+        dominant = max(by_focus, key=lambda k: by_focus[k])
+        themes = sorted(
+            ({"focus": f, "count": n, "goal": latest_goal_for[f]} for f, n in by_focus.items()),
+            key=lambda t: t["count"],
+            reverse=True,
+        )
+        return {
+            "status": "ok",
+            "considered": len(recent),
+            "dominant_focus": dominant,
+            "themes": themes,
+            "standing_directive": latest_goal_for[dominant],
         }
 
     def reset(self) -> None:

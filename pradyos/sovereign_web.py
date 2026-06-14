@@ -83,6 +83,7 @@ from pradyos.web.reverie_web import register_reverie_routes  # REVERIE — idle 
 from pradyos.web.drive_web import register_drive_routes  # DRIVE — goal/drive manager (self-direction, gated)
 from pradyos.web.critic_web import register_critic_routes  # CRITIC — adversarial critic ensemble (L4 judgment gate)
 from pradyos.web.causality_web import register_causality_routes  # CAUSALITY — counterfactual credit assignment (L5)
+from pradyos.web.aegis_web import register_aegis_routes  # AEGIS — software integrity & tamper-evidence
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -3749,7 +3750,34 @@ def create_app(
         app, guild, on_complete=lambda project: _distill(skills_lib, project)
     )  # GUILD + L1 auto-distill → skill library
 
-    register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
+    license_vault = register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
+
+    # AEGIS — software integrity & tamper-evidence. Loads a signed manifest from
+    # PRADYOS_INTEGRITY_MANIFEST (a token) verified with PRADYOS_INTEGRITY_PUBKEY;
+    # on tamper it drops to the free tier (tamper-EVIDENT) — never harms the machine.
+    _expected = None
+    try:
+        _man = os.environ.get("PRADYOS_INTEGRITY_MANIFEST")
+        _pub = os.environ.get("PRADYOS_INTEGRITY_PUBKEY")
+        if _man and _pub:
+            from pathlib import Path as _P
+
+            from pradyos.aegis import load_signed_manifest
+
+            _expected = load_signed_manifest(_P(_man).read_text(encoding="utf-8"), _P(_pub).read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — no/invalid manifest ⇒ unverified, never crash
+        _expected = None
+
+    def _on_tamper(report: dict[str, Any]) -> None:
+        log.error("AEGIS integrity check FAILED — dropping to free tier: %s", report)
+        try:
+            license_vault.clear()
+        except Exception:  # noqa: BLE001
+            pass
+
+    from pradyos.aegis import IntegrityGuard
+
+    register_aegis_routes(app, IntegrityGuard(expected=_expected, on_tamper=_on_tamper))
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
@@ -3810,6 +3838,17 @@ def create_app(
     # PROPOSES each one to DRIVE for Sovereign approval (self-direction, gated).
     from pradyos.reverie import Reverie
 
+    # L6: optional LLM reflector for sharper curiosity goals (fail-soft, opt-in).
+    _reflector = None
+    if os.environ.get("PRADYOS_REVERIE_LLM", "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from pradyos.core.llm import resolve_provider
+            from pradyos.reverie.llm_reflector import make_llm_reflector
+
+            _reflector = make_llm_reflector(resolve_provider())
+        except Exception:  # noqa: BLE001 — any wiring issue ⇒ deterministic reflection
+            _reflector = None
+
     # Expose the engine on app.state so the production entrypoint can attach a
     # background ReverieDriver (the cognition heartbeat); tests never start one.
     app.state.reverie = register_reverie_routes(
@@ -3818,6 +3857,7 @@ def create_app(
             foresight=foresight_engine,
             skills=skills_lib,
             on_curiosity=lambda text: drive_mgr.propose(text, source="reverie"),
+            reflector=_reflector,
         ),
     )
 

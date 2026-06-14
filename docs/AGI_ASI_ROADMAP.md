@@ -161,8 +161,16 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
   (action→success trials); the planner (`/api/v1/plan`) re-weights matched skills
   by causal strength; the console surfaces the loop (REVERIE insights + DRIVE
   goals with approve/run). Repo organized (legacy phase patches archived).
-- ▶️ Next (L6 / hardening): an LLM-backed REVERIE, memory consolidation of
-  insights, and the legitimate security pass (signing / Secure Boot / TPM).
+- ✅ **L6**: LLM-backed REVERIE reflector (`reverie/llm_reflector.py`, opt-in
+  `PRADYOS_REVERIE_LLM`, fail-soft) + memory **consolidation** of insights
+  (`/api/v1/reverie/consolidate` → dominant focus + standing directive).
+- ✅ **Security (application layer): AEGIS** (`pradyos/aegis/`) — a signed Ed25519
+  manifest of the OS's own files, verified at runtime; on tamper it drops to the
+  free tier (tamper-EVIDENT) and **never harms the machine**. Vendor tool
+  `scripts/build_manifest.py`; `/api/v1/aegis/verify`.
+- ▶️ Next (boot-level hardening, ISO pipeline): Secure Boot, TPM-sealed keys, a
+  measured/locked bootloader — these are image/hardware concerns handled in the
+  build scripts, not the Python app.
 - Tests: foresight (+llm), plan, guild-distill, reverie (+driver), drive, critic
   (+llm), causality — the full loop end-to-end.
 
