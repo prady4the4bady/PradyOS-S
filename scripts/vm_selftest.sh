@@ -261,6 +261,19 @@ json_check "$API/api/v1/ascent/applied" "isinstance(d.get('applied'), list)" \
     || fail "ascent applied log did not answer"
 emit "PRADYOS-SELFTEST: ascent apply-gate (staged self-modification) ok"
 
+# --- Phase 12: GUILD — a working organization of specialist agents ------------
+# An objective is run through a roster of roles (planner→…→synthesizer), each
+# contributing to a shared blackboard. The roster + orchestration are
+# deterministic; a full run uses the local LLM worker, so probe structurally
+# (it degrades to a 'charter' if the model is absent).
+json_check "$API/api/v1/guild/roles" \
+    "[r['name'] for r in d.get('roles',[])][:1]==['planner'] and len(d.get('roles',[]))>=5" \
+    || fail "guild roster did not answer with the expected roles"
+json_post "$API/api/v1/guild/run" '{"objective":"outline a tiny CLI tool","roster":["planner"]}' \
+    "d.get('id') and d.get('status') in ('complete','charter') and len(d.get('contributions',[]))==1" \
+    || fail "guild run did not return a well-formed project"
+emit "PRADYOS-SELFTEST: guild (multi-agent organization) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"
