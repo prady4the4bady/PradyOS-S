@@ -42,3 +42,6 @@ env/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+
+# stray local log
+excalidraw.log
