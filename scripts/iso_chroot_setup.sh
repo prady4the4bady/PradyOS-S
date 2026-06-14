@@ -96,7 +96,8 @@ python3 -m venv "$VENV"
     "psutil>=5.9" "rich>=13.7" "textual>=0.58" "aiohttp>=3.9" \
     "pydantic>=2.5" "orjson>=3.9" "anyio>=4.2" "click>=8.1" "httpx>=0.27" \
     "starlette>=0.27" "fastapi>=0.100" "scikit-learn>=1.3" \
-    "redis>=5.0" "uvicorn>=0.30"
+    "redis>=5.0" "uvicorn>=0.30" \
+    "cryptography>=42"
 # Install the package itself WITHOUT re-resolving deps, so chromadb cannot sneak
 # back in through pyproject. --no-deps is safe: every runtime dep is pinned above.
 "$VENV/bin/pip" install --no-input --no-deps -e /opt/pradyos/src

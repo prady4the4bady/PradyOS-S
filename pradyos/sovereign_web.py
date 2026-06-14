@@ -76,6 +76,7 @@ from pradyos.web.kll_sketch_web import register_kll_sketch_routes  # Phase 92
 from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 163
 from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
 from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
+from pradyos.web.licensing_web import register_license_routes  # LICENSING — tiers + entitlements
 from pradyos.web.linear_counter_web import register_linearcounting_routes  # Phase 112
 from pradyos.web.lossy_count_web import register_lossy_count_routes  # Phase 95
 from pradyos.web.lru_web import register_lru_routes  # Phase 84
@@ -367,6 +368,7 @@ def create_app(
     evolve: Any | None = None,
     ascent: Any | None = None,
     guild: Any | None = None,
+    licensing: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3728,6 +3730,8 @@ def create_app(
 
     register_guild_routes(app, guild)  # GUILD — organization of specialist agents
 
+    register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
+
     return app
 
 
@@ -3828,6 +3832,20 @@ def main() -> None:
         role_tools={"researcher": ["research"], "planner": ["memory"]},
         memory=guild_memory,
     )
+    # Licensing: verify a signed license against the shipped public key and gate
+    # premium tiers. No key/license on disk ⇒ free tier (the OS still runs).
+    from pradyos.licensing import Ed25519Verifier, LicenseVault
+
+    licensing = LicenseVault()
+    pub_key = Path("/etc/pradyos/license.pub")
+    if pub_key.exists():
+        try:
+            licensing = LicenseVault(verifier=Ed25519Verifier(pub_key.read_text(encoding="utf-8")))
+            key_file = Path("/etc/pradyos/license.key")
+            if key_file.exists():
+                licensing.install(key_file.read_text(encoding="utf-8").strip())
+        except Exception as exc:  # noqa: BLE001 — a bad license must not block boot
+            log.warning("license not activated (running free tier): %s", exc)
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,
@@ -3836,6 +3854,7 @@ def main() -> None:
         evolve=evolve,
         ascent=ascent,
         guild=guild,
+        licensing=licensing,
     )
     # Make the loop AUTONOMOUS: a background heartbeat surveys the OS's own
     # modules and runs ASCENT cycles in real time (read-only; promotes only queue

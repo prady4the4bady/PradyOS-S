@@ -294,6 +294,21 @@ json_check "$API/api/v1/guild/memory?q=test" "isinstance(d.get('memory'), list)"
     || fail "guild memory recall surface did not answer"
 emit "PRADYOS-SELFTEST: guild memory (continual learning) ok"
 
+# --- Phase 13: LICENSING — signed offline tiers + entitlements ----------------
+# With no license installed the OS runs the FREE tier; premium features (sovereign
+# mode, cloud AI) are gated. The tier catalogue answers and a bogus token is
+# rejected (signature invalid) — proving the gate works without phoning home.
+json_check "$API/api/v1/license/status" \
+    "d.get('tier')=='free' and d.get('entitlements',{}).get('sovereign_mode') is False" \
+    || fail "license status wrong (expected free tier, sovereign_mode gated)"
+json_check "$API/api/v1/license/tiers" \
+    "'sovereign' in d.get('tiers',{}) and 'sovereign_mode' in d['tiers'].get('sovereign',[])" \
+    || fail "license tier catalogue missing sovereign tier"
+json_post "$API/api/v1/license/install" '{"token":"not-a-valid.token"}' "True" >/dev/null 2>&1
+json_check "$API/api/v1/license/status" "d.get('tier')=='free'" \
+    || fail "license accepted an unsigned token (must stay free)"
+emit "PRADYOS-SELFTEST: licensing (signed tiers + entitlements) ok"
+
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do
     emit "PRADYOS-SELFTEST: info $u=$(systemctl is-active "$u" 2>/dev/null)"
