@@ -150,10 +150,16 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
 - ✅ **L4 critic ensemble** (`pradyos/critic/`) — skeptical critics score a
   proposal on safety/correctness/value; any safety blocker is a veto. Gates DRIVE:
   a dangerous goal can't run even after Sovereign approval. `/api/v1/critic/*`.
-- ▶️ Next: **L5 causal reasoning** over the event bus (counterfactual credit
-  assignment), and an LLM-backed critic to complement the heuristic panel.
-- Tests: `test_foresight.py`, `test_foresight_llm.py`, `test_plan_integration.py`,
-  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`,
-  `test_drive.py`, `test_critic.py`.
+- ✅ **L5 causal reasoning** (`pradyos/causality/`) — counterfactual credit
+  assignment: P(effect|cause) − P(effect|¬cause) tells a real cause from a
+  bystander and answers "what if I hadn't done X?". `/api/v1/causality/*`.
+- ✅ **LLM-backed critic** (`critic/llm_critic.py`) — a holistic, fail-soft judge
+  added to the L4 panel when `PRADYOS_CRITIC_LLM` is set; catches risks the
+  regexes miss without ever vetoing on model unavailability.
+- 🎯 **The five-layer roadmap (L1–L5) is complete.** Next is hardening &
+  integration: feed FORESIGHT/Guild outcomes into CAUSALITY automatically, let
+  CAUSALITY re-weight FORESIGHT priors, and the legitimate security pass.
+- Tests: foresight (+llm), plan, guild-distill, reverie (+driver), drive, critic
+  (+llm), causality — the full loop end-to-end.
 
 *References are named for traceability only; no external text is reproduced here.*
