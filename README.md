@@ -130,8 +130,12 @@ planner re-weights skills by causal strength. **Opt-in env:** `PRADYOS_FORESIGHT
 - **AEGIS integrity** (`pradyos.aegis`): a signed Ed25519 manifest of the OS's own
   source files, verified at runtime (`/api/v1/aegis/verify`); on tamper it **drops
   to the free tier** and logs — tamper-EVIDENT, never tamper-punishing. Vendor tool:
-  `scripts/build_manifest.py`. Boot-level hardening (Secure Boot / TPM-sealed keys)
-  lives in the ISO pipeline.
+  `scripts/build_manifest.py`. A boot-time check (`pradyos-aegis.service`) extends
+  the chain of trust into the payload.
+- **Boot-level hardening** (`scripts/harden_boot.sh`): a verified boot chain —
+  Secure Boot signing (kernel + GRUB), MOK enrollment, a locked bootloader, and
+  optional TPM2 sealing to the measured boot state. Guarded/idempotent; design in
+  [`docs/BOOT_HARDENING.md`](docs/BOOT_HARDENING.md).
 - **Tamper-EVIDENT, never tamper-punishing.** An invalid/expired license or altered
   binary drops to the free tier; the OS **never harms the inspecting machine**. The
   L4 critic actively blocks machine-locking / exfiltration / destructive proposals.

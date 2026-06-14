@@ -168,10 +168,16 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
   manifest of the OS's own files, verified at runtime; on tamper it drops to the
   free tier (tamper-EVIDENT) and **never harms the machine**. Vendor tool
   `scripts/build_manifest.py`; `/api/v1/aegis/verify`.
-- ▶️ Next (boot-level hardening, ISO pipeline): Secure Boot, TPM-sealed keys, a
-  measured/locked bootloader — these are image/hardware concerns handled in the
-  build scripts, not the Python app.
-- Tests: foresight (+llm), plan, guild-distill, reverie (+driver), drive, critic
-  (+llm), causality — the full loop end-to-end.
+- ✅ **Boot-level hardening** (`scripts/harden_boot.sh` + `pradyos-aegis.service` +
+  `python -m pradyos.aegis verify`): a verified boot chain — Secure Boot signing
+  of kernel + GRUB, MOK enrollment, a locked bootloader, and optional TPM2 sealing
+  to the measured boot state (PCRs 0,2,4,7). The AEGIS check runs at boot and
+  extends the chain of trust into the PradyOS payload. Guarded/idempotent (skips
+  cleanly when a tool or the TPM is absent). Design: [`docs/BOOT_HARDENING.md`].
+- 🎯 **The roadmap is complete** (autonomy L1–L6 + cross-plane integration + the
+  full security chain, application + boot). Further work is iteration, not new
+  layers: an LLM-backed REVERIE driver tuning, deeper causal fusion, field hardening.
+- Tests: foresight (+llm), plan, guild-distill, reverie (+driver/+l6), drive,
+  critic (+llm), causality, aegis (+cli) — the full loop end-to-end.
 
 *References are named for traceability only; no external text is reproduced here.*
