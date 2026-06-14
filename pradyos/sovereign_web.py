@@ -62,6 +62,7 @@ from pradyos.web.fortify_web import register_fortify_routes  # FORTIFY — self-
 from pradyos.web.frugal_web import register_frugal_routes  # Phase 125
 from pradyos.web.gcs_web import register_gcs_routes  # Phase 128
 from pradyos.web.gk_quantile_web import register_gk_quantile_routes  # Phase 91
+from pradyos.web.guild_web import register_guild_routes  # GUILD — multi-agent organization
 from pradyos.web.heavy_light_web import register_hld_routes  # Phase 165
 from pradyos.web.heavykeeper_web import register_heavykeeper_routes  # Phase 102
 from pradyos.web.helios_forge_web import register_helios_routes  # Agent 2 — HELIOS FORGE
@@ -365,6 +366,7 @@ def create_app(
     fortify: Any | None = None,
     evolve: Any | None = None,
     ascent: Any | None = None,
+    guild: Any | None = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application."""
 
@@ -3724,6 +3726,8 @@ def create_app(
 
     register_ascent_routes(app, ascent)  # ASCENT — autonomous self-improvement loop (orchestrator)
 
+    register_guild_routes(app, guild)  # GUILD — organization of specialist agents
+
     return app
 
 
@@ -3758,6 +3762,7 @@ def main() -> None:
     from pradyos.core.bus import get_bus
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, OllamaProposer
+    from pradyos.guild import GuildOrg, OllamaGuildWorker
     from pradyos.imperium.checkpoint import CheckpointStore
     from pradyos.research import (
         ArxivSource,
@@ -3805,6 +3810,10 @@ def main() -> None:
         evolve=evolve,
         applier=AscentApplier(apply_root=apply_root, audit=get_audit_log()),
     )
+    # A working organization of specialist agents (planner/researcher/engineer/
+    # analyst/critic/synthesizer) backed by the LOCAL Ollama worker (zero API
+    # credits; degrades gracefully if absent). Tests wire no worker.
+    guild = GuildOrg(worker=OllamaGuildWorker())
     app = create_app(
         campaign_registry=registry,
         checkpoint_store=checkpoint,
@@ -3812,6 +3821,7 @@ def main() -> None:
         research=research,
         evolve=evolve,
         ascent=ascent,
+        guild=guild,
     )
     # Make the loop AUTONOMOUS: a background heartbeat surveys the OS's own
     # modules and runs ASCENT cycles in real time (read-only; promotes only queue

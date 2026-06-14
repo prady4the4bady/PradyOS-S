@@ -615,6 +615,9 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_ascent_web.py",
     "tests/test_ascent_driver.py",
     "tests/test_ascent_apply.py",
+    # GUILD — a working organization of specialist agents
+    "tests/test_guild.py",
+    "tests/test_guild_web.py",
 ]
 
 # ANSI color codes — disabled on Windows if ANSI not supported
