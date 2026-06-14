@@ -109,7 +109,8 @@ loops (ASCENT improves the *code*; REVERIE improves the *mind*):
 | **L4** | `critic` (+ LLM critic) | adversarial veto on dangerous/low-quality proposals | ✅ |
 | **L5** | `causality` | counterfactual credit assignment ("what if I hadn't?") | ✅ |
 | — | `reverie` + `ascent` drivers | two background ouroboros loops (mind + code) | ✅ |
-| **L6** | (planned) | tighter loop fusion + an LLM-backed reverie + memory consolidation | ▶️ |
+| **L6** | `reverie.llm_reflector` + consolidation | LLM-written curiosity goals + insight consolidation into a standing directive | ✅ |
+| **Sec** | `aegis` | signed-manifest integrity + tamper-evident self-disable | ✅ |
 
 Cross-plane integration is wired: FORESIGHT outcomes auto-feed CAUSALITY, and the
 planner re-weights skills by causal strength. **Opt-in env:** `PRADYOS_FORESIGHT_LLM`,
@@ -126,10 +127,14 @@ planner re-weights skills by causal strength. **Opt-in env:** `PRADYOS_FORESIGHT
   catalogue in test or live mode.
 - **Open mode**: a Sovereign master switch (`/api/v1/license/open-mode`) that makes
   every feature free for all users, and back.
-- **Tamper-EVIDENT, never tamper-punishing.** An invalid/expired license drops to
-  the free tier; the OS **never harms the inspecting machine**. The L4 critic
-  actively blocks machine-locking / exfiltration / destructive proposals. Planned
-  hardening: code signing, Secure Boot / TPM-sealed keys, self-disable-on-tamper.
+- **AEGIS integrity** (`pradyos.aegis`): a signed Ed25519 manifest of the OS's own
+  source files, verified at runtime (`/api/v1/aegis/verify`); on tamper it **drops
+  to the free tier** and logs — tamper-EVIDENT, never tamper-punishing. Vendor tool:
+  `scripts/build_manifest.py`. Boot-level hardening (Secure Boot / TPM-sealed keys)
+  lives in the ISO pipeline.
+- **Tamper-EVIDENT, never tamper-punishing.** An invalid/expired license or altered
+  binary drops to the free tier; the OS **never harms the inspecting machine**. The
+  L4 critic actively blocks machine-locking / exfiltration / destructive proposals.
 
 ---
 
