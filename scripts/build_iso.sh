@@ -130,7 +130,8 @@ chmod +x "$CHROOT/usr/sbin/policy-rc.d"
 # Stage inputs for the chroot step.
 rm -rf "$CHROOT/tmp/pradyos-iso" "$CHROOT/opt/pradyos/src"
 mkdir -p "$CHROOT/tmp/pradyos-iso" "$CHROOT/opt/pradyos"
-cp "$WORK/src/scripts/iso_chroot_setup.sh" "$WORK/src/scripts/vm_selftest.sh" "$CHROOT/tmp/pradyos-iso/"
+cp "$WORK/src/scripts/iso_chroot_setup.sh" "$WORK/src/scripts/vm_selftest.sh" \
+   "$WORK/src/scripts/install_to_disk.sh" "$CHROOT/tmp/pradyos-iso/"
 cp -a "$WORK/src" "$CHROOT/opt/pradyos/src"
 
 # Persistent pip cache across rebuilds. Track the bind so the EXIT trap can
@@ -164,9 +165,11 @@ cp "$VMLINUZ" "$STAGING/live/vmlinuz"
 cp "$INITRD"  "$STAGING/live/initrd.img"
 
 rm -f "$STAGING/live/filesystem.squashfs"
-# /boot stays out of the squash — GRUB loads kernel+initrd from the ISO.
+# Keep /boot IN the squash: live boot loads kernel+initrd from /live on the ISO,
+# but a disk install (pradyos-install) needs the rootfs to carry its own
+# /boot (kernel, initrd, config, System.map, grub modules) to be bootable.
 mksquashfs "$CHROOT" "$STAGING/live/filesystem.squashfs" \
-    -comp xz -b 1M -noappend -e boot
+    -comp xz -b 1M -noappend
 
 # ---------------------------------------------------------------------------
 # [6/7] GRUB hybrid ISO.
@@ -187,7 +190,23 @@ menuentry "PradyOS Sovereign Edition (live, quiet)" {
     linux /live/vmlinuz boot=live quiet console=tty0 console=ttyS0,115200
     initrd /live/initrd.img
 }
+menuentry "Install PradyOS to disk" {
+    linux /live/vmlinuz boot=live pradyos.installer=interactive console=tty0 console=ttyS0,115200
+    initrd /live/initrd.img
+}
 GRUBCFG
+
+# Test/unattended builds: PRADYOS_AUTOINSTALL_TARGET=/dev/vda adds an autoinstall
+# entry and makes it the default, so the ISO installs itself then powers off.
+if [ -n "${PRADYOS_AUTOINSTALL_TARGET:-}" ]; then
+    cat >> "$STAGING/boot/grub/grub.cfg" <<EOF
+menuentry "PradyOS unattended install to ${PRADYOS_AUTOINSTALL_TARGET}" {
+    linux /live/vmlinuz boot=live pradyos.autoinstall=${PRADYOS_AUTOINSTALL_TARGET} console=tty0 console=ttyS0,115200
+    initrd /live/initrd.img
+}
+EOF
+    sed -i 's/^set default=0/set default=3/' "$STAGING/boot/grub/grub.cfg"
+fi
 
 # NOTE: do NOT pass --compress=xz — it fails on Debian hosts that lack
 # i386-pc/hdparm.mod. Plain grub-mkrescue produces the hybrid image fine.

@@ -26,7 +26,11 @@ apt-get install -y -qq --no-install-recommends \
     dbus udev kmod \
     redis-server \
     python3 python3-venv python3-pip \
-    ca-certificates curl iproute2 procps less nano
+    ca-certificates curl iproute2 procps less nano \
+    `# disk-install toolchain: lets the live OS install itself to a hard disk.` \
+    `# grub2-common provides grub-install/update-grub; the -bin pkgs the platforms.` \
+    gdisk dosfstools squashfs-tools util-linux \
+    grub2-common grub-pc-bin grub-efi-amd64-bin efibootmgr
 # live-boot installs initramfs hooks; make sure the (already unpacked) kernel
 # initrd is regenerated with them.
 update-initramfs -u
@@ -128,6 +132,49 @@ PYCHECK
 echo "[chroot] systemd units"
 cp /opt/pradyos/src/deploy/systemd/pradyos-*.service /etc/systemd/system/
 install -m 0755 /tmp/pradyos-iso/vm_selftest.sh /usr/local/sbin/pradyos-selftest
+install -m 0755 /tmp/pradyos-iso/install_to_disk.sh /usr/local/sbin/pradyos-install
+
+# Disk-install services — both gated on the kernel cmdline so a NORMAL live boot
+# never touches a disk. `pradyos.installer=interactive` (the "Install PradyOS to
+# disk" boot-menu entry) runs the installer on the console; `pradyos.autoinstall=
+# /dev/X` does an unattended install then powers off (used by verify_install +
+# kiosk/unattended deployments).
+cat > /etc/systemd/system/pradyos-installer.service <<'UNIT'
+[Unit]
+Description=PradyOS interactive disk installer
+ConditionKernelCommandLine=pradyos.installer
+After=systemd-user-sessions.service plymouth-quit-wait.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=idle
+ExecStart=/usr/local/sbin/pradyos-install
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat > /etc/systemd/system/pradyos-autoinstall.service <<'UNIT'
+[Unit]
+Description=PradyOS unattended disk install (pradyos.autoinstall=/dev/X), then power off
+ConditionKernelCommandLine=pradyos.autoinstall
+After=local-fs.target systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pradyos-install
+ExecStopPost=/bin/systemctl poweroff
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+UNIT
 cat > /etc/systemd/system/pradyos-selftest.service <<'UNIT'
 [Unit]
 Description=PradyOS first-boot integration selftest (emits PRADYOS-SELFTEST marker on console)
@@ -148,7 +195,8 @@ systemctl enable \
     redis-server \
     pradyos-titan pradyos-warden pradyos-imperium \
     pradyos-oracle pradyos-admission pradyos-web \
-    pradyos-selftest
+    pradyos-selftest \
+    pradyos-installer pradyos-autoinstall
 # pradyos-throne stays disabled: interactive TUI, launched per session.
 
 echo "[chroot] networking (DHCP on any ethernet — QEMU user-net friendly)"
