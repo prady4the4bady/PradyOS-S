@@ -280,6 +280,12 @@ json_post "$API/api/v1/guild/run" '{"objective":"outline a tiny CLI tool","roste
     "d.get('id') and d.get('status') in ('complete','charter') and len(d.get('contributions',[]))==1" \
     || fail "guild run did not return a well-formed project"
 emit "PRADYOS-SELFTEST: guild (multi-agent organization) ok"
+# The guild is equipped with OS tools (the researcher runs live RESEARCH) — agents
+# that act, not just talk. Confirm the toolbox is wired.
+json_check "$API/api/v1/guild/tools" \
+    "any(t.get('name')=='research' for t in d.get('tools',[]))" \
+    || fail "guild has no research tool wired"
+emit "PRADYOS-SELFTEST: guild tools (agents use the OS) ok"
 
 # --- Informational: optional planes -------------------------------------------
 for u in "${INFO_UNITS[@]}"; do

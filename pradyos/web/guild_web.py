@@ -27,6 +27,10 @@ def register_guild_routes(app: Any, guild: Any | None = None) -> Any:
     async def api_guild_roles() -> JSONResponse:
         return JSONResponse({"roles": org.roles()})
 
+    @app.get("/api/v1/guild/tools")
+    async def api_guild_tools() -> JSONResponse:
+        return JSONResponse({"tools": org.tools()})
+
     @app.post("/api/v1/guild/run")
     async def api_guild_run(request: Request) -> JSONResponse:
         body = await _json(request)

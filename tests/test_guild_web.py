@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from pradyos.guild import GuildOrg
+from pradyos.guild import GuildOrg, Tool
 from pradyos.web.guild_web import register_guild_routes
 
 
@@ -17,13 +17,28 @@ def _worker(role, objective, context):
 @pytest.fixture()
 def client():
     app = FastAPI()
-    register_guild_routes(app, GuildOrg(worker=_worker))
+    org = GuildOrg(
+        worker=_worker,
+        toolbox=[Tool("research", "live research", lambda o: f"findings for {o}")],
+        role_tools={"researcher": ["research"]},
+    )
+    register_guild_routes(app, org)
     return TestClient(app)
 
 
 def test_roles(client):
     names = [r["name"] for r in client.get("/api/v1/guild/roles").json()["roles"]]
     assert "planner" in names and "synthesizer" in names
+
+
+def test_tools_route(client):
+    tools = client.get("/api/v1/guild/tools").json()["tools"]
+    assert any(t["name"] == "research" for t in tools)
+
+
+def test_run_records_tool_use(client):
+    body = client.post("/api/v1/guild/run", json={"objective": "build X"}).json()
+    assert {"role": "researcher", "tool": "research"} in body["tool_uses"]
 
 
 def test_run_full_roster(client):

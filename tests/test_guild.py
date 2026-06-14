@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pradyos.guild import GuildError, GuildOrg, Role
+from pradyos.guild import GuildError, GuildOrg, Role, Tool, research_tool
 
 
 class _FakeWorker:
@@ -138,3 +138,77 @@ def test_custom_roles_constructor():
     org = GuildOrg(worker=_FakeWorker(), roles=roles)
     assert [r["name"] for r in org.roles()] == ["scout", "boss"]
     assert [c["role"] for c in org.run("x")["contributions"]] == ["scout", "boss"]
+
+
+# ── tools: agents that act, not just talk ──────────────────────────────────────
+
+
+def test_tool_output_lands_on_blackboard_before_role():
+    worker = _FakeWorker()
+    spy = Tool("lookup", "a fake tool", lambda objective: f"FACT about {objective}")
+    org = GuildOrg(
+        worker=worker,
+        toolbox=[spy],
+        role_tools={"researcher": ["lookup"]},
+    )
+    proj = org.run("widgets")
+    # the researcher's tool ran and its output is recorded
+    assert proj["tool_uses"] == [{"role": "researcher", "tool": "lookup"}]
+    # the researcher saw the tool output on the blackboard (as 'tool:lookup')
+    assert "tool:lookup" in worker.seen["researcher"]
+    # and everyone after the researcher also sees it
+    assert "tool:lookup" in worker.seen["engineer"]
+
+
+def test_tools_listed_and_counted():
+    org = GuildOrg(toolbox=[Tool("a", "desc-a", lambda o: ""), Tool("b", "desc-b", lambda o: "")])
+    names = [t["name"] for t in org.tools()]
+    assert names == ["a", "b"] and org.stats()["tools"] == 2
+
+
+def test_tool_failure_does_not_sink_project():
+    def _boom(objective):
+        raise RuntimeError("tool down")
+
+    org = GuildOrg(
+        worker=_FakeWorker(),
+        toolbox=[Tool("flaky", "boom", _boom)],
+        role_tools={"planner": ["flaky"]},
+    )
+    proj = org.run("x")  # must not raise
+    assert proj["tool_uses"] == []  # failed tool recorded nothing
+    assert proj["status"] == "complete"
+
+
+def test_tool_empty_output_is_skipped():
+    org = GuildOrg(
+        worker=_FakeWorker(),
+        toolbox=[Tool("quiet", "empty", lambda o: "   ")],
+        role_tools={"planner": ["quiet"]},
+    )
+    assert org.run("x")["tool_uses"] == []
+
+
+def test_unknown_tool_name_is_ignored():
+    org = GuildOrg(worker=_FakeWorker(), role_tools={"planner": ["ghost"]})
+    assert org.run("x")["tool_uses"] == []  # no such tool → no-op
+
+
+def test_research_tool_digests_findings():
+    class _Brief:
+        @staticmethod
+        def to_dict():
+            return {"findings": [{"title": "Tokio", "url": "https://tokio.rs"}]}
+
+    class _Engine:
+        def research(self, objective):
+            return _Brief()
+
+    tool = research_tool(_Engine())
+    out = tool.run("rust async")
+    assert tool.name == "research" and "tokio.rs" in out and "Live research" in out
+
+
+def test_tool_invalid_name_raises():
+    with pytest.raises(GuildError):
+        Tool("", "desc", lambda o: "")
