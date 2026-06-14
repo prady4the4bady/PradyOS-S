@@ -139,9 +139,13 @@ Together: ASCENT improves the *machinery*, REVERIE improves the *mind*. Both onl
   **ASCENT** code-ouroboros, **FORESIGHT** metacognition, the **skill library**,
   the **L1 planner bridge** (`/api/v1/plan`), **L1 auto-distillation** (completed
   Guild project → reusable skill / reinforce), and **REVERIE** (cognition loop).
-- ▶️ Next: **L2 LLM world-model** for FORESIGHT (semantic prediction), then a
-  ReverieDriver heartbeat so the cognition loop runs unattended like ASCENT.
-- Tests: `test_foresight.py` (13), `test_plan_integration.py`,
-  `test_guild_distill.py`, `test_reverie.py` cover the loop end-to-end.
+- ✅ **L2 LLM world-model** (`foresight/llm_model.py`) — semantic, prior-anchored,
+  fail-soft prediction via the pluggable model; opt-in via `PRADYOS_FORESIGHT_LLM`.
+- ✅ **ReverieDriver** (`reverie/driver.py`) — the cognition heartbeat now runs
+  unattended in production (`PRADYOS_REVERIE_INTERVAL`, default 240s), beside ASCENT.
+- ▶️ Next: **L3 goal/drive manager** (promote curiosity goals into approved
+  objectives), then **L4 critic ensemble** before the apply-gate.
+- Tests: `test_foresight.py`, `test_foresight_llm.py`, `test_plan_integration.py`,
+  `test_guild_distill.py`, `test_reverie.py`, `test_reverie_driver.py`.
 
 *References are named for traceability only; no external text is reproduced here.*
