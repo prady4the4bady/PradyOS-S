@@ -34,7 +34,7 @@ was written against a stale snapshot and collides with shipped work.
 |--:|------------------|--------|---------------------------------------------|
 | 106 | MomentSketch | ✅ **SHIPPED** | `core/moment_sketch.py`, `/api/v1/momentsketch` |
 | 107 | SemanticMemory | ✅ **SHIPPED** | `core/semantic_memory.py` + `/api/v1/semantic` — MinHash(Jaccard 0.6) + SimHash(rescaled Hamming 0.4) recall, store/recall/forget/merge; 54 tests, prove.py-green |
-| 108 | AttentionSketch | 🟢 **GAP (free)** | composes Count-Sketch (present); no equivalent |
+| 108 | AttentionSketch | ✅ **SHIPPED** | `core/attention_sketch.py` + `/api/v1/attention` — Count-Sketch frequency + exponential decay; absolute saturating weight `1−exp(−κ·est·s)` (decay-real, not ratio-invariant); 51 tests, prove.py-green |
 | 109 | ExperienceDistribution | 🟡 **GAP / partial** | streaming percentile tracker is free; overlaps FORESIGHT calibration + `system_web` metrics |
 | 110 | NoveltyDetector | 🟢 **GAP (free)** | composes Bloom+HLL+Count-Min; REVERIE has *surprise* but not this streaming primitive |
 | 111 | CausalSketch | 🔵 **EQUIVALENT** | `pradyos/causality` — counterfactual `P(e\|c)−P(e\|¬c)`, stronger than the directive's co-occurrence `P(e\|c)`. `/api/v1/causality` |
@@ -59,13 +59,14 @@ colliding with concurrent worktrees.
 
 1. ✅ **SemanticMemory** — *shipped* (`core/semantic_memory.py`, `/api/v1/semantic`):
    MinHash Jaccard + rescaled-SimHash Hamming associative recall.
-2. **AttentionSketch** — Count-Sketch frequency attention with decay.
+2. ✅ **AttentionSketch** — *shipped* (`core/attention_sketch.py`, `/api/v1/attention`):
+   Count-Sketch frequency + exponential decay.
 3. **ExperienceDistribution** — streaming per-metric percentiles + IQR anomaly.
 4. **NoveltyDetector** — Bloom+HLL+Count-Min novelty/surprise/cardinality.
 5. **AnalogyEngine** — structural `a:b::c:?` via MinHash difference.
 6. **CompressionController** — adaptive accuracy/memory parameter tuning.
 
-**Build order / status:** 1 done; 2–6 remain (build in that order, each
+**Build order / status:** 1–2 done; 3–6 remain (build in that order, each
 drift-checked + protocol-clean before the next).
 
 Plus two thin, optional integrations (not new planes): a unifying `/api/v1/mind/*`
