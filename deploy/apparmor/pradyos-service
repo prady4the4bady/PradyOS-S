@@ -1,0 +1,45 @@
+# AppArmor profile — STUB — shared baseline for the non-exec PradyOS daemons:
+# WARDEN GRID, ORACLE, AURORA THRONE, and the Sovereign Web service.
+#
+# These read the package, write only their state/runtime/logs, talk TCP+unix,
+# and hold no privileged capabilities. Attach via systemd on each unit:
+#   AppArmorProfile=pradyos-service
+#include <tunables/global>
+
+profile pradyos-service flags=(attach_disconnected) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+
+  /opt/pradyos/.venv/bin/{python*,pradyos-*} ix,
+  /usr/bin/python3*            ix,
+  /opt/pradyos/{,**}            r,
+  /opt/pradyos/**.so           mr,
+  /usr/lib/python3*/{,**}       r,
+
+  /var/lib/pradyos/{,**}        rw,
+  owner /run/pradyos/{,**}      rw,
+  /var/log/pradyos/{,**}        w,
+
+  # the web service binds a TCP port; all daemons may use unix sockets
+  network inet  stream,
+  network inet6 stream,
+  network unix  stream,
+  deny network raw,
+  deny network packet,
+
+  deny capability sys_admin,
+  deny capability sys_module,
+  deny capability sys_rawio,
+  deny capability setuid,
+  deny capability setgid,
+  deny capability dac_override,
+  deny ptrace (read, trace),
+  deny mount,
+  deny umount,
+  deny /etc/shadow      rwklx,
+  deny /root/.ssh/**    rwklx,
+  deny @{HOME}/.ssh/**  rwklx,
+  deny /boot/**         wklx,
+  deny /sys/firmware/** rwklx,
+}
