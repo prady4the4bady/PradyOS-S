@@ -93,6 +93,7 @@ from pradyos.web.minhash_lsh_web import register_minhashlsh_routes  # Phase 115
 from pradyos.web.minhash_web import register_minhash_routes  # Phase 88
 from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
+from pradyos.web.semantic_memory_web import register_semantic_routes  # cognitive layer — semantic memory
 from pradyos.web.morris_web import register_morris_routes  # Phase 111
 from pradyos.web.nexus_weave_web import register_nexus_routes  # Agent 4 — NEXUS WEAVE
 from pradyos.web.night_citadel_web import register_citadel_routes  # Plane 9 — NIGHT CITADEL
@@ -293,6 +294,7 @@ def create_app(
     augmented_sketch: Any | None = None,
     qdigest: Any | None = None,
     moment_sketch: Any | None = None,
+    semantic_memory: Any | None = None,
     counting_bloom: Any | None = None,
     binary_fuse: Any | None = None,
     vacuum_filter: Any | None = None,
@@ -3578,6 +3580,7 @@ def create_app(
     register_qdigest_routes(app, qdigest)
 
     register_momentsketch_routes(app, moment_sketch)
+    register_semantic_routes(app, semantic_memory)  # cognitive layer — semantic memory
 
     register_countingbloom_routes(app, counting_bloom)
 
