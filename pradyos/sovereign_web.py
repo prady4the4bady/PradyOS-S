@@ -95,6 +95,7 @@ from pradyos.web.misra_gries_web import register_misra_gries_routes  # Phase 99
 from pradyos.web.moment_sketch_web import register_momentsketch_routes  # Phase 106
 from pradyos.web.semantic_memory_web import register_semantic_routes  # cognitive layer — semantic memory
 from pradyos.web.attention_sketch_web import register_attention_routes  # cognitive layer — attention
+from pradyos.web.experience_distribution_web import register_experience_routes  # cognitive layer — experience
 from pradyos.web.morris_web import register_morris_routes  # Phase 111
 from pradyos.web.nexus_weave_web import register_nexus_routes  # Agent 4 — NEXUS WEAVE
 from pradyos.web.night_citadel_web import register_citadel_routes  # Plane 9 — NIGHT CITADEL
@@ -297,6 +298,7 @@ def create_app(
     moment_sketch: Any | None = None,
     semantic_memory: Any | None = None,
     attention_sketch: Any | None = None,
+    experience_distribution: Any | None = None,
     counting_bloom: Any | None = None,
     binary_fuse: Any | None = None,
     vacuum_filter: Any | None = None,
@@ -3584,6 +3586,7 @@ def create_app(
     register_momentsketch_routes(app, moment_sketch)
     register_semantic_routes(app, semantic_memory)  # cognitive layer — semantic memory
     register_attention_routes(app, attention_sketch)  # cognitive layer — attention
+    register_experience_routes(app, experience_distribution)  # cognitive layer — experience
 
     register_countingbloom_routes(app, counting_bloom)
 

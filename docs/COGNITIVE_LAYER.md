@@ -35,7 +35,7 @@ was written against a stale snapshot and collides with shipped work.
 | 106 | MomentSketch | ✅ **SHIPPED** | `core/moment_sketch.py`, `/api/v1/momentsketch` |
 | 107 | SemanticMemory | ✅ **SHIPPED** | `core/semantic_memory.py` + `/api/v1/semantic` — MinHash(Jaccard 0.6) + SimHash(rescaled Hamming 0.4) recall, store/recall/forget/merge; 54 tests, prove.py-green |
 | 108 | AttentionSketch | ✅ **SHIPPED** | `core/attention_sketch.py` + `/api/v1/attention` — Count-Sketch frequency + exponential decay; absolute saturating weight `1−exp(−κ·est·s)` (decay-real, not ratio-invariant); 51 tests, prove.py-green |
-| 109 | ExperienceDistribution | 🟡 **GAP / partial** | streaming percentile tracker is free; overlaps FORESIGHT calibration + `system_web` metrics |
+| 109 | ExperienceDistribution | ✅ **SHIPPED** | `core/experience_distribution.py` + `/api/v1/experience` — per-metric T-Digest percentiles + DDSketch (positive-only) cross-check + IQR modified-z anomaly; 52 tests, prove.py-green |
 | 110 | NoveltyDetector | 🟢 **GAP (free)** | composes Bloom+HLL+Count-Min; REVERIE has *surprise* but not this streaming primitive |
 | 111 | CausalSketch | 🔵 **EQUIVALENT** | `pradyos/causality` — counterfactual `P(e\|c)−P(e\|¬c)`, stronger than the directive's co-occurrence `P(e\|c)`. `/api/v1/causality` |
 | 112 | AnalogyEngine | 🟢 **GAP (free)** | structural MinHash analogy; no equivalent |
@@ -61,12 +61,13 @@ colliding with concurrent worktrees.
    MinHash Jaccard + rescaled-SimHash Hamming associative recall.
 2. ✅ **AttentionSketch** — *shipped* (`core/attention_sketch.py`, `/api/v1/attention`):
    Count-Sketch frequency + exponential decay.
-3. **ExperienceDistribution** — streaming per-metric percentiles + IQR anomaly.
+3. ✅ **ExperienceDistribution** — *shipped* (`core/experience_distribution.py`,
+   `/api/v1/experience`): T-Digest + DDSketch percentiles + IQR anomaly.
 4. **NoveltyDetector** — Bloom+HLL+Count-Min novelty/surprise/cardinality.
 5. **AnalogyEngine** — structural `a:b::c:?` via MinHash difference.
 6. **CompressionController** — adaptive accuracy/memory parameter tuning.
 
-**Build order / status:** 1–2 done; 3–6 remain (build in that order, each
+**Build order / status:** 1–3 done; 4–6 remain (build in that order, each
 drift-checked + protocol-clean before the next).
 
 Plus two thin, optional integrations (not new planes): a unifying `/api/v1/mind/*`
