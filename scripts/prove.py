@@ -373,6 +373,9 @@ DEFAULT_MODULES: list[str] = [
     # Cognitive layer — Semantic Memory Engine (MinHash + SimHash recall)
     "tests/test_semantic_memory.py",
     "tests/test_semantic_memory_web.py",
+    # Cognitive layer — Frequency-Aware Attention (Count-Sketch + exponential decay)
+    "tests/test_attention_sketch.py",
+    "tests/test_attention_sketch_web.py",
     # Phase 107
     "tests/test_counting_bloom.py",
     "tests/test_countingbloom_web.py",
