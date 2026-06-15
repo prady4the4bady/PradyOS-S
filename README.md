@@ -95,6 +95,9 @@ python -m pradyos.sovereign_web      # console on http://localhost:8000
 > autonomy* engineered in measurable layers — not a claim of human-level intelligence.
 > Capability and **oversight advance together**: the Sovereign approves; the machine
 > executes. Full design notes in [`docs/AGI_ASI_ROADMAP.md`](docs/AGI_ASI_ROADMAP.md).
+> A probabilistic "cognitive sketch" layer was proposed separately; see
+> [`docs/COGNITIVE_LAYER.md`](docs/COGNITIVE_LAYER.md) for how it maps onto (and
+> mostly already exists in) these planes, and which pieces are genuinely new.
 
 The OS runs a closed cognitive loop and two self-referential background "ouroboros"
 loops (ASCENT improves the *code*; REVERIE improves the *mind*):
