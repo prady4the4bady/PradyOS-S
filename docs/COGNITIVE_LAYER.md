@@ -33,7 +33,7 @@ was written against a stale snapshot and collides with shipped work.
 | # | Directive module | Status | What already fulfils it (or why it's a gap) |
 |--:|------------------|--------|---------------------------------------------|
 | 106 | MomentSketch | ✅ **SHIPPED** | `core/moment_sketch.py`, `/api/v1/momentsketch` |
-| 107 | SemanticMemory | 🟢 **GAP (free)** | composes MinHash+SimHash (both present); no equivalent |
+| 107 | SemanticMemory | ✅ **SHIPPED** | `core/semantic_memory.py` + `/api/v1/semantic` — MinHash(Jaccard 0.6) + SimHash(rescaled Hamming 0.4) recall, store/recall/forget/merge; 54 tests, prove.py-green |
 | 108 | AttentionSketch | 🟢 **GAP (free)** | composes Count-Sketch (present); no equivalent |
 | 109 | ExperienceDistribution | 🟡 **GAP / partial** | streaming percentile tracker is free; overlaps FORESIGHT calibration + `system_web` metrics |
 | 110 | NoveltyDetector | 🟢 **GAP (free)** | composes Bloom+HLL+Count-Min; REVERIE has *surprise* but not this streaming primitive |
@@ -52,18 +52,21 @@ Legend: ✅ shipped · 🔵 working equivalent on `main` (building = duplication
 
 ## The genuine, non-duplicative gaps
 
-These six are real *additive* primitives — sub-linear cognitive sketches that
-compose existing structures and do **not** duplicate any merged plane. They are
-the only part of the directive worth building, and only under **correct
-next-free phase numbers** (not 106–119), after a fresh drift-check to avoid
-colliding with concurrent worktrees:
+These are real *additive* primitives — sub-linear cognitive sketches that compose
+existing structures and do **not** duplicate any merged plane. They are the only
+part of the directive worth building, drift-checked at the live tip to avoid
+colliding with concurrent worktrees.
 
-1. **SemanticMemory** — MinHash+SimHash recall (`store/recall/forget`).
+1. ✅ **SemanticMemory** — *shipped* (`core/semantic_memory.py`, `/api/v1/semantic`):
+   MinHash Jaccard + rescaled-SimHash Hamming associative recall.
 2. **AttentionSketch** — Count-Sketch frequency attention with decay.
 3. **ExperienceDistribution** — streaming per-metric percentiles + IQR anomaly.
 4. **NoveltyDetector** — Bloom+HLL+Count-Min novelty/surprise/cardinality.
 5. **AnalogyEngine** — structural `a:b::c:?` via MinHash difference.
 6. **CompressionController** — adaptive accuracy/memory parameter tuning.
+
+**Build order / status:** 1 done; 2–6 remain (build in that order, each
+drift-checked + protocol-clean before the next).
 
 Plus two thin, optional integrations (not new planes): a unifying `/api/v1/mind/*`
 read facade over the existing endpoints, and an HTTP-request *perception*
