@@ -385,6 +385,9 @@ DEFAULT_MODULES: list[str] = [
     # Cognitive layer — Analogy Engine (MinHash relational analogy)
     "tests/test_analogy_engine.py",
     "tests/test_analogy_engine_web.py",
+    # Cognitive layer — Compression Controller (multi-strategy stream summarisation)
+    "tests/test_compression_controller.py",
+    "tests/test_compression_controller_web.py",
     # Phase 107
     "tests/test_counting_bloom.py",
     "tests/test_countingbloom_web.py",
