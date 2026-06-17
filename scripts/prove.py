@@ -379,6 +379,9 @@ DEFAULT_MODULES: list[str] = [
     # Cognitive layer — Experience Distribution (T-Digest + DDSketch percentiles + IQR anomaly)
     "tests/test_experience_distribution.py",
     "tests/test_experience_distribution_web.py",
+    # Cognitive layer — Novelty Detector (Bloom Filter + HyperLogLog)
+    "tests/test_novelty_detector.py",
+    "tests/test_novelty_detector_web.py",
     # Phase 107
     "tests/test_counting_bloom.py",
     "tests/test_countingbloom_web.py",
