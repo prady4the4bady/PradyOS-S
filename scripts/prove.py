@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PRADY OS — Repository Proving Ground: local validation runner.
+"""PRADY OS - Repository Proving Ground: local validation runner.
 
 Windows-safe pytest runner that:
   - Detects the correct Python/pytest executable (venv-aware)
@@ -70,7 +70,7 @@ DEFAULT_MODULES: list[str] = [
     "tests/test_metrics.py",
     "tests/test_config.py",
     "tests/test_campaign_archiver.py",
-    # Phase 7 — Sovereign Convergence
+    # Phase 7 - Sovereign Convergence
     "tests/test_audit_hooks.py",
     "tests/test_metrics_hooks.py",
     "tests/test_retry_hooks.py",
@@ -370,22 +370,22 @@ DEFAULT_MODULES: list[str] = [
     # Phase 106
     "tests/test_moment_sketch.py",
     "tests/test_moment_sketch_web.py",
-    # Cognitive layer — Semantic Memory Engine (MinHash + SimHash recall)
+    # Cognitive layer - Semantic Memory Engine (MinHash + SimHash recall)
     "tests/test_semantic_memory.py",
     "tests/test_semantic_memory_web.py",
-    # Cognitive layer — Frequency-Aware Attention (Count-Sketch + exponential decay)
+    # Cognitive layer - Frequency-Aware Attention (Count-Sketch + exponential decay)
     "tests/test_attention_sketch.py",
     "tests/test_attention_sketch_web.py",
-    # Cognitive layer — Experience Distribution (T-Digest + DDSketch percentiles + IQR anomaly)
+    # Cognitive layer - Experience Distribution (T-Digest + DDSketch percentiles + IQR anomaly)
     "tests/test_experience_distribution.py",
     "tests/test_experience_distribution_web.py",
-    # Cognitive layer — Novelty Detector (Bloom Filter + HyperLogLog)
+    # Cognitive layer - Novelty Detector (Bloom Filter + HyperLogLog)
     "tests/test_novelty_detector.py",
     "tests/test_novelty_detector_web.py",
-    # Cognitive layer — Analogy Engine (MinHash relational analogy)
+    # Cognitive layer - Analogy Engine (MinHash relational analogy)
     "tests/test_analogy_engine.py",
     "tests/test_analogy_engine_web.py",
-    # Cognitive layer — Compression Controller (multi-strategy stream summarisation)
+    # Cognitive layer - Compression Controller (multi-strategy stream summarisation)
     "tests/test_compression_controller.py",
     "tests/test_compression_controller_web.py",
     # Phase 107
@@ -574,77 +574,77 @@ DEFAULT_MODULES: list[str] = [
     # Phase 168
     "tests/test_polygon.py",
     "tests/test_polygon_web.py",
-    # Plane 8 — QUASAR GATE (inference router)
+    # Plane 8 - QUASAR GATE (inference router)
     "tests/test_quasar_gate.py",
     "tests/test_quasar_web.py",
-    # Plane 6 — STARMAP (knowledge graph)
+    # Plane 6 - STARMAP (knowledge graph)
     "tests/test_starmap.py",
     "tests/test_starmap_web.py",
-    # Plane 7 — BASTION (security shield)
+    # Plane 7 - BASTION (security shield)
     "tests/test_bastion.py",
     "tests/test_bastion_web.py",
-    # Agent 2 — HELIOS FORGE (build engine)
+    # Agent 2 - HELIOS FORGE (build engine)
     "tests/test_helios_forge.py",
     "tests/test_helios_forge_web.py",
-    # Plane 9 — NIGHT CITADEL (self-improvement)
+    # Plane 9 - NIGHT CITADEL (self-improvement)
     "tests/test_night_citadel.py",
     "tests/test_night_citadel_web.py",
-    # Agent 5 — SENTINEL WATCH (adversarial defense)
+    # Agent 5 - SENTINEL WATCH (adversarial defense)
     "tests/test_sentinel_watch.py",
     "tests/test_sentinel_watch_web.py",
-    # Agent 6 — SYNAPTIC MIND (model management)
+    # Agent 6 - SYNAPTIC MIND (model management)
     "tests/test_synaptic_mind.py",
     "tests/test_synaptic_mind_web.py",
-    # Agent 4 — NEXUS WEAVE (A2A orchestration)
+    # Agent 4 - NEXUS WEAVE (A2A orchestration)
     "tests/test_nexus_weave.py",
     "tests/test_nexus_weave_web.py",
-    # Agent 7 — CHRONICLE SAGE (institutional memory)
+    # Agent 7 - CHRONICLE SAGE (institutional memory)
     "tests/test_chronicle_sage.py",
     "tests/test_chronicle_sage_web.py",
-    # SPECTER — web-action executor
+    # SPECTER - web-action executor
     "tests/test_specter.py",
     "tests/test_specter_web.py",
-    # PRISM — creative artifact production
+    # PRISM - creative artifact production
     "tests/test_prism.py",
     "tests/test_prism_web.py",
-    # Plane 10 — AETHER SHELL (experience layer)
+    # Plane 10 - AETHER SHELL (experience layer)
     "tests/test_aether_shell.py",
     "tests/test_aether_shell_web.py",
-    # RESEARCH — autonomous intelligence gathering
+    # RESEARCH - autonomous intelligence gathering
     "tests/test_research.py",
     "tests/test_research_web.py",
-    # SKILL LIBRARY — learn-from-experience self-improvement
+    # SKILL LIBRARY - learn-from-experience self-improvement
     "tests/test_skills.py",
     "tests/test_skills_web.py",
-    # CODEMAP — structural self-knowledge of own code
+    # CODEMAP - structural self-knowledge of own code
     "tests/test_codemap.py",
     "tests/test_codemap_web.py",
-    # REVIEW GATE — vet self-modifications
+    # REVIEW GATE - vet self-modifications
     "tests/test_review.py",
     "tests/test_review_web.py",
-    # FORTIFY — self-hardening audit
+    # FORTIFY - self-hardening audit
     "tests/test_fortify.py",
     "tests/test_fortify_web.py",
-    # LLM — pluggable model provider (local default, config-switchable)
+    # LLM - pluggable model provider (local default, config-switchable)
     "tests/test_llm.py",
-    # EVOLVE — autonomous self-improvement pipeline
+    # EVOLVE - autonomous self-improvement pipeline
     "tests/test_evolve.py",
     "tests/test_evolve_web.py",
-    # ASCENT — the autonomous self-improvement loop (capstone orchestrator)
+    # ASCENT - the autonomous self-improvement loop (capstone orchestrator)
     "tests/test_ascent.py",
     "tests/test_ascent_web.py",
     "tests/test_ascent_driver.py",
     "tests/test_ascent_apply.py",
-    # GUILD — a working organization of specialist agents
+    # GUILD - a working organization of specialist agents
     "tests/test_guild.py",
     "tests/test_guild_web.py",
     "tests/test_guild_memory.py",
-    # LICENSING — signed offline tiers + entitlements
+    # LICENSING - signed offline tiers + entitlements
     "tests/test_licensing.py",
     "tests/test_licensing_web.py",
 ]
 
-# ANSI color codes — disabled on Windows if ANSI not supported
+# ANSI color codes - disabled on Windows if ANSI not supported
 _ANSI = sys.platform != "win32" or os.environ.get("TERM") or os.environ.get("ANSICON")
 GREEN = "\033[92m" if _ANSI else ""
 RED = "\033[91m" if _ANSI else ""
@@ -671,7 +671,7 @@ def _is_runnable(path: Path) -> bool:
     if sys.platform == "win32":
         return True  # Windows: existence is enough
     if path.suffix.lower() == ".exe":
-        return False  # Windows PE on POSIX — never runnable natively
+        return False  # Windows PE on POSIX - never runnable natively
     return os.access(path, os.X_OK)
 
 
@@ -747,7 +747,7 @@ def preflight_checks() -> list[str]:
         py_ver = sys.version_info
         if py_ver < (3, 10):
             warnings.append(
-                f"Python {py_ver.major}.{py_ver.minor} detected — PRADY OS requires >= 3.10"
+                f"Python {py_ver.major}.{py_ver.minor} detected - PRADY OS requires >= 3.10"
             )
 
         python = find_python()
@@ -834,9 +834,9 @@ def _module_label(path: str) -> str:
 
 def print_preflight(warnings: list[str]) -> None:
     if not warnings:
-        print(f"{GREEN}✓ Pre-flight checks passed{RESET}")
+        print(f"{GREEN}OK Pre-flight checks passed{RESET}")
         return
-    print(f"{YELLOW}⚠ Pre-flight warnings:{RESET}")
+    print(f"{YELLOW}!! Pre-flight warnings:{RESET}")
     for w in warnings:
         print(f"  {YELLOW}•{RESET} {w}")
     print()
@@ -859,13 +859,13 @@ def print_summary(results: list[tuple[str, bool, float]]) -> None:
     total_time = sum(d for _, _, d in results)
 
     print()
-    print(f"{BOLD}{'─' * 60}{RESET}")
-    print(f"{BOLD}PROVING GROUND — SUMMARY{RESET}")
-    print(f"{'─' * 60}")
+    print(f"{BOLD}{'-' * 60}{RESET}")
+    print(f"{BOLD}PROVING GROUND - SUMMARY{RESET}")
+    print(f"{'-' * 60}")
     for label, ok, dur in results:
-        icon = f"{GREEN}✓{RESET}" if ok else f"{RED}✗{RESET}"
+        icon = f"{GREEN}OK{RESET}" if ok else f"{RED}--{RESET}"
         print(f"  {icon}  {label:<40}  {DIM}{dur:.2f}s{RESET}")
-    print(f"{'─' * 60}")
+    print(f"{'-' * 60}")
 
     if failed == 0:
         print(
@@ -888,7 +888,7 @@ def print_summary(results: list[tuple[str, bool, float]]) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="prove",
-        description="PRADY OS Proving Ground — local test validation runner",
+        description="PRADY OS Proving Ground - local test validation runner",
     )
     parser.add_argument(
         "--module",
@@ -910,13 +910,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip-preflight", action="store_true", help="skip Windows pre-flight environment checks"
     )
+    parser.add_argument(
+        "--benchmark", "-b", action="store_true", help="run internal benchmarks via scripts/benchmarks.py"
+    )
+    parser.add_argument(
+        "--benchmark-list", action="store_true", help="list available benchmarks and exit"
+    )
     args = parser.parse_args(argv)
 
     if args.no_color:
         global GREEN, RED, YELLOW, CYAN, DIM, BOLD, RESET
         GREEN = RED = YELLOW = CYAN = DIM = BOLD = RESET = ""
 
-    print(f"\n{BOLD}{CYAN}PRADY OS — PROVING GROUND{RESET}")
+    print(f"\n{BOLD}{CYAN}PRADY OS - PROVING GROUND{RESET}")
     print(f"{DIM}Project root: {ROOT}{RESET}")
     print()
 
@@ -950,22 +956,48 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {DIM}(not found) {m}{RESET}")
         print()
 
-    if not existing:
+    # If --benchmark is set without explicit --module, only run benchmarks
+    run_modules = existing if not (args.benchmark and not args.modules) else []
+
+    if not run_modules and not (args.benchmark or args.benchmark_list):
         print(f"{RED}No test modules found. Aborting.{RESET}")
         return 1
-
-    print(f"Running {len(existing)} module(s)...\n")
 
     results: list[tuple[str, bool, float]] = []
     any_failed = False
 
-    for module in existing:
+    for module in run_modules:
         label = _module_label(module)
         passed, duration, output = run_module(
             pytest_cmd, module, fast=args.fast, verbose=args.verbose
         )
         print_result(label, passed, duration, output, args.verbose)
         results.append((label, passed, duration))
+        if not passed:
+            any_failed = True
+
+    # --- benchmarks ---
+    if args.benchmark_list:
+        python = find_python()
+        bm = subprocess.run(
+            [python, str(ROOT / "scripts" / "benchmarks.py"), "--list"],
+            capture_output=True, text=True
+        )
+        print(bm.stdout)
+        return bm.returncode
+
+    if args.benchmark:
+        print(f"\n{BOLD}{CYAN}INTERNAL BENCHMARKS{RESET}")
+        python = find_python()
+        t0 = time.monotonic()
+        bm = subprocess.run(
+            [python, str(ROOT / "scripts" / "benchmarks.py")],
+            capture_output=True, text=True,
+        )
+        duration = time.monotonic() - t0
+        passed = bm.returncode == 0
+        print_result("benchmarks", passed, duration, bm.stdout + bm.stderr, args.verbose)
+        results.append(("benchmarks", passed, duration))
         if not passed:
             any_failed = True
 
