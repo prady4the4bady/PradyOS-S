@@ -382,6 +382,9 @@ DEFAULT_MODULES: list[str] = [
     # Cognitive layer — Novelty Detector (Bloom Filter + HyperLogLog)
     "tests/test_novelty_detector.py",
     "tests/test_novelty_detector_web.py",
+    # Cognitive layer — Analogy Engine (MinHash relational analogy)
+    "tests/test_analogy_engine.py",
+    "tests/test_analogy_engine_web.py",
     # Phase 107
     "tests/test_counting_bloom.py",
     "tests/test_countingbloom_web.py",
