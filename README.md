@@ -29,6 +29,13 @@ python -m pradyos.sovereign_web
 # Open http://localhost:8000/docs for API reference
 ```
 
+### Hello World (Dev Mode)
+
+```bash
+python examples/hello_skill.py
+python examples/swarm_bugfix.py
+```
+
 ## Key Concepts
 
 ### Autonomy Layers (L1–L6)
