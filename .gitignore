@@ -46,3 +46,7 @@ htmlcov/
 # stray local log
 excalidraw.log
 var/commitmsg.txt
+
+# Machine-dependent benchmark artifacts
+benchmarks/
+

@@ -1,4 +1,6 @@
-# PradySovereign Enterprise Agent Blueprint
+# [SOVEREIGN] Enterprise Agent Blueprint — Production Deployment
+# This blueprint governs enterprise-grade agent fleet deployments.
+# Changes require double approval and are audited for 365 days.
 agent_name: "enterprise-agent"
 
 version: "1.0"
@@ -6,21 +8,25 @@ environment: production
 
 tools:
   filesystem:
+    # [SOVEREIGN] Production root — must be an isolated volume
     root: "/var/pradyos/data"
     allowed_ops: ["read", "write", "list"]
     max_storage_mb: 10240
   email:
+    # [SOVEREIGN] Wildcard domain — production only, restrict per tenant
     domains: ["*"]
     max_per_hour: 500
   calendar:
     max_events_per_day: 50
   database:
+    # [SOVEREIGN] Connection pool limit — prevents resource exhaustion
     max_connections: 20
     query_timeout_seconds: 30
 
 sovereign_policies:
   min_risk_for_manual_approval: 0.3
   log_all_actions: true
+  # [SOVEREIGN] All enterprise actions require two independent approvers
   require_double_approval: true
   audit_retention_days: 365
 

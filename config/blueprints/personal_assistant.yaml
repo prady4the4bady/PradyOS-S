@@ -1,14 +1,19 @@
-# PradySovereign Personal Assistant Blueprint
+# [SOVEREIGN] Personal Assistant Blueprint — Local Mode
+# This blueprint governs all personal-assistant daemon behaviour.
+# Changes require explicit Sovereign approval.
 agent_name: "personal-assistant"
 
 tools:
   filesystem:
+    # [SOVEREIGN] Sandbox root — never allow read/write outside this dir
     root: "./sandbox"
     allowed_ops: ["read", "write", "list"]
   email:
+    # [SOVEREIGN] Only send/receive from approved domains
     domains: ["example.com"]
     max_per_hour: 50
   calendar:
+    # [SOVEREIGN] Throttle scheduling to prevent calendar spam
     max_events_per_day: 10
 
 sovereign_policies:

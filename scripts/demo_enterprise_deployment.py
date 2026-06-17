@@ -39,48 +39,54 @@ def fake_worker(role: Any, objective: str, context: list[dict]) -> str:
 
 
 def main() -> None:
-    print("PradySovereign Enterprise Mode — Blueprint Deployment Demo")
+    bp_path = Path(__file__).resolve().parent.parent / "config" / "blueprints" / "enterprise_agent.yaml"
+    if not bp_path.is_file():
+        print(f"FATAL: blueprint not found at {bp_path}", file=sys.stderr)
+        sys.exit(1)
+
+    print("[SOVEREIGN] PradySovereign Enterprise Mode -- Blueprint Deployment")
     print("=" * 60)
 
     sovereign = SovereignClient()
     blueprint = load_blueprint("enterprise_agent.yaml")
-    print(f"\nLoaded blueprint: {blueprint['agent_name']} v{blueprint.get('version', '?')}")
-    print(f"  Fleet replicas: {blueprint['agent_fleet']['replicas']}")
-    print(f"  Roles: {', '.join(blueprint['agent_fleet']['roles'])}")
+    print(f"\n  [SOVEREIGN] Blueprint: {blueprint['agent_name']} v{blueprint.get('version', '?')}")
+    print(f"  [SOVEREIGN] Fleet replicas: {blueprint['agent_fleet']['replicas']}")
+    print(f"  [SOVEREIGN] Roles: {', '.join(blueprint['agent_fleet']['roles'])}")
+    print(f"  [SOVEREIGN] Double approval: {blueprint['sovereign_policies'].get('require_double_approval', False)}")
 
     # Deploy each replica (simulate approval per replica)
-    print("\n--- Deploying agent fleet ---")
+    print("\n  [SOVEREIGN] --- Deploying agent fleet ---")
     for i in range(blueprint["agent_fleet"]["replicas"]):
-        print(f"\n[Replica {i+1}] Proposing deployment ...")
+        print(f"\n  [SOVEREIGN] [Replica {i+1}] Proposing deployment ...")
         proposal = sovereign.submit_proposal({
             "action": "deploy_agent",
             "blueprint": blueprint["agent_name"],
             "replica": i + 1,
             "roles": blueprint["agent_fleet"]["roles"],
         })
-        print(f"  Proposed: {proposal}")
+        print(f"    Proposed: {proposal}")
 
         time.sleep(0.1)
         sovereign.log_decision({
             "action": "approve_deployment",
             "replica": i + 1,
         })
-        print("  Approved (logged to Decision Journal)")
+        print("    Approved (logged to Decision Journal)")
 
     # Run a fleet task via GuildSwarm
-    print("\n--- Running fleet task ---")
+    print("\n  [SOVEREIGN] --- Running fleet task ---")
     swarm = GuildSwarm(worker=fake_worker)
     result = swarm.run_task(
         "Audit system security: check logs, verify permissions, report vulnerabilities."
     )
     for contrib in result.get("contributions", []):
-        print(f"\n  [{contrib['role'].upper()}]")
+        print(f"\n    [{contrib['role'].upper()}]")
         print(f"    {contrib['content']}")
 
-    print(f"\n  [SYNTHESIS]")
+    print(f"\n    [DONE]")
     print(f"    {result.get('synthesis', 'N/A')}")
-    print(f"\nFleet task status: {result.get('status', 'unknown')}")
-    print(f"\nEnterprise deployment complete. All decisions logged.")
+    print(f"\n  [SOVEREIGN] Fleet task status: {result.get('status', 'unknown')}")
+    print(f"  [SOVEREIGN] Enterprise deployment complete. All decisions logged.")
 
 
 if __name__ == "__main__":

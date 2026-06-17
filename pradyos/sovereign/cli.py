@@ -326,14 +326,13 @@ def cmd_schedule(args: argparse.Namespace) -> int:
 def cmd_deploy(args: argparse.Namespace) -> int:
     """Validate and deploy an enterprise agent blueprint."""
     bp_path = _ROOT / "config" / "blueprints" / args.blueprint
+    if not bp_path.is_file():
+        print(f"FATAL: blueprint not found at {bp_path} -- aborting.", file=sys.stderr)
+        return 1
     import yaml  # type: ignore[import-untyped]
 
-    try:
-        with bp_path.open(encoding="utf-8") as fh:
-            config = yaml.safe_load(fh)
-    except FileNotFoundError:
-        print(f"ERROR: blueprint not found: {bp_path}", file=sys.stderr)
-        return 1
+    with bp_path.open(encoding="utf-8") as fh:
+        config = yaml.safe_load(fh)
 
     aname = config.get("agent_name", "unknown")
     replicas = config.get("agent_fleet", {}).get("replicas", 1)
@@ -356,6 +355,37 @@ def cmd_deploy(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Codemap (structural self-knowledge)
+# ---------------------------------------------------------------------------
+
+
+def cmd_codemap(args: argparse.Namespace) -> int:
+    """Scan the package tree and print a structural summary."""
+    from pradyos.codemap import scan_package
+
+    index = scan_package()
+    modules = index.get("modules", {})
+    total = len(modules)
+    total_fn = sum(len(m.get("functions", [])) for m in modules.values() if "error" not in m)
+    total_cls = sum(len(m.get("classes", [])) for m in modules.values() if "error" not in m)
+    total_mtd = sum(len(m.get("methods", [])) for m in modules.values() if "error" not in m)
+    total_loc = sum(m.get("loc", 0) for m in modules.values() if "error" not in m)
+    errors = sum(1 for m in modules.values() if "error" in m)
+
+    print(f"PradySovereign Codemap -- {total} modules")
+    print(f"  Functions:   {total_fn}")
+    print(f"  Classes:     {total_cls}")
+    print(f"  Methods:     {total_mtd}")
+    print(f"  Total LOC:   {total_loc}")
+    print(f"  Errors:      {errors}")
+    if args.json:
+        from pradyos.codemap import export_json
+        export_json(output="codemap_index.json")
+        print("  Exported:    codemap_index.json")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Daemon (personal-assistant)
 # ---------------------------------------------------------------------------
 
@@ -367,14 +397,13 @@ def cmd_daemon(args: argparse.Namespace) -> int:
     blueprint = getattr(args, "blueprint", None)
     if blueprint:
         bp_path = _ROOT / "config" / "blueprints" / blueprint
+        if not bp_path.is_file():
+            print(f"FATAL: blueprint not found at {bp_path} -- aborting.", file=sys.stderr)
+            return 1
         import yaml  # type: ignore[import-untyped]
 
-        try:
-            with bp_path.open(encoding="utf-8") as fh:
-                config = yaml.safe_load(fh)
-        except FileNotFoundError:
-            print(f"ERROR: blueprint not found: {bp_path}", file=sys.stderr)
-            return 1
+        with bp_path.open(encoding="utf-8") as fh:
+            config = yaml.safe_load(fh)
     else:
         config = {"agent_name": "personal-assistant", "sovereign_policies": {}}
 
@@ -453,6 +482,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_rm.add_argument("schedule_id", help="Schedule ID or unique prefix")
 
     p_sc.set_defaults(func=cmd_schedule)
+
+    # --- codemap ---
+    p_cm = sub.add_parser("codemap", help="Scan package tree and show structural summary")
+    p_cm.add_argument("--json", action="store_true", help="Export index to codemap_index.json")
+    p_cm.set_defaults(func=cmd_codemap)
 
     # --- daemon ---
     p_daemon = sub.add_parser("daemon", help="Start personal-assistant daemon")

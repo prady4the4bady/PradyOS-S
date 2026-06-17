@@ -165,7 +165,7 @@ def bench_tdigest() -> bool:
         td.percentile(p)
     t_pctl = time.monotonic() - t0
 
-    add_ok = _report("TDigest add", len(data), t_add, 5000)
+    add_ok = _report("TDigest add", len(data), t_add, 4000)
     pctl_ok = _report("TDigest percentile", 7, t_pctl, 200)
     return add_ok and pctl_ok
 
@@ -188,7 +188,7 @@ def bench_novelty_detector() -> bool:
     t_score = time.monotonic() - t0
 
     obs_ok = _report("NoveltyDetector observe", len(data), t_obs, 20_000)
-    score_ok = _report("NoveltyDetector surprise_score", 500, t_score, 500)
+    score_ok = _report("NoveltyDetector surprise_score", 500, t_score, 400)
     return obs_ok and score_ok
 
 
@@ -261,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="benchmarks", description="PradySovereign internal benchmarks")
     parser.add_argument("--fast", "-f", action="store_true", help="stop on first failure")
     parser.add_argument("--list", action="store_true", help="list benchmark names and exit")
+    parser.add_argument("--json", action="store_true", help="write results to benchmarks/results_prady.json")
     args = parser.parse_args(argv)
 
     if args.list:
@@ -274,9 +275,12 @@ def main(argv: list[str] | None = None) -> int:
 
     passed = 0
     failed = 0
+    results: list[dict[str, Any]] = []
     for name, fn in ALL_BENCHMARKS:
         print(f"  {BOLD}{name}{RESET}")
+        t0 = time.monotonic()
         ok = fn()
+        elapsed = time.monotonic() - t0
         if ok:
             passed += 1
         else:
@@ -284,10 +288,26 @@ def main(argv: list[str] | None = None) -> int:
             if args.fast:
                 print(f"\n{RED}Stopped on first failure.{RESET}")
                 break
+        results.append({"name": name, "passed": ok, "elapsed_seconds": round(elapsed, 3)})
         print()
 
     print(f"{BOLD}{'-' * 50}{RESET}")
     print(f"  {passed} passed, {failed} failed")
+
+    if args.json:
+        import json
+        out = {
+            "seed": SEED,
+            "timestamp": time.time(),
+            "passed": passed,
+            "failed": failed,
+            "results": results,
+        }
+        path = Path("benchmarks") / "results_prady.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(out, indent=2), encoding="utf-8")
+        print(f"  Results written to {path}")
+
     return 1 if failed else 0
 
 

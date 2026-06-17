@@ -30,13 +30,18 @@ CALENDAR = [
 
 
 def main() -> None:
-    print("PradySovereign Personal Assistant — Local Mode Demo")
+    bp = Path(__file__).resolve().parent.parent / "config" / "blueprints" / "personal_assistant.yaml"
+    if not bp.is_file():
+        print(f"FATAL: blueprint not found at {bp}", file=sys.stderr)
+        sys.exit(1)
+
+    print("[SOVEREIGN] PradySovereign Personal Assistant -- Local Mode Demo")
     print("=" * 55)
 
     sovereign = SovereignClient()
 
     # 1. Read & summarise inbox
-    print("\n[1/3] Reading inbox ...")
+    print("\n  [SOVEREIGN] [1/3] Reading inbox...")
     for msg in INBOX:
         summary = f"[{msg['from']}] {msg['subject']}: {msg['body'][:60]}..."
         sovereign.log_decision({
@@ -45,10 +50,10 @@ def main() -> None:
             "subject": msg["subject"],
             "summary": summary,
         })
-        print(f"  Logged: {msg['from']} — {msg['subject']}")
+        print(f"    Logged: {msg['from']} - {msg['subject']}")
 
     # 2. Propose calendar event
-    print("\n[2/3] Proposing calendar events ...")
+    print("\n  [SOVEREIGN] [2/3] Proposing calendar events...")
     for event in CALENDAR:
         proposal = sovereign.submit_proposal({
             "type": "calendar",
@@ -58,12 +63,12 @@ def main() -> None:
             "reasoning": f"Schedule {event['title']} to align the team on scope.",
         })
         if proposal.get("approved", True):
-            print(f"  Approved: {event['title']} at {event['time']}")
+            print(f"    Approved: {event['title']} at {event['time']}")
         else:
-            print(f"  Pending Sovereign review: {event['title']}")
+            print(f"    Pending Sovereign review: {event['title']}")
 
     # 3. Draft reply
-    print("\n[3/3] Drafting replies ...")
+    print("\n  [SOVEREIGN] [3/3] Drafting replies...")
     draft = f"Dear Carol,\n\nThanks for the report. We'll prioritize the session-expiry fix in the next sprint.\n\nBest,\nPersonal Assistant"
     sovereign.log_decision({
         "action": "draft_reply",
@@ -71,10 +76,10 @@ def main() -> None:
         "subject": "Re: Bug report",
         "draft": draft,
     })
-    print("  Draft logged via SovereignClient.")
+    print("    Draft logged via SovereignClient.")
 
-    print(f"\nDemo complete. {len(INBOX)} messages summarised, 1 event proposed, 1 draft logged.")
-    print("All actions recorded in the Decision Journal.")
+    print(f"\n  [SOVEREIGN] Demo complete. {len(INBOX)} messages summarised, 1 event proposed, 1 draft logged.")
+    print("  [SOVEREIGN] All actions recorded in the Decision Journal.")
 
 
 if __name__ == "__main__":
