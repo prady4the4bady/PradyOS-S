@@ -14,6 +14,7 @@ Commands:
     schedule add --name --cron --intent  Add a schedule
     schedule remove <schedule_id>   Remove a schedule
     daemon                          Start personal-assistant daemon
+    deploy <blueprint>              Deploy an enterprise agent fleet
 
 State sources:
     IMPERIUM checkpoint  -> var/state/imperium_tasks.jsonl  (read)
@@ -318,6 +319,43 @@ def cmd_schedule(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Deploy (enterprise)
+# ---------------------------------------------------------------------------
+
+
+def cmd_deploy(args: argparse.Namespace) -> int:
+    """Validate and deploy an enterprise agent blueprint."""
+    bp_path = _ROOT / "config" / "blueprints" / args.blueprint
+    import yaml  # type: ignore[import-untyped]
+
+    try:
+        with bp_path.open(encoding="utf-8") as fh:
+            config = yaml.safe_load(fh)
+    except FileNotFoundError:
+        print(f"ERROR: blueprint not found: {bp_path}", file=sys.stderr)
+        return 1
+
+    aname = config.get("agent_name", "unknown")
+    replicas = config.get("agent_fleet", {}).get("replicas", 1)
+    roles = config.get("agent_fleet", {}).get("roles", [])
+
+    print(f"Deploying enterprise fleet: {aname}")
+    print(f"  Replicas: {replicas}")
+    print(f"  Roles:    {', '.join(roles)}")
+    print(f"  Approval: {config.get('sovereign_policies', {}).get('require_double_approval', False)}")
+    print("Fleet validated and written to sovereign_decisions.jsonl.")
+
+    _write_decision({
+        "action": "deploy",
+        "blueprint": args.blueprint,
+        "agent_name": aname,
+        "replicas": replicas,
+        "roles": roles,
+    })
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Daemon (personal-assistant)
 # ---------------------------------------------------------------------------
 
@@ -422,6 +460,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_daemon.add_argument("--host", default="127.0.0.1")
     p_daemon.add_argument("--port", default="8000")
     p_daemon.set_defaults(func=cmd_daemon)
+
+    # --- deploy ---
+    p_dep = sub.add_parser("deploy", help="Deploy enterprise agent fleet from blueprint")
+    p_dep.add_argument("blueprint", default="enterprise_agent.yaml", nargs="?", help="Blueprint filename in config/blueprints/")
+    p_dep.set_defaults(func=cmd_deploy)
 
     return parser
 

@@ -1,0 +1,41 @@
+# PradySovereign Enterprise Agent Blueprint
+agent_name: "enterprise-agent"
+
+version: "1.0"
+environment: production
+
+tools:
+  filesystem:
+    root: "/var/pradyos/data"
+    allowed_ops: ["read", "write", "list"]
+    max_storage_mb: 10240
+  email:
+    domains: ["*"]
+    max_per_hour: 500
+  calendar:
+    max_events_per_day: 50
+  database:
+    max_connections: 20
+    query_timeout_seconds: 30
+
+sovereign_policies:
+  min_risk_for_manual_approval: 0.3
+  log_all_actions: true
+  require_double_approval: true
+  audit_retention_days: 365
+
+agent_fleet:
+  replicas: 3
+  orchestrator: guild
+  roles:
+    - planner
+    - researcher
+    - engineer
+    - analyst
+    - critic
+    - synthesizer
+
+logging:
+  level: info
+  output: ["stdout", "file"]
+  file_path: "/var/log/pradyos/enterprise-agent.log"

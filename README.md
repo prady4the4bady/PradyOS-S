@@ -74,4 +74,6 @@ python examples/swarm_bugfix.py
 - [Cognitive Demo](scripts/demo_cognitive_layer.py)
 - [Dev Mode](docs/DEV_MODE.md)
 - [Local Mode](docs/LOCAL_MODE.md)
+- [Enterprise Mode](docs/ENTERPRISE_MODE.md)
 - [Personal Assistant Demo](scripts/demo_personal_assistant.py)
+- [Enterprise Deployment Demo](scripts/demo_enterprise_deployment.py)
