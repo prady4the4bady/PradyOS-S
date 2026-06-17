@@ -13,6 +13,7 @@ Commands:
     schedule list                   List cron schedules
     schedule add --name --cron --intent  Add a schedule
     schedule remove <schedule_id>   Remove a schedule
+    daemon                          Start personal-assistant daemon
 
 State sources:
     IMPERIUM checkpoint  -> var/state/imperium_tasks.jsonl  (read)
@@ -317,6 +318,41 @@ def cmd_schedule(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Daemon (personal-assistant)
+# ---------------------------------------------------------------------------
+
+
+def cmd_daemon(args: argparse.Namespace) -> int:
+    """Start the personal-assistant daemon."""
+    import uvicorn
+
+    blueprint = getattr(args, "blueprint", None)
+    if blueprint:
+        bp_path = _ROOT / "config" / "blueprints" / blueprint
+        import yaml  # type: ignore[import-untyped]
+
+        try:
+            with bp_path.open(encoding="utf-8") as fh:
+                config = yaml.safe_load(fh)
+        except FileNotFoundError:
+            print(f"ERROR: blueprint not found: {bp_path}", file=sys.stderr)
+            return 1
+    else:
+        config = {"agent_name": "personal-assistant", "sovereign_policies": {}}
+
+    from pradyos.sovereign_web import create_app
+
+    app = create_app()
+    host = getattr(args, "host", "127.0.0.1")
+    port = int(getattr(args, "port", "8000"))
+
+    print(f"Starting {config.get('agent_name', 'daemon')} on http://{host}:{port}")
+    print(f"Blueprint: {blueprint or '(none)'}")
+    uvicorn.run(app, host=host, port=port, log_level="info")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
 
@@ -379,6 +415,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_rm.add_argument("schedule_id", help="Schedule ID or unique prefix")
 
     p_sc.set_defaults(func=cmd_schedule)
+
+    # --- daemon ---
+    p_daemon = sub.add_parser("daemon", help="Start personal-assistant daemon")
+    p_daemon.add_argument("--blueprint", default="personal_assistant.yaml", help="Blueprint filename in config/blueprints/")
+    p_daemon.add_argument("--host", default="127.0.0.1")
+    p_daemon.add_argument("--port", default="8000")
+    p_daemon.set_defaults(func=cmd_daemon)
 
     return parser
 

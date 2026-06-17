@@ -72,3 +72,6 @@ python examples/swarm_bugfix.py
 - [Technical Architecture](docs/ARCHITECTURE.md)
 - [Agent Guidelines](CLAUDE.md)
 - [Cognitive Demo](scripts/demo_cognitive_layer.py)
+- [Dev Mode](docs/DEV_MODE.md)
+- [Local Mode](docs/LOCAL_MODE.md)
+- [Personal Assistant Demo](scripts/demo_personal_assistant.py)
