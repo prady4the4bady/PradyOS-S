@@ -2,39 +2,20 @@
 
 **A governed, self‑improving cognitive layer for autonomous agents.**
 
-PradySovereign is a high-autonomy agent runtime that combines a governed orchestration kernel with a deep cognitive substrate. It enables agents to operate with administrator-level authority while remaining strictly accountable to a human **Sovereign** who approves strategic direction.
-
-## Why PradySovereign?
-
-While other frameworks focus on swarm coordination or persistent memory, PradySovereign emphasizes **deeper cognition + governance**.
-
-- **vs Hermes**: More robust cognitive substrate for internal reflection.
-- **vs Ruflo**: Adds causal/cognitive layers to multi-agent swarms.
-- **vs OpenClaw/NemoClaw**: Stronger internal cognition for self-improvement.
+PradySovereign is a governed agent runtime with a probabilistic cognitive substrate — think memory, attention, novelty, analogy, and compression primitives — wired into a multi-agent guild that can introspect and improve its own codebase.
 
 ## Quickstart
 
-Get the cognitive layer running locally in seconds:
-
 ```bash
-git clone https://github.com/prady4thebady/PradyOS-S
+git clone https://github.com/prady4the4bady/PradyOS-S
 cd PradyOS-S
 pip install -e .
-python scripts/demo_cognitive_layer.py
-```
-
-To explore the API and Governance Chamber:
-```bash
-python -m pradyos.sovereign_web
-# Open http://localhost:8000/docs for API reference
-```
-
-### Hello World (Dev Mode)
-
-```bash
 python examples/hello_skill.py
 python examples/swarm_bugfix.py
+python examples/swarm_on_repo.py --task "Find one small improvement in this repo and propose a patch."
 ```
+
+The swarm example introspects the actual repo via the codemap — 432 modules, 72k LOC — and produces a multi-role analysis without any LLM dependency.
 
 ## Key Concepts
 
@@ -70,11 +51,8 @@ python examples/swarm_bugfix.py
 
 ## Links
 - [Technical Architecture](docs/ARCHITECTURE.md)
-- [Agent Guidelines](CLAUDE.md)
-- [Cognitive Demo](scripts/demo_cognitive_layer.py)
+- [Codemap — structural self-knowledge](docs/CODEMAP.md)
+- [Benchmarks](docs/BENCHMARKS.md)
 - [Dev Mode](docs/DEV_MODE.md)
 - [Local Mode](docs/LOCAL_MODE.md)
 - [Enterprise Mode](docs/ENTERPRISE_MODE.md)
-- [Benchmarks](docs/BENCHMARKS.md)
-- [Personal Assistant Demo](scripts/demo_personal_assistant.py)
-- [Enterprise Deployment Demo](scripts/demo_enterprise_deployment.py)
