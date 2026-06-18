@@ -15,13 +15,9 @@ import WebPanel from "./components/WebPanel";
 function Starfield() {
   const stars = useMemo(() =>
     Array.from({length: 150}, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 70,
-      size: Math.random() * 2 + 0.5,
-      opacity: Math.random() * 0.7 + 0.3,
-      duration: Math.random() * 3 + 2,
-      delay: Math.random() * 3,
+      id: i, x: Math.random() * 100, y: Math.random() * 60,
+      size: Math.random() * 2 + 0.5, opacity: Math.random() * 0.6 + 0.3,
+      duration: Math.random() * 3 + 2, delay: Math.random() * 3,
     })), []);
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{zIndex: 0}}>
@@ -41,20 +37,19 @@ function Starfield() {
 function Mountains() {
   return (
     <div className="absolute bottom-0 left-[5%] right-[5%] pointer-events-none" style={{zIndex: 0}}>
-      <svg viewBox="0 0 800 300" preserveAspectRatio="none" className="w-full" style={{height: '220px'}}>
+      <svg viewBox="0 0 800 300" preserveAspectRatio="none" className="w-full" style={{height: '200px'}}>
         <defs>
-          <linearGradient id="skyGlow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(124,58,237,0.08)" />
+          <radialGradient id="glow" cx="50%" cy="80%" r="50%">
+            <stop offset="0%" stopColor="rgba(124,58,237,0.12)" />
             <stop offset="100%" stopColor="transparent" />
-          </linearGradient>
+          </radialGradient>
         </defs>
-        <rect x="0" y="0" width="800" height="200" fill="url(#skyGlow)" />
-        <polygon points="0,300 200,80 400,300" fill="#1a1a3e" opacity="0.85"/>
-        <polygon points="100,300 350,40 550,300" fill="#12122a" opacity="0.92"/>
-        <polygon points="250,300 500,90 750,300" fill="#0d0d2b" opacity="1"/>
-        <polygon points="500,300 650,150 800,300" fill="#1a1a3e" opacity="0.8"/>
-        <polygon points="-50,300 100,130 280,300" fill="#15153a" opacity="0.7"/>
-        <polygon points="600,300 720,120 850,300" fill="#15153a" opacity="0.65"/>
+        <rect x="0" y="0" width="800" height="200" fill="url(#glow)" />
+        <polygon points="0,300 200,70 400,300" fill="#2d1b69" opacity="0.7"/>
+        <polygon points="80,300 350,35 580,300" fill="#1e1040" opacity="0.82"/>
+        <polygon points="200,300 450,80 680,300" fill="#14102e" opacity="0.92"/>
+        <polygon points="350,300 550,120 800,300" fill="#0d0a1f" opacity="1"/>
+        <polygon points="550,300 700,160 900,300" fill="#2d1b69" opacity="0.6"/>
       </svg>
     </div>
   );
@@ -70,7 +65,7 @@ export default function App() {
   }, [setSplash]);
 
   return (
-    <div className="h-screen overflow-hidden" style={{background: 'linear-gradient(180deg, #050510 0%, #0a0a1a 40%, #0d0d2b 100%)'}}>
+    <div className="h-screen overflow-hidden" style={{background: 'linear-gradient(180deg, #050510 0%, #0a0a2e 50%, #0d0d2b 100%)'}}>
       <Starfield />
       <Mountains />
       <WebSocketHandler />
@@ -84,22 +79,22 @@ export default function App() {
         <div className="h-full"
           style={{
             display: "grid",
-            gridTemplateColumns: "266px 1fr 348px",
-            gridTemplateRows: "66px 1fr 92px",
+            gridTemplateColumns: "220px 1fr 260px",
+            gridTemplateRows: "56px 1fr 96px",
             gridTemplateAreas: `
               "top top top"
               "side main rail"
               "side dock dock"
             `,
-            gap: "20px",
-            padding: "20px 24px",
+            gap: "16px",
+            padding: "14px 20px",
           }}
         >
           <div style={{ gridArea: "top" }}><TopBar /></div>
           <div style={{ gridArea: "side" }}><Sidebar /></div>
           <div style={{ gridArea: "main" }}><MainPanel /></div>
           <div style={{ gridArea: "rail" }}><RightPanel /></div>
-          <div style={{ gridArea: "dock", justifySelf: "center", alignSelf: "end" }}><Dock /></div>
+          <div style={{ gridArea: "dock", justifySelf: "center", alignSelf: "end", marginBottom: "20px" }}><Dock /></div>
         </div>
       </div>
 

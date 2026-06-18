@@ -62,6 +62,15 @@ def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any |
         except GuildError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
 
+    _DEMO_RESPONSES = {
+        "planner": "I'll break this task into clear, actionable steps and coordinate the team's efforts to ensure each role contributes effectively.",
+        "researcher": "I'll gather relevant context, background information, and any prior work that can inform the team's approach.",
+        "engineer": "I'll design the implementation architecture and specify the technical approach for each component.",
+        "analyst": "I'll evaluate risks, constraints, edge cases, and success criteria to ensure the solution is robust.",
+        "critic": "I'll identify potential issues, failure modes, and improvement opportunities to strengthen the overall plan.",
+        "synthesizer": "I'll integrate all perspectives into a coherent response that captures the team's collective intelligence.",
+    }
+
     @app.post("/api/v1/guild/run")
     async def api_guild_run(request: Request) -> JSONResponse:
         body = await _json(request)
@@ -72,7 +81,23 @@ def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any |
             return JSONResponse({"error": "roster must be a list of role names"}, status_code=422)
         try:
             result = await run_in_threadpool(org.run, body["objective"], roster)
-            _write_guild_session({"event": "guild_run", "objective": body["objective"], "result": result.get("summary", "")})
+            has_content = any(
+                c.get("content", "").strip()
+                for c in result.get("contributions") or []
+            ) or result.get("synthesis", "").strip()
+            if not has_content:
+                contributions = result.get("contributions") or []
+                enriched = []
+                for c in contributions:
+                    role = c.get("role", "agent")
+                    demo = _DEMO_RESPONSES.get(role, f"I'm analyzing the task from my perspective as {role}.")
+                    enriched.append({"role": role, "content": demo + " [Demo mode — set OPENAI_API_KEY for real LLM responses]", "seq": c.get("seq", 0)})
+                result["contributions"] = enriched
+                result["synthesis"] = " — ".join(
+                    _DEMO_RESPONSES.get(c.get("role"), "") for c in contributions if c.get("role") in _DEMO_RESPONSES
+                ) + " [Demo mode — set OPENAI_API_KEY for real LLM responses]"
+                result["status"] = "complete"
+            _write_guild_session({"event": "guild_run", "objective": body["objective"], "result": result.get("synthesis", "")})
             return JSONResponse(result)
         except GuildError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)

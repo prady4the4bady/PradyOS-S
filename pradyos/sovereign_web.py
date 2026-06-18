@@ -472,8 +472,8 @@ def create_app(
         bus.subscribe("*", _publish_to_sse)
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-    async def dashboard() -> HTMLResponse:
-        return HTMLResponse(content=_DASHBOARD_HTML, status_code=200)
+    async def landing() -> HTMLResponse:
+        return HTMLResponse(content=_LANDING_HTML, status_code=200)
 
     # Serve the React+Vite SPA at /console (built to frontend/ -> pradyos/web/static/console/)
     _console_static = Path(__file__).resolve().parent / "web" / "static" / "console"
@@ -4198,10 +4198,10 @@ def _read_checkpoint_summary(checkpoint_store: Any) -> dict[str, Any]:
     return {"status": "available"}
 
 
-# The Sovereign Command Console (the glassmorphic OS face: dual SOVEREIGN/MANUAL
-# views + four time-of-day themes). Kept in its own module so this string-heavy
-# UI doesn't bloat the web app; served verbatim at "/".
-from pradyos.web.console import CONSOLE_HTML as _DASHBOARD_HTML
+
+
+# Landing page HTML (public marketing website at /)
+from pradyos.web.landing_page import LANDING_HTML as _LANDING_HTML
 
 # Module-level app for production servers (Render, Fly.io, etc.) that expect `module:app`
 app = create_app()

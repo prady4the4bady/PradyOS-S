@@ -94,7 +94,7 @@ def test_get_root_returns_html(tmp_path: Path) -> None:
     resp = client.get("/")
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
-    assert "PRADY OS" in resp.text
+    assert "PradyOS" in resp.text
     assert "Sovereign" in resp.text
 
 

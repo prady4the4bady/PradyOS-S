@@ -1,12 +1,38 @@
 import { useState, useRef, useEffect } from "react";
 import useGuildStore from "../stores/useGuildStore";
 
+const ROLE_LABELS = {
+  planner: "Planner",
+  researcher: "Researcher",
+  engineer: "Engineer",
+  analyst: "Analyst",
+  critic: "Critic",
+  synthesizer: "Synthesizer",
+};
+
 function greet() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning,";
   if (h < 17) return "Good afternoon,";
   if (h < 21) return "Good evening,";
   return "Good night,";
+}
+
+function renderGuildResponse(data) {
+  const parts = [];
+  if (data.contributions) {
+    for (const c of data.contributions) {
+      const content = (c.content || "").trim();
+      if (!content) continue;
+      const label = ROLE_LABELS[c.role] || c.role;
+      parts.push({ type: "contribution", role: c.role, label, content });
+    }
+  }
+  const synthesis = (data.synthesis || "").trim();
+  if (synthesis) {
+    parts.push({ type: "synthesis", label: "Synthesis", content: synthesis });
+  }
+  return parts;
 }
 
 export default function MainPanel() {
@@ -40,14 +66,15 @@ export default function MainPanel() {
         body: JSON.stringify({ objective: v }),
       });
       const d = await res.json();
-      if (d?.synthesis) {
-        addMessage("SYNTH", d.synthesis);
-      } else if (d?.summary) {
-        addMessage("SYNTH", d.summary);
+      const parts = renderGuildResponse(d);
+      if (parts.length > 0) {
+        for (const p of parts) {
+          addMessage(p.type === "synthesis" ? "SYNTH" : "CONTRIB", `[${p.label}] ${p.content}`);
+        }
       } else if (d?.error) {
         addMessage("ERROR", d.error);
       } else {
-        addMessage("SYNTH", JSON.stringify(d, null, 1).slice(0, 600));
+        addMessage("ERROR", "Guild agents ran but returned no content. Set OPENAI_API_KEY or ANTHROPIC_API_KEY to enable LLM responses.");
       }
     } catch {
       addMessage("ERROR", "Could not reach Guild. Is the LLM provider configured?");
@@ -57,14 +84,10 @@ export default function MainPanel() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden items-center">
-      <div className="text-center pt-8 pb-2">
-        <div className="flex items-center justify-center gap-2 text-accent-light text-sm tracking-wide mb-0.5">
-          <span>{greet()}</span>
-        </div>
-        <h2 className="text-[3.2rem] font-extralight tracking-tight leading-tight">
-          <span className="font-bold text-white">Sovereign.</span>
-        </h2>
-        <p className="text-txt-dim text-base flex items-center justify-center gap-1.5">
+      <div className="text-center pt-6 pb-1">
+        <div className="text-accent-light text-sm tracking-wide mb-0.5">{greet()}</div>
+        <h2 className="text-[4.5rem] font-extrabold leading-none text-white tracking-tight">Sovereign.</h2>
+        <p className="text-txt-dim text-base flex items-center justify-center gap-1.5 mt-1.5">
           The machine is at your service.
           <span className="inline-block w-2 h-2 rounded-full bg-accent-light animate-pulse" />
         </p>
@@ -73,7 +96,7 @@ export default function MainPanel() {
       <div className="flex items-center gap-3 max-w-xl w-full mx-auto mt-4 px-5 py-3.5 rounded-full"
         style={{
           background: "rgba(255,255,255,0.05)",
-          backdropFilter: "blur(24px) saturate(150%)",
+          backdropFilter: "blur(20px)",
           border: "1px solid rgba(255,255,255,0.1)",
         }}
       >
@@ -113,31 +136,41 @@ export default function MainPanel() {
             <span className="text-[0.62rem] tracking-widest font-bold text-accent-light">
               PRADYOS · GUILD RESPONSE
             </span>
-            {messages.length > 1 && (
-              <button
-                onClick={clearMessages}
-                className="ml-auto text-txt-dim text-[0.6rem] tracking-wider bg-transparent border-0 cursor-pointer hover:text-red-400"
-              >
-                Clear
-              </button>
-            )}
+            <button
+              onClick={clearMessages}
+              className="ml-auto text-txt-dim text-[0.6rem] tracking-wider bg-transparent border-0 cursor-pointer hover:text-red-400"
+            >
+              Clear
+            </button>
           </div>
           <div ref={responseRef} className="flex-1 overflow-y-auto p-4 text-left text-xs leading-relaxed max-h-60">
             {messages.map((m, i) => (
-              <div key={i} className="mb-2">
-                <span className={`text-[0.6rem] font-bold tracking-wider ${
-                  m.role === "ERROR" ? "text-red-400" :
-                  m.role === "SYNTH" ? "text-accent-light" :
-                  m.role === "TASK" ? "text-txt-dim" :
-                  "text-purple-300"
-                }`}>
-                  [{m.role}]
-                </span>
-                <span className="text-txt-dim ml-1">{m.text}</span>
+              <div key={i} className="mb-2.5">
+                {m.role === "TASK" ? (
+                  <span className="text-txt-dim italic">&rsaquo; {m.text}</span>
+                ) : m.role === "CONTRIB" || m.role === "SYNTH" ? (
+                  <div>
+                    <span className="text-accent-light text-[0.6rem] font-bold tracking-wider">
+                      {m.text.match(/\[(.*?)\]/)?.[1] || m.role}
+                    </span>
+                    <span className="text-txt-dim ml-1">
+                      {m.text.replace(/\[.*?\]\s*/, "")}
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <span className={`text-[0.6rem] font-bold tracking-wider ${
+                      m.role === "ERROR" ? "text-red-400" : "text-purple-300"
+                    }`}>
+                      [{m.role}]
+                    </span>
+                    <span className="text-txt-dim ml-1">{m.text}</span>
+                  </div>
+                )}
               </div>
             ))}
             {streaming && (
-              <div className="text-accent-light text-xs animate-pulse mt-2">processing...</div>
+              <div className="text-accent-light text-xs animate-pulse">processing...</div>
             )}
           </div>
         </div>

@@ -159,7 +159,7 @@ def test_console_defines_four_time_themes():
         assert f'data-theme="{theme}"' in CONSOLE_HTML
 
 
-def test_console_served_at_root():
+def test_landing_served_at_root():
     resp = _client().get("/")
     assert resp.status_code == 200
-    assert "PRADYOS" in resp.text
+    assert "PradyOS" in resp.text

@@ -30,13 +30,13 @@ export default function MetricsBar() {
     <>
       <h4 className="text-[0.7rem] tracking-widest uppercase text-txt-dim mb-4 flex justify-between items-center">
         SYSTEM OVERVIEW
-        <button className="text-txt-dim cursor-pointer text-sm bg-transparent border-0 hover:text-accent-light" title="Close">✕</button>
+        <span className="text-txt-dim text-xs">⇲</span>
       </h4>
       <div className="grid grid-cols-2 gap-y-5 gap-x-2">
         <DonutGauge value={cpu} label="CPU" color="#7c3aed" />
-        <DonutGauge value={gpu} label="GPU" color="#a78bfa" />
-        <DonutGauge value={ram} label="RAM" color="#7c3aed" />
-        <DonutGauge value={disk} label="DISK" color="#a78bfa" />
+        <DonutGauge value={gpu} label="GPU" color="#6366f1" />
+        <DonutGauge value={ram} label="RAM" color="#22c55e" />
+        <DonutGauge value={disk} label="DISK" color="#f97316" />
       </div>
     </>
   );

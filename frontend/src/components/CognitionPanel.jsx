@@ -37,7 +37,7 @@ export default function CognitionPanel() {
           </div>
           <div className="flex flex-col gap-1.5">
             {state.proposed_goals.slice(0, 4).map((g, i) => (
-              <div key={i} className="p-2 rounded-xl bg-glass">
+              <div key={i} className="p-2 rounded-xl" style={{background: "rgba(255,255,255,0.05)"}}>
                 <div className="text-[0.72rem]">{g.text}</div>
               </div>
             ))}

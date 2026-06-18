@@ -8,7 +8,7 @@ export default function NetworkGraph() {
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg || history.length < 2) return;
-    const w = 300, h = 56;
+    const w = 220, h = 48;
     const vals = history.map((n) => n.recv);
     const mx = Math.max(...vals, 1);
     const mn = Math.min(...vals, 0);
@@ -16,16 +16,17 @@ export default function NetworkGraph() {
     const points = vals
       .map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - ((v - mn) / rg) * (h - 8) - 4).toFixed(1)}`)
       .join(" ");
-    svg.innerHTML = `<polyline points="${points}" fill="none" stroke="#7c3aed" stroke-width="2"/>`;
+    svg.innerHTML = `<polyline points="${points}" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/>`;
   }, [history]);
 
   return (
     <>
-      <h4 className="text-[0.7rem] tracking-widest uppercase text-txt-dim mb-3 flex justify-between">
-        Network <span>⇲</span>
+      <h4 className="text-[0.7rem] tracking-widest uppercase text-txt-dim mb-2 flex justify-between">
+        NETWORK <span className="text-txt-dim text-xs">⇲</span>
       </h4>
-      <svg ref={svgRef} className="w-full h-14" viewBox="0 0 300 56" preserveAspectRatio="none" />
-      <div className="flex justify-between text-txt-dim text-[0.72rem] mt-1">
+      <svg ref={svgRef} className="w-full h-12" viewBox="0 0 220 48" preserveAspectRatio="none"
+        style={{background: "rgba(0,0,0,0.3)", borderRadius: "8px"}} />
+      <div className="flex justify-between text-txt-dim text-[0.68rem] mt-1">
         <span>↓ <b className="text-txt">{(history.length > 0 ? history[history.length - 1].recv : 0).toFixed(1)}</b> Gbps</span>
         <span>↑ <b className="text-txt">{Math.round(history.length > 0 ? history[history.length - 1].sent : 0)}</b> Mbps</span>
       </div>
