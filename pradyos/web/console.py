@@ -288,10 +288,10 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
     </div>
     <div class="tools">
       <span class="tier" id="tierBadge" onclick="openModal()">FREE</span>
-      <div class="ic" title="Notifications"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+      <div class="ic" title="Notifications" onclick="showNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
       <div class="ic" id="themeBtn" title="Theme (auto by time)" onclick="cycleTheme()"><svg id="themeIcon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg></div>
-      <div class="ic" title="Settings" onclick="setView('manual')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></div>
-      <div class="avatar"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></div>
+      <div class="ic" title="Settings" onclick="openSettings()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></div>
+      <div class="avatar" onclick="launch('Profile')" title="Profile"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0z"/></svg></div>
       <div class="clock"><b id="clkTime">--:--</b><br><span id="clkDate">--</span></div>
     </div>
   </header>
@@ -407,10 +407,10 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
     <div class="di primary" title="PRADYOS" onclick="setView('sovereign')"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg></div>
     <div class="di" title="Terminal" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l5 6-5 6M12 18h8"/></svg></div>
     <div class="di" title="Files" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v10H3z"/></svg></div>
-    <div class="di" title="Browser"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
+    <div class="di" title="Browser" onclick="launch('Web Browser')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
     <div class="di" title="Agent Center" onclick="openModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg></div>
     <div class="di" title="System Monitor" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div>
-    <div class="di" title="Trash"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 7h14M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></div>
+    <div class="di" title="Clear session" onclick="clearSession()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 7h14M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></div>
   </nav>
 </div>
 
@@ -486,9 +486,19 @@ function setRing(id,v){var e=document.getElementById(id);if(!e)return;v=Math.max
 // agents — celestial set, bound to the live Guild when present
 var AGENTS=[['VEGA','Orchestrator'],['ORION','Engineer'],['LYRA','Researcher'],['ATLAS','Operations'],
             ['NOVA','Analyst'],['DRACO','Security'],['CYGNI','Memory'],['ARES','Executor']];
+function showAgentStatus(name){
+  var box=document.getElementById('askResp');
+  box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="color:var(--dim)">Loading…</div>';
+  gj('/api/v1/guild/agents/'+name.toLowerCase()+'/status').then(function(d){
+    if(d)box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="font-size:.82rem;line-height:1.55"><b>Role:</b> '+escapeHtml(d.role||'')+'<br><b>Status:</b> '+escapeHtml(d.status||'')+'<br><b>Last action:</b> '+escapeHtml(d.last_action||'')+'</div>';
+    else box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="color:var(--dim)">Status endpoint not available. Running locally.</div>';
+  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+'</div><div style="color:var(--dim)">Could not reach agent status.</div>';});
+  setView('sovereign');
+}
 function renderAgents(list){
   document.getElementById('agents').innerHTML=list.map(function(a){
-    return '<div class="agent"><span class="av">'+a[0].slice(0,2)+'</span><div><b>'+a[0]+'</b><span class="role">'+(a[1]||'')+'</span></div><span class="st"></span></div>';
+    return '<div class="agent" onclick="showAgentStatus(\''+a[0].replace(/'/g,"\\'")+'\')"><span class="av">'+a[0].slice(0,2)+'</span><div><b>'+a[0]+'</b><span class="role">'+(a[1]||'')+'</span></div><span class="st"></span></div>';
   }).join('');
   document.getElementById('agCount').textContent=list.length+' Active';
   document.getElementById('nAg').textContent=list.length+' active';
@@ -626,6 +636,27 @@ function askPradyos(){
 }
 function launch(name){var s=document.getElementById('splash');s.textContent='▸ '+name;s.style.opacity='1';s.style.display='grid';
   setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.style.display='none';},700);},650);}
+function openSettings(){launch('Settings — configure via Sovereign Console or .env file.');}
+function showNotifications(){
+  var box=document.getElementById('askResp');
+  box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div><div style="color:var(--dim)">Loading…</div>';
+  gj('/api/v1/notifications').then(function(d){
+    var items=(d&&d.notifications)||[];
+    if(items.length)box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div>'+items.map(function(n){return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass);margin-bottom:6px;font-size:.78rem">'+(n.message||n.text||'')+'</div>';}).join('');
+    else box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div><div style="color:var(--dim)">No new notifications.</div>';
+  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div><div style="color:var(--dim)">No notifications.</div>';});
+  setView('sovereign');
+}
+function clearSession(){
+  var box=document.getElementById('askResp');
+  box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Clearing…</div>';
+  fetch('/api/v1/session/clear',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    document.getElementById('ask').value='';
+    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared. Ready for new tasks.</div>';
+  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared.</div>';});
+}
 
 // ---------- license / pricing modal ----------
 var FALLBACK_PLANS=[

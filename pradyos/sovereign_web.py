@@ -3822,6 +3822,19 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
+    # Console UI stubs — used by the sovereign command console's JS handlers.
+    @app.post("/api/v1/session/clear")
+    async def _session_clear():
+        return {"status": "ok", "session_id": ""}
+
+    @app.get("/api/v1/guild/agents/{name}/status")
+    async def _agent_status(name: str):
+        return {"name": name, "status": "active", "role": "", "last_action": "Awaiting task"}
+
+    @app.get("/api/v1/notifications")
+    async def _list_notifications():
+        return {"notifications": []}
+
     causal_engine = register_causality_routes(app)  # CAUSALITY — counterfactual credit assignment (L5)
 
     # FORESIGHT — predict/act/compare/learn. L2: when PRADYOS_FORESIGHT_LLM is set,
