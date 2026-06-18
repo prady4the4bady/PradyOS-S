@@ -14,6 +14,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from pradyos.core.anomaly_watch import SourceNotFoundError  # Phase 71
 from pradyos.core.approval_queue import ApprovalStatus  # Phase 43
@@ -473,6 +474,25 @@ def create_app(
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def dashboard() -> HTMLResponse:
         return HTMLResponse(content=_DASHBOARD_HTML, status_code=200)
+
+    # Serve the React+Vite SPA at /console (built to frontend/ -> pradyos/web/static/console/)
+    _console_static = Path(__file__).resolve().parent / "web" / "static" / "console"
+    if _console_static.is_dir() and (_console_static / "index.html").exists():
+        @app.get("/console", response_class=HTMLResponse, include_in_schema=False)
+        @app.get("/console/", response_class=HTMLResponse, include_in_schema=False)
+        async def console_spa() -> HTMLResponse:
+            return HTMLResponse(content=(_console_static / "index.html").read_text(encoding="utf-8"), status_code=200)
+
+        @app.get("/console/{rest:path}", include_in_schema=False, response_model=None)
+        async def console_static(rest: str):
+            target = (_console_static / rest).resolve()
+            if _console_static in target.parents and target.exists() and target.is_file():
+                import mimetypes
+                mime, _ = mimetypes.guess_type(str(target))
+                content = target.read_bytes()
+                from fastapi.responses import Response as FastResponse
+                return FastResponse(content=content, media_type=mime or "application/octet-stream")
+            return JSONResponse({"error": "not_found"}, status_code=404)
 
     @app.get("/api/status")
     async def api_status() -> JSONResponse:

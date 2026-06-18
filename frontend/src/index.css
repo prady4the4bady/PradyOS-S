@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #0a0a1a;
+    color: #e2e8f0;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.3); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 16px;
+  }
+  .glass2 {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 12px;
+  }
+  .panel { @apply p-4; }
+  .ring-value {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 0.7rem; font-weight: 700;
+    background: conic-gradient(#7c3aed calc(var(--v)*1%), rgba(124,58,237,0.15) 0);
+    transition: background 0.6s ease;
+  }
+  .ring-value i {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: rgba(10,10,26,0.8);
+    display: grid; place-items: center;
+    font-style: normal;
+  }
+  .scrim {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(5,4,15,0.62);
+    backdrop-filter: blur(6px);
+    display: grid; place-items: center;
+    padding: 24px;
+  }
+  .splash {
+    position: fixed; inset: 0; z-index: 99;
+    display: grid; place-items: center;
+    background: #06040f; color: #c9b6ff;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 5px;
+    transition: opacity 0.9s ease;
+  }
+}
