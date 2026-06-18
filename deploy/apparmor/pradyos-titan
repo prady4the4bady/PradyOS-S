@@ -1,0 +1,77 @@
+# AppArmor profile — STUB — TITAN OPS (Plane 2): the privileged execution lane.
+#
+# TITAN OPS is the admin-grade command runner; it is the highest-value process to
+# confine. Attach via systemd:  AppArmorProfile=pradyos-titan
+#
+# STATUS: baseline stub. It already denies the dangerous defaults (raw sockets,
+# ptrace, mount, shadow/ssh, sys_admin/module/rawio). Before production, REPLACE
+# the broad command transitions below with an explicit allowlist of exactly the
+# binaries TITAN is permitted to run. See deploy/apparmor/README.md.
+#include <tunables/global>
+
+profile pradyos-titan flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  #include <abstractions/nameservice>
+
+  # --- interpreter + the package (read / exec only; never writable) ---
+  /opt/pradyos/.venv/bin/python* ix,
+  /usr/bin/python3*            ix,
+  /opt/pradyos/{,**}            r,
+  /opt/pradyos/**.so           mr,
+  /usr/lib/python3*/{,**}       r,
+
+  # --- the ONLY writable trees: state, runtime, logs ---
+  /var/lib/pradyos/{,**}        rw,
+  owner /run/pradyos/{,**}      rw,
+  /var/log/pradyos/{,**}        w,
+
+  # --- TITAN executes vetted commands. STUB: a confined child profile is used
+  #     for spawned binaries; tighten this list to an explicit allowlist. ---
+  /usr/bin/{ls,cat,grep,sed,awk,git,systemctl,journalctl,id,uname} Px -> pradyos-titan//cmd,
+  /bin/{sh,bash}                                                   Px -> pradyos-titan//cmd,
+
+  # --- capabilities: the minimum a privileged runner needs; the rest denied ---
+  capability dac_override,
+  capability chown,
+  capability fowner,
+  deny capability sys_admin,
+  deny capability sys_module,
+  deny capability sys_rawio,
+  deny capability sys_ptrace,
+
+  # --- network: local execution fabric → unix + outbound TCP only ---
+  network inet  stream,
+  network inet6 stream,
+  network unix  stream,
+  deny network raw,
+  deny network packet,
+
+  # --- hard denies (secrets, escalation, kernel/firmware) ---
+  deny /etc/shadow            rwklx,
+  deny /etc/gshadow           rwklx,
+  deny /root/.ssh/**          rwklx,
+  deny @{HOME}/.ssh/**        rwklx,
+  deny /boot/**               wklx,
+  deny /sys/firmware/**       rwklx,
+  deny ptrace (read, trace),
+  deny mount,
+  deny umount,
+  deny pivot_root,
+
+  # --- confined child for spawned commands ---
+  profile cmd flags=(attach_disconnected) {
+    #include <abstractions/base>
+    /usr/bin/*               ixr,
+    /bin/*                   ixr,
+    /opt/pradyos/{,**}       r,
+    /var/lib/pradyos/{,**}   rw,
+    owner /run/pradyos/{,**} rw,
+    deny /etc/shadow         rwklx,
+    deny @{HOME}/.ssh/**     rwklx,
+    deny capability sys_admin,
+    deny capability sys_module,
+    deny mount,
+    deny ptrace (read, trace),
+  }
+}
