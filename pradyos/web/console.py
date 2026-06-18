@@ -287,7 +287,7 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v10H4zM2 17h20v2H2z"/></svg>MANUAL MODE</button>
     </div>
     <div class="tools">
-      <span class="tier" id="tierBadge" onclick="openModal()">FREE</span>
+      <span class="tier" id="tierBadge" onclick="location.href='/billing'">FREE</span>
       <div class="ic" title="Notifications" onclick="showNotifications()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
       <div class="ic" id="themeBtn" title="Theme (auto by time)" onclick="cycleTheme()"><svg id="themeIcon" width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg></div>
       <div class="ic" title="Settings" onclick="openSettings()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></div>
@@ -328,9 +328,9 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
         <div class="app" onclick="launch('AI Terminal')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l5 6-5 6M12 18h8"/></svg><b>AI Terminal</b></div>
         <div class="app" onclick="setView('manual')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v10H3z"/></svg><b>Files</b></div>
         <div class="app" onclick="setView('manual')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg><b>System Monitor</b></div>
-        <div class="app" onclick="openModal()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg><b>Agent Center</b></div>
-        <div class="app" onclick="launch('Projects')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h7l2 3h7v11H4z"/></svg><b>Projects</b></div>
-        <div class="app" onclick="launch('Reports')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6zM9 12h6M9 16h6"/></svg><b>Reports</b></div>
+        <div class="app" onclick="openAgentCenter()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg><b>Agent Center</b></div>
+        <div class="app" onclick="showProjects()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h7l2 3h7v11H4z"/></svg><b>Projects</b></div>
+        <div class="app" onclick="showReports()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6zM9 12h6M9 16h6"/></svg><b>Reports</b></div>
       </div>
     </div>
 
@@ -404,14 +404,23 @@ CONSOLE_HTML = r"""<!DOCTYPE html>
 
   <!-- DOCK -->
   <nav class="dock glass">
-    <div class="di primary" title="PRADYOS" onclick="setView('sovereign')"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg></div>
-    <div class="di" title="Terminal" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l5 6-5 6M12 18h8"/></svg></div>
+    <div class="di primary" title="PRADYOS — new session" onclick="newSession()"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg></div>
+    <div class="di" title="Terminal / Logs" onclick="toggleLogPanel()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l5 6-5 6M12 18h8"/></svg></div>
     <div class="di" title="Files" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h6l2 2h10v10H3z"/></svg></div>
-    <div class="di" title="Browser" onclick="launch('Web Browser')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
-    <div class="di" title="Agent Center" onclick="openModal()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg></div>
+    <div class="di" title="Browser" onclick="showInResp('WEB BROWSER','<div style=\"color:var(--dim);font-size:.82rem\">Web browser requires a configured LLM provider. Use the AI Terminal below to make requests, or open an app from the launcher above.</div>')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div>
+    <div class="di" title="Agent Center" onclick="openAgentCenter()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg></div>
     <div class="di" title="System Monitor" onclick="setView('manual')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div>
     <div class="di" title="Clear session" onclick="clearSession()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 7h14M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></div>
   </nav>
+</div>
+
+<!-- LOG PANEL -->
+<div id="logPanel" style="position:fixed;bottom:0;left:0;right:0;z-index:40;height:220px;background:var(--glass);backdrop-filter:blur(26px);border-top:1px solid var(--brd);display:none;flex-direction:column;font-family:var(--mono);font-size:.72rem;padding:10px 16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <span style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;font-family:var(--font)">LIVE LOG</span>
+    <span onclick="toggleLogPanel()" style="cursor:pointer;color:var(--dim);font-size:1.2rem">✕</span>
+  </div>
+  <div id="logOutput" style="flex:1;overflow-y:auto;color:var(--txt);line-height:1.6;white-space:pre-wrap"></div>
 </div>
 
 <!-- LICENSE / UPGRADE MODAL -->
@@ -479,32 +488,166 @@ function setView(v){
   if(v==='manual'){loadFiles();loadProcs();}
 }
 
-// ---------- live OS data ----------
+// ---------- helpers ----------
 function gj(u){return fetch(u).then(function(r){if(!r.ok)throw 0;return r.json();}).catch(function(){return null;});}
 function setRing(id,v){var e=document.getElementById(id);if(!e)return;v=Math.max(0,Math.min(100,Math.round(v)));e.style.setProperty('--v',v);e.querySelector('i').textContent=v+'%';}
+function escapeHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function showInResp(title,html){var box=document.getElementById('askResp');box.style.display='block';box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+title+'</div>'+html;setView('sovereign');}
+function launch(name){var s=document.getElementById('splash');s.textContent='▸ '+name;s.style.opacity='1';s.style.display='grid';setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.style.display='none';},700);},650);}
 
-// agents — celestial set, bound to the live Guild when present
-var AGENTS=[['VEGA','Orchestrator'],['ORION','Engineer'],['LYRA','Researcher'],['ATLAS','Operations'],
-            ['NOVA','Analyst'],['DRACO','Security'],['CYGNI','Memory'],['ARES','Executor']];
+// ---------- File content viewer ----------
+function viewFile(path,name){
+  showInResp('FILE: '+escapeHtml(name),'<div style="color:var(--dim)">Loading…</div>');
+  gj('/api/v1/files/content?path='+encodeURIComponent(path)).then(function(d){
+    if(d&&d.content){
+      var html='<div style="font-size:.72rem;color:var(--dim);margin-bottom:8px">'+escapeHtml(d.path)+' · '+d.size_kb+' KB</div>';
+      html+='<pre style="font-family:var(--mono);font-size:.72rem;line-height:1.45;overflow:auto;max-height:50vh;background:var(--glass);padding:12px;border-radius:11px;white-space:pre-wrap">'+escapeHtml(d.content.slice(0,5000))+'</pre>';
+      if(d.content.length>5000)html+='<div style="color:var(--dim);font-size:.68rem;margin-top:6px">(showing first 5000 chars)</div>';
+      showInResp('FILE: '+escapeHtml(name),html);
+    }else showInResp('FILE: '+escapeHtml(name),'<div style="color:var(--dim)">Could not read file.</div>');
+  });
+}
+
+// ---------- Agent center ----------
+function openAgentCenter(){
+  showInResp('AGENT CENTER','<div style="color:var(--dim)">Loading agent roster…</div>');
+  Promise.all([gj('/api/v1/guild/agents'), gj('/api/v1/guild/stats')]).then(function(results){
+    var agents=(results[0]&&results[0].agents)||[];
+    var stats=results[1]||{};
+    if(!agents.length){
+      showInResp('AGENT CENTER','<div style="color:var(--dim)">No agents registered.</div>');return;
+    }
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    agents.forEach(function(a){
+      var st=a.status||'active';var dotCol=st==='active'?'#39d98a':(st==='error'?'#ff5f57':'#febc2e');
+      html+='<div style="padding:12px;border-radius:13px;background:var(--glass);border:1px solid var(--brd)">';
+      html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+      html+='<span style="width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:.7rem">'+escapeHtml((a.name||'').slice(0,2))+'</span>';
+      html+='<div><b style="font-size:.76rem">'+escapeHtml(a.name||'')+'</b><br><span style="font-size:.62rem;color:var(--dim)">'+escapeHtml(a.role||'')+'</span></div>';
+      html+='<span style="width:8px;height:8px;border-radius:50%;background:'+dotCol+';margin-left:auto;box-shadow:0 0 6px '+dotCol+'"></span>';
+      html+='</div>';
+      html+='<div style="font-size:.68rem;color:var(--dim)">Last: '+(a.last_action||'Awaiting task')+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    if(stats&&stats.projects_done!==undefined)html+='<div style="margin-top:12px;font-size:.72rem;color:var(--dim)">Projects completed: '+stats.projects_done+'</div>';
+    showInResp('AGENT CENTER',html);
+  });
+}
+
+// ---------- Projects & Reports ----------
+function showProjects(){
+  showInResp('PROJECTS','<div style="color:var(--dim)">Loading projects…</div>');
+  gj('/api/v1/guild/projects').then(function(d){
+    var projects=(d&&d.projects)||[];
+    if(!projects.length){showInResp('PROJECTS','<div style="color:var(--dim)">No projects yet. Ask PRADYOS something to start one.</div>');return;}
+    var html='';
+    projects.slice(0,15).forEach(function(p){
+      html+='<div style="padding:11px 13px;border-radius:11px;background:var(--glass);margin-bottom:8px">';
+      html+='<div style="font-size:.78rem;font-weight:600">'+escapeHtml(p.objective||p.name||'Project')+'</div>';
+      var syn=p.synthesis||p.summary||p.result||'';
+      if(syn)html+='<div style="font-size:.7rem;color:var(--dim);margin-top:4px">'+escapeHtml(String(syn).slice(0,200))+'</div>';
+      if(p.ts||p.created)html+='<div style="font-size:.62rem;color:var(--dim);margin-top:4px">'+new Date((p.ts||p.created)*1000).toLocaleString()+'</div>';
+      html+='</div>';
+    });
+    if(projects.length>15)html+='<div style="color:var(--dim);font-size:.68rem">… and '+(projects.length-15)+' more</div>';
+    showInResp('PROJECTS',html);
+  });
+}
+function showReports(){
+  showInResp('REPORTS','<div style="color:var(--dim)">Loading reports…</div>');
+  Promise.all([gj('/api/v1/guild/stats'), gj('/api/v1/session/history')]).then(function(results){
+    var stats=results[0]||{};
+    var hist=results[1]||{};
+    var entries=(hist.entries)||[];
+    var html='<div style="font-size:.82rem;line-height:1.8">';
+    html+='<b>Guild stats:</b><br>';
+    html+='Projects: '+(stats.projects_done||0)+' done, '+(stats.projects_total||0)+' total<br>';
+    html+='Skills: '+(stats.skills||0)+' learned<br>';
+    if(stats.avg_score!==undefined)html+='Avg score: '+(stats.avg_score||'-')+'<br>';
+    html+='<br><b>Recent activity:</b><br>';
+    if(entries.length){
+      entries.slice(-8).reverse().forEach(function(e){
+        var msg=e.event||'event';
+        var obj=e.objective||e.result||'';
+        html+='<div style="padding:6px 8px;border-radius:7px;background:var(--glass);margin-bottom:4px;font-size:.72rem">';
+        html+='<span style="color:var(--accent)">['+escapeHtml(msg)+']</span> '+escapeHtml(String(obj).slice(0,120));
+        html+='</div>';
+      });
+    }else{html+='<div style="color:var(--dim);font-size:.72rem">No activity recorded yet.</div>';}
+    html+='</div>';
+    showInResp('REPORTS',html);
+  });
+}
+
+// ---------- WebSocket for real-time metrics ----------
+var ws=null, wsReconnectTimer=null, netHist=[];
+function connectWS(){
+  var proto=location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(proto+'//'+location.host+'/ws/console');
+  ws.onmessage=function(e){
+    try{var d=JSON.parse(e.data);
+      if(d.type==='metrics'){
+        setRing('rCpu',d.cpu); setRing('rGpu',d.gpu||0); setRing('rRam',d.ram); setRing('rDsk',d.disk);
+        netHist.push({recv:d.recv_mbps||0,sent:d.sent_mbps||0,ts:Date.now()});
+        if(netHist.length>42)netHist.shift();
+        drawSpark();
+      }
+    }catch(ex){}
+  };
+  ws.onclose=function(){ws=null;clearTimeout(wsReconnectTimer);wsReconnectTimer=setTimeout(connectWS,3000);};
+  ws.onerror=function(){ws&&ws.close();};
+}
+function drawSpark(){
+  var w=300,h=62;
+  if(netHist.length<2)return;
+  var vals=netHist.map(function(n){return n.recv;});
+  var mx=Math.max.apply(null,vals),mn=Math.min.apply(null,vals),rg=(mx-mn)||1;
+  var d=vals.map(function(v,i){return (i?'L':'M')+(i/(vals.length-1)*w).toFixed(1)+','+(h-(v-mn)/rg*(h-9)-4).toFixed(1);}).join(' ');
+  document.getElementById('spark').innerHTML='<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="'+d+' L300,62 L0,62Z" fill="var(--accent-soft)"/>';
+  var last=netHist[netHist.length-1];
+  document.getElementById('netD').textContent=(last.recv||0).toFixed(1);
+  document.getElementById('netU').textContent=Math.round(last.sent||0);
+}
+function pollMetrics(){
+  gj('/api/v1/system/metrics').then(function(d){
+    if(d){setRing('rCpu',d.cpu);setRing('rGpu',d.gpu||0);setRing('rRam',d.ram);setRing('rDsk',d.disk);
+      netHist.push({recv:d.net_down||1,sent:d.net_up||1,ts:Date.now()});if(netHist.length>42)netHist.shift();drawSpark();}
+  });
+}
+
+// ---------- AI Agents from API ----------
 function showAgentStatus(name){
   var box=document.getElementById('askResp');
   box.style.display='block';
   box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="color:var(--dim)">Loading…</div>';
   gj('/api/v1/guild/agents/'+name.toLowerCase()+'/status').then(function(d){
     if(d)box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="font-size:.82rem;line-height:1.55"><b>Role:</b> '+escapeHtml(d.role||'')+'<br><b>Status:</b> '+escapeHtml(d.status||'')+'<br><b>Last action:</b> '+escapeHtml(d.last_action||'')+'</div>';
-    else box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="color:var(--dim)">Status endpoint not available. Running locally.</div>';
+    else box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+' · AGENT STATUS</div><div style="color:var(--dim)">Status endpoint not available.</div>';
   }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+name+'</div><div style="color:var(--dim)">Could not reach agent status.</div>';});
   setView('sovereign');
 }
 function renderAgents(list){
   document.getElementById('agents').innerHTML=list.map(function(a){
-    return '<div class="agent" onclick="showAgentStatus(\''+a[0].replace(/'/g,"\\'")+'\')"><span class="av">'+a[0].slice(0,2)+'</span><div><b>'+a[0]+'</b><span class="role">'+(a[1]||'')+'</span></div><span class="st"></span></div>';
+    var st=a.status||'active';var dotCol=st==='active'?'#39d98a':(st==='error'?'#ff5f57':'#febc2e');
+    return '<div class="agent" onclick="showAgentStatus(\''+a.name.replace(/'/g,"\\'")+'\')"><span class="av">'+a.name.slice(0,2)+'</span><div><b>'+a.name+'</b><span class="role">'+(a.role||'')+'</span></div><span class="st" style="background:'+dotCol+';box-shadow:0 0 7px '+dotCol+'"></span></div>';
   }).join('');
   document.getElementById('agCount').textContent=list.length+' Active';
   document.getElementById('nAg').textContent=list.length+' active';
 }
-renderAgents(AGENTS);
+function loadAgents(){
+  gj('/api/v1/guild/agents').then(function(d){
+    if(d&&Array.isArray(d.agents)&&d.agents.length){renderAgents(d.agents);}
+    else{gj('/api/v1/guild/roles').then(function(r){
+      if(r&&Array.isArray(r.roles)&&r.roles.length){
+        var names=['VEGA','ORION','LYRA','ATLAS','NOVA','DRACO','CYGNI','ARES'];
+        renderAgents(r.roles.map(function(x,i){return {name:names[i]||(x.name||'AGT').toUpperCase(),role:x.role||'',status:'active'};}));
+      }
+    });}
+  });
+}
 
+// ---------- File browser ----------
 function loadFiles(){
   gj('/api/v1/files?path=~').then(function(d){
     var box=document.getElementById('fmList');
@@ -512,7 +655,8 @@ function loadFiles(){
       document.getElementById('fmPath').textContent=d.path||'Home';
       box.innerHTML=d.entries.slice(0,12).map(function(e){
         var ic=e.is_dir?'🗀':'🗎';
-        return '<div class="f">'+ic+' '+e.name+'<span>'+(e.is_dir?'dir':((e.size_kb||0)+' KB'))+'</span></div>';
+        var click=e.is_dir?'':'onclick="viewFile(\''+escapeHtml(d.path+'/'+e.name).replace(/'/g,"\\'")+'\',\''+escapeHtml(e.name).replace(/'/g,"\\'")+'\')"';
+        return '<div class="f" '+click+'>'+ic+' '+e.name+'<span>'+(e.is_dir?'dir':((e.size_kb||0)+' KB'))+'</span></div>';
       }).join('');
     }else{
       box.innerHTML=['Desktop|dir','Documents|dir','Downloads|dir','Pictures|dir','Projects|dir','PRADYOS Drive|dir']
@@ -532,8 +676,7 @@ function loadProcs(){
   });
 }
 function loadInfo(){
-  gj('/api/v1/system/info').then(function(d){
-    if(!d)return;
+  gj('/api/v1/system/info').then(function(d){if(!d)return;
     if(d.kernel)document.getElementById('nKernel').textContent=d.kernel;
     if(d.uptime)document.getElementById('nUp').textContent=d.uptime;
     if(d.host)document.getElementById('nHost').textContent=d.host;
@@ -543,81 +686,37 @@ function loadInfo(){
   });
 }
 
-var fellBack={cpu:12,gpu:18,ram:32,dsk:68};
-function refresh(){
-  gj('/api/v1/system/metrics').then(function(d){
-    if(d){
-      setRing('rCpu',d.cpu); setRing('rGpu',d.gpu); setRing('rRam',d.ram); setRing('rDsk',d.disk);
-      if(d.net_down!=null)document.getElementById('netD').textContent=(+d.net_down).toFixed(1);
-      if(d.net_up!=null)document.getElementById('netU').textContent=Math.round(d.net_up);
-    }else{ // graceful jitter so the shell looks alive without a metrics backend
-      setRing('rCpu',10+Math.random()*14); setRing('rGpu',14+Math.random()*12);
-      setRing('rRam',30+Math.random()*8); setRing('rDsk',68);
-    }
-  });
-  gj('/api/v1/guild/roles').then(function(d){
-    if(d&&Array.isArray(d.roles)&&d.roles.length){
-      var live=d.roles.map(function(r,i){return [(AGENTS[i]?AGENTS[i][0]:(r.name||'AGT').toUpperCase()),(r.role||(AGENTS[i]?AGENTS[i][1]:''))];});
-      renderAgents(live);
-    }
-  });
-  gj('/api/v1/license/status').then(function(d){ if(d){document.getElementById('tierBadge').textContent=d.open_mode?'OPEN':(d.tier?d.tier.toUpperCase():'FREE'); setOpenModeBtn(d.open_mode);} });
-  loadCognition();
+// ---------- Log panel (SSE stream) ----------
+var logEventSource=null, logPanelOpen=false;
+function toggleLogPanel(){
+  var p=document.getElementById('logPanel');
+  logPanelOpen=!logPanelOpen;
+  p.style.display=logPanelOpen?'flex':'none';
+  if(logPanelOpen){
+    document.getElementById('logOutput').innerHTML='<div style="color:var(--dim)">Connecting to log stream…</div>';
+    logEventSource=new EventSource('/api/v1/system/logs');
+    logEventSource.onmessage=function(e){
+      try{var d=JSON.parse(e.data);
+        var col=d.level==='ERROR'?'#ff5f57':(d.level==='WARNING'?'#febc2e':'var(--txt)');
+        var out=document.getElementById('logOutput');
+        out.innerHTML+='<span style="color:'+col+'">['+d.level+'] '+escapeHtml(d.line||d.message||'')+'</span>\n';
+        out.scrollTop=out.scrollHeight;
+      }catch(ex){}
+    };
+    logEventSource.onerror=function(){
+      document.getElementById('logOutput').innerHTML+='<span style="color:var(--dim)">— log stream disconnected, retrying… —</span>\n';
+    };
+  }else{
+    if(logEventSource){logEventSource.close();logEventSource=null;}
+  }
 }
-// ---------- Cognition panel: REVERIE insights + DRIVE goals ----------
-function loadCognition(){
-  var goalEl=document.getElementById('cogGoal'); if(!goalEl)return;
-  gj('/api/v1/reverie/stats').then(function(s){ if(s&&s.latest_goal)goalEl.textContent=s.latest_goal; });
-  gj('/api/v1/drive/goals?status=proposed').then(function(d){
-    var box=document.getElementById('cogGoals'), cnt=document.getElementById('cogCount');
-    var goals=(d&&d.goals)||[];
-    if(cnt)cnt.textContent=goals.length?('('+goals.length+')'):'';
-    if(!box)return;
-    box.innerHTML = goals.slice(0,4).map(function(g){
-      return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass)">'+
-        '<div style="font-size:.72rem;margin-bottom:6px">'+escapeHtml(g.text)+'</div>'+
-        '<div style="display:flex;gap:6px">'+
-        '<button onclick="approveGoal(\''+g.id+'\')" style="flex:1;border:1px solid var(--brd);cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:var(--accent-soft);color:var(--accent)">APPROVE</button>'+
-        '<button onclick="runGoal(\''+g.id+'\')" style="flex:1;border:0;cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff">RUN</button>'+
-        '</div></div>';
-    }).join('') || '<div style="font-size:.7rem;color:var(--dim)">No proposed goals yet — reflect to generate one.</div>';
-  });
-}
-function reflectNow(){ fetch('/api/v1/reverie/reflect',{method:'POST'}).then(function(){loadCognition();}); }
-function approveGoal(id){ fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){loadCognition();}); }
-function runGoal(id){
-  fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){
-    return fetch('/api/v1/drive/'+id+'/run',{method:'POST'}); }).then(function(r){return r.json();})
-    .then(function(d){ launch(d&&d.error?('Vetoed: '+(d.error||'')):'Goal executed'); loadCognition(); })
-    .catch(function(){ loadCognition(); });
-}
-function setOpenModeBtn(on){var b=document.getElementById('openModeBtn');if(!b)return;b.textContent=on?'ON':'OFF';
-  b.style.background=on?'linear-gradient(135deg,var(--accent),var(--accent2))':'var(--accent-soft)';b.style.color=on?'#fff':'var(--accent)';}
-function toggleOpenMode(){
-  gj('/api/v1/license/open-mode').then(function(s){
-    var next=!(s&&s.open_mode);
-    fetch('/api/v1/license/open-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:next})})
-      .then(function(r){return r.json();}).then(function(d){setOpenModeBtn(d&&d.open_mode);refresh();});
-  });
-}
-loadInfo(); refresh(); setInterval(refresh,5000);
 
-// ---------- sparkline ----------
-var hist=Array.from({length:42},function(){return 20+Math.random()*20;});
-function spark(){
-  hist.push(15+Math.random()*30); if(hist.length>42)hist.shift();
-  var w=300,h=62,mx=Math.max.apply(null,hist),mn=Math.min.apply(null,hist),rg=(mx-mn)||1;
-  var d=hist.map(function(v,i){return (i?'L':'M')+(i/(hist.length-1)*w).toFixed(1)+','+(h-(v-mn)/rg*(h-9)-4).toFixed(1);}).join(' ');
-  document.getElementById('spark').innerHTML='<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="2"/><path d="'+d+' L300,62 L0,62Z" fill="var(--accent-soft)"/>';
-}
-spark(); setInterval(spark,1600);
-
-// ---------- search / actions ----------
-function escapeHtml(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+// ---------- Guild task / Ask PRADYOS ----------
 function askPradyos(){
   var v=document.getElementById('ask').value.trim(); if(!v)return;
   document.getElementById('ask').value='';
   var box=document.getElementById('askResp');
+  document.getElementById('ask').disabled=true;
   box.style.display='block';
   box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">VEGA · COORDINATING THE GUILD</div><div style="color:var(--dim)">▰▰▰ working on: '+escapeHtml(v)+'</div>';
   fetch('/api/v1/guild/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({objective:v})})
@@ -631,15 +730,59 @@ function askPradyos(){
       else{txt='The Guild produced no output. Configure a model (PRADYOS_LLM_PROVIDER) — it defaults to local Ollama.';}
       if(typeof txt!=='string')txt=JSON.stringify(txt).slice(0,900);
       box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">PRADYOS · GUILD RESPONSE</div><div style="white-space:pre-wrap">'+escapeHtml(txt)+'</div>';
+      document.getElementById('ask').disabled=false;
     })
-    .catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">PRADYOS</div><div style="color:var(--dim)">Could not reach the Guild service. Is the OS backend running?</div>';});
+    .catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">PRADYOS</div><div style="color:var(--dim)">Could not reach the Guild service. Is the OS backend running?</div>';document.getElementById('askInput').disabled=false;});
 }
-function launch(name){var s=document.getElementById('splash');s.textContent='▸ '+name;s.style.opacity='1';s.style.display='grid';
-  setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.style.display='none';},700);},650);}
-function openSettings(){launch('Settings — configure via Sovereign Console or .env file.');}
-function showNotifications(){
-  var box=document.getElementById('askResp');
-  box.style.display='block';
+
+// ---------- Session management ----------
+function newSession(){
+  setView('sovereign');
+  fetch('/api/v1/session/new',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    var box=document.getElementById('askResp');box.style.display='block';
+    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">New session started. Ready for your command.</div>';
+  }).catch(function(){});
+}
+function clearSession(){
+  var box=document.getElementById('askResp');box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Clearing…</div>';
+  fetch('/api/v1/session/clear',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    document.getElementById('ask').value='';
+    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared. Ready for new tasks.</div>';
+  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared.</div>';});
+}
+
+// ---------- Settings from API ----------
+function openSettings(){
+  var box=document.getElementById('askResp');box.style.display='block';
+  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SETTINGS</div><div style="color:var(--dim)">Loading…</div>';
+  Promise.all([gj('/api/v1/license/status'), gj('/api/v1/config/public')]).then(function(results){
+    var st=results[0]||{}, cfg=results[1]||{};
+    var tier=st.open_mode?'OPEN':(st.tier?st.tier.toUpperCase():(cfg.tier||'').toUpperCase()||'FREE');
+    var html='<div style="font-size:.82rem;line-height:1.8">';
+    html+='<b>Current tier:</b> '+tier+'<br>';
+    html+='<b>Payment:</b> '+(cfg.payment_provider||'Stripe')+' · Polar<br>';
+    html+='<b>Open Mode:</b> '+(st.open_mode?'ON':'OFF')+'<br>';
+    html+='<b>Version:</b> '+(cfg.version||'—')+'<br>';
+    html+='<b>System controls:</b><br>';
+    html+='<span style="cursor:pointer;color:var(--accent);margin-right:12px" onclick="toggleSystemSetting(\'/api/v1/system/volume/toggle\',\'Volume\')">🔊 Volume</span>';
+    html+='<span style="cursor:pointer;color:var(--accent);margin-right:12px" onclick="toggleSystemSetting(\'/api/v1/system/brightness/toggle\',\'Brightness\')">☀ Brightness</span>';
+    html+='<span style="cursor:pointer;color:var(--accent);margin-right:12px" onclick="toggleSystemSetting(\'/api/v1/system/wifi/status\',\'WiFi\')">📶 WiFi</span>';
+    html+='<span style="cursor:pointer;color:var(--accent)" onclick="toggleSystemSetting(\'/api/v1/system/bluetooth/status\',\'Bluetooth\')">🔵 Bluetooth</span><br><br>';
+    html+='<b>Upgrade:</b> <span style="color:var(--accent);cursor:pointer" onclick="location.href=\'/billing\'">Visit /billing →</span></div>';
+    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SETTINGS</div>'+html;
+  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SETTINGS</div><div style="color:var(--dim)">Settings unavailable.</div>';});
+  setView('sovereign');
+}
+
+// ---------- Notifications from decisions log ----------
+function showNotifications(items){
+  var box=document.getElementById('askResp');box.style.display='block';
+  if(items&&Array.isArray(items)){
+    var html='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div>';
+    html+=items.map(function(n){return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass);margin-bottom:6px;font-size:.78rem">'+escapeHtml(n.message||'')+'</div>';}).join('');
+    box.innerHTML=html;setView('sovereign');return;
+  }
   box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div><div style="color:var(--dim)">Loading…</div>';
   gj('/api/v1/notifications').then(function(d){
     var items=(d&&d.notifications)||[];
@@ -648,15 +791,86 @@ function showNotifications(){
   }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">NOTIFICATIONS</div><div style="color:var(--dim)">No notifications.</div>';});
   setView('sovereign');
 }
-function clearSession(){
-  var box=document.getElementById('askResp');
-  box.style.display='block';
-  box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Clearing…</div>';
-  fetch('/api/v1/session/clear',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
-    document.getElementById('ask').value='';
-    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared. Ready for new tasks.</div>';
-  }).catch(function(){box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">SESSION</div><div style="color:var(--dim)">Session cleared.</div>';});
+
+// ---------- System controls ----------
+function toggleSystemSetting(ep,label){
+  gj(ep).then(function(d){
+    var box=document.getElementById('askResp');box.style.display='block';
+    box.innerHTML='<div style="color:var(--accent);font-size:.68rem;letter-spacing:1.6px;margin-bottom:7px">'+label+'</div><div style="color:var(--dim)">'+(d&&d.status||'Toggled')+'</div>';
+    setView('sovereign');
+  });
 }
+
+// ---------- Cognition panel ----------
+function loadCognition(){
+  var goalEl=document.getElementById('cogGoal');if(!goalEl)return;
+  gj('/api/v1/sovereign/state').then(function(s){
+    if(s&&s.latest_curiosity)goalEl.textContent=s.latest_curiosity;
+    if(s&&Array.isArray(s.proposed_goals)){
+      var box=document.getElementById('cogGoals'),cnt=document.getElementById('cogCount');
+      if(cnt)cnt.textContent=s.proposed_goals.length?'('+s.proposed_goals.length+')':'';
+      if(box)box.innerHTML=s.proposed_goals.slice(0,4).map(function(g){
+        return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass)"><div style="font-size:.72rem">'+escapeHtml(g.text||g)+'</div></div>';
+      }).join('')||'<div style="font-size:.7rem;color:var(--dim)">No proposed goals yet — reflect to generate one.</div>';
+    }
+  });
+  // fallback to reverie+drive if sovereign/state missing
+  gj('/api/v1/reverie/stats').then(function(s){if(s&&s.latest_goal&&document.getElementById('cogGoal').textContent==='—')document.getElementById('cogGoal').textContent=s.latest_goal;});
+  gj('/api/v1/drive/goals?status=proposed').then(function(d){
+    var box=document.getElementById('cogGoals'),cnt=document.getElementById('cogCount');
+    if(!box||box.children.length)return;
+    var goals=(d&&d.goals)||[];if(cnt)cnt.textContent=goals.length?'('+goals.length+')':'';
+    box.innerHTML=goals.slice(0,4).map(function(g){
+      return '<div style="padding:8px 10px;border-radius:9px;background:var(--glass)">'+
+        '<div style="font-size:.72rem;margin-bottom:6px">'+escapeHtml(g.text)+'</div>'+
+        '<div style="display:flex;gap:6px">'+
+        '<button onclick="approveGoal(\''+g.id+'\')" style="flex:1;border:1px solid var(--brd);cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:var(--accent-soft);color:var(--accent)">APPROVE</button>'+
+        '<button onclick="runGoal(\''+g.id+'\')" style="flex:1;border:0;cursor:pointer;border-radius:7px;padding:5px;font-size:.64rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff">RUN</button>'+
+        '</div></div>';
+    }).join('')||'';
+  });
+}
+function reflectNow(){fetch('/api/v1/reverie/reflect',{method:'POST'}).then(function(){loadCognition();});}
+function approveGoal(id){fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){loadCognition();});}
+function runGoal(id){
+  fetch('/api/v1/drive/'+id+'/approve',{method:'POST'}).then(function(){
+    return fetch('/api/v1/drive/'+id+'/run',{method:'POST'});}).then(function(r){return r.json();})
+    .then(function(d){launch(d&&d.error?('Vetoed: '+(d.error||'')):'Goal executed');loadCognition();})
+    .catch(function(){loadCognition();});
+}
+function setOpenModeBtn(on){var b=document.getElementById('openModeBtn');if(!b)return;b.textContent=on?'ON':'OFF';
+  b.style.background=on?'linear-gradient(135deg,var(--accent),var(--accent2))':'var(--accent-soft)';b.style.color=on?'#fff':'var(--accent)';}
+function toggleOpenMode(){
+  gj('/api/v1/license/open-mode').then(function(s){
+    var next=!(s&&s.open_mode);
+    fetch('/api/v1/license/open-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:next})})
+      .then(function(r){return r.json();}).then(function(d){setOpenModeBtn(d&&d.open_mode);loadCognition();});
+  });
+}
+
+// ---------- Periodic refresh ----------
+function loadDriverStatus(){
+  gj('/api/v1/ascent/driver').then(function(d){
+    var el=document.getElementById('cogReflect');
+    if(!el)return;
+    if(d&&d.status){
+      var statusText='⟳ '+(d.status==='running'?'⏵':'⏸')+' '+(d.interval_s||'')+'s';
+      el.title='Ascent: '+d.status+(d.last_cycle_ts?' · last cycle '+(Math.floor((Date.now()/1000-d.last_cycle_ts)/60))+'m ago':'');
+    }
+  });
+  gj('/api/v1/reverie/driver').then(function(d){
+    var el=document.getElementById('cogGoal');
+    if(!el||!d)return;
+    if(d.status&&el.textContent==='—'){
+      el.textContent='Reverie driver: '+d.status+(d.reflections?' ('+d.reflections+' reflections)':'');
+    }
+  });
+}
+function refresh(){loadAgents();loadCognition();loadDriverStatus();
+  gj('/api/v1/license/status').then(function(d){if(d){document.getElementById('tierBadge').textContent=d.open_mode?'OPEN':(d.tier?d.tier.toUpperCase():'FREE');setOpenModeBtn(d.open_mode);}});
+}
+loadInfo();refresh();setInterval(refresh,10000);
+connectWS();setInterval(function(){if(!ws||ws.readyState!==1)pollMetrics();},5000);
 
 // ---------- license / pricing modal ----------
 var FALLBACK_PLANS=[

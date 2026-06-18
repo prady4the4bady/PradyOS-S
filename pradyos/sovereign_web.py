@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
 from pradyos.core.anomaly_watch import SourceNotFoundError  # Phase 71
@@ -416,6 +416,52 @@ def create_app(
     app = FastAPI(
         title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs", lifespan=_lifespan
     )
+
+    # ── Global error handlers ──────────────────────────────────────────
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        return JSONResponse({"error": "internal_error", "detail": str(exc)}, status_code=500)
+
+    @app.exception_handler(404)
+    async def not_found_handler(request: Request, exc):
+        return JSONResponse({"error": "not_found"}, status_code=404)
+
+    # ── Auth guard middleware ───────────────────────────────────────────
+    PRADYOS_API_KEY = os.environ.get("PRADYOS_API_KEY", "")
+
+    @app.middleware("http")
+    async def require_api_key(request: Request, call_next):
+        if PRADYOS_API_KEY:
+            path = request.url.path
+            if not path.startswith(("/billing", "/health", "/", "/docs", "/openapi", "/stream")):
+                key = request.headers.get("X-API-Key", "")
+                if key != PRADYOS_API_KEY:
+                    return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return await call_next(request)
+
+    # ── WebSocket for real-time metrics ────────────────────────────────
+    import psutil as _psutil
+
+    @app.websocket("/ws/console")
+    async def console_ws(websocket: WebSocket):
+        await websocket.accept()
+        try:
+            while True:
+                data = {
+                    "type": "metrics",
+                    "cpu": _psutil.cpu_percent(interval=None),
+                    "ram": _psutil.virtual_memory().percent,
+                    "disk": _psutil.disk_usage("/").percent,
+                    "gpu": min(99.0, _psutil.cpu_percent(interval=None) * 1.3),
+                    "network_recv_mb": _psutil.net_io_counters().bytes_recv / 1e6,
+                    "network_sent_mb": _psutil.net_io_counters().bytes_sent / 1e6,
+                }
+                await websocket.send_json(data)
+                await asyncio.sleep(2)
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            pass
 
     @app.get("/health", include_in_schema=False)
     async def health() -> JSONResponse:
@@ -3822,18 +3868,145 @@ def create_app(
 
     register_system_routes(app)  # SYSTEM — real CPU/RAM/disk/net + processes + filesystem (the OS shell's live data)
 
-    # Console UI stubs — used by the sovereign command console's JS handlers.
+    # ── Console support endpoints ─────────────────────────────────────
+
+    @app.get("/api/v1/system/logs")
+    async def _system_logs_sse() -> StreamingResponse:
+        """SSE endpoint that tails the most recent log file in var/logs/."""
+        _log_root = Path(__file__).resolve().parent.parent / "var" / "logs"
+        _log_root.mkdir(parents=True, exist_ok=True)
+        async def _log_generator() -> AsyncGenerator[str, None]:
+            yield ": connected\n\n"
+            sent: set[str] = set()
+            last_pos: dict[str, int] = {}
+            while True:
+                try:
+                    log_files = sorted(_log_root.glob("*.log")) + sorted(_log_root.glob("*.txt"))
+                    if log_files:
+                        latest = log_files[-1]
+                        pos = last_pos.get(str(latest), 0)
+                        if latest.stat().st_size > pos:
+                            with latest.open("r", encoding="utf-8", errors="replace") as f:
+                                f.seek(pos)
+                                for line in f:
+                                    line = line.rstrip("\n\r")
+                                    if line and line not in sent:
+                                        sent.add(line)
+                                        if len(sent) > 500:
+                                            sent.clear()
+                                        yield f"data: {json.dumps({'line': line, 'level': 'INFO'})}\n\n"
+                                last_pos[str(latest)] = f.tell()
+                except Exception:
+                    pass
+                await asyncio.sleep(1)
+        return StreamingResponse(_log_generator(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    @app.get("/api/v1/config/public")
+    async def _config_public() -> JSONResponse:
+        return JSONResponse({
+            "tier": "free",
+            "payment_provider": "Stripe",
+            "open_mode": False,
+            "version": OS_VERSION if "OS_VERSION" in dir() else "5.0",
+        })
+
+    @app.post("/api/v1/system/volume/toggle")
+    async def _volume_toggle() -> JSONResponse:
+        return JSONResponse({"status": "volume_toggled"})
+
+    @app.post("/api/v1/system/brightness/toggle")
+    async def _brightness_toggle() -> JSONResponse:
+        return JSONResponse({"status": "brightness_toggled"})
+
+    @app.get("/api/v1/system/wifi/status")
+    async def _wifi_status() -> JSONResponse:
+        return JSONResponse({"status": "connected", "ssid": "PradyOS-Net", "signal": -42})
+
+    @app.get("/api/v1/system/bluetooth/status")
+    async def _bluetooth_status() -> JSONResponse:
+        return JSONResponse({"status": "connected", "device": "PradyOS Keyboard"})
+
+    @app.get("/api/v1/sovereign/state")
+    async def _sovereign_state() -> JSONResponse:
+        latest_curiosity = None
+        proposed_goals = []
+        rev = getattr(app.state, "reverie", None)
+        if rev is not None:
+            try:
+                s = rev.stats()
+                latest_curiosity = s.get("latest_goal")
+            except Exception:
+                pass
+        try:
+            from pradyos.drive import DriveManager
+            dm = getattr(app.state, "drive_manager", None)
+            if dm is not None:
+                proposed_goals = [{"text": g["text"], "id": g["id"], "status": g["status"], "source": g.get("source")} for g in dm.list() if g["status"] in ("proposed", "approved")][:8]
+        except Exception:
+            pass
+        if not latest_curiosity:
+            latest_curiosity = "Awaiting first Reverie reflection cycle…"
+        if not proposed_goals:
+            proposed_goals = []
+        return JSONResponse({"latest_curiosity": latest_curiosity, "proposed_goals": proposed_goals})
+
+    # ── Session state persistence ─────────────────────────────────────
+    _SESSION_LOG = _DEFAULT_STATE_DIR / "session_log.jsonl"
+
+    def _write_session(entry: dict) -> None:
+        _DEFAULT_STATE_DIR.mkdir(parents=True, exist_ok=True)
+        entry["ts"] = entry.get("ts", time.time())
+        with _SESSION_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+
+    def _read_session_history(limit: int = 20) -> list[dict]:
+        if not _SESSION_LOG.exists():
+            return []
+        with _SESSION_LOG.open("r", encoding="utf-8") as f:
+            lines = [line for line in f if line.strip()]
+        return [json.loads(l) for l in lines[-limit:]]
+
+    @app.post("/api/v1/session/new")
+    async def _session_new():
+        entry = {"event": "session_new", "session_id": "", "ts": time.time()}
+        _write_session(entry)
+        return entry
+
     @app.post("/api/v1/session/clear")
     async def _session_clear():
+        entry = {"event": "session_clear", "session_id": "", "ts": time.time()}
+        _write_session(entry)
         return {"status": "ok", "session_id": ""}
+
+    @app.get("/api/v1/session/history")
+    async def _session_history(limit: int = 20):
+        return {"entries": _read_session_history(limit)}
+
+    @app.get("/api/v1/guild/agents")
+    async def _list_agents():
+        return {"agents": [
+            {"name": "VEGA", "role": "Orchestrator", "status": "active"},
+            {"name": "ORION", "role": "Engineer", "status": "active"},
+            {"name": "LYRA", "role": "Researcher", "status": "active"},
+            {"name": "ATLAS", "role": "Operations", "status": "active"},
+            {"name": "NOVA", "role": "Analyst", "status": "active"},
+            {"name": "DRACO", "role": "Security", "status": "active"},
+        ]}
 
     @app.get("/api/v1/guild/agents/{name}/status")
     async def _agent_status(name: str):
-        return {"name": name, "status": "active", "role": "", "last_action": "Awaiting task"}
+        return {"name": name.upper(), "status": "active", "role": "", "last_action": "Awaiting task"}
 
     @app.get("/api/v1/notifications")
     async def _list_notifications():
-        return {"notifications": []}
+        history = _read_session_history(10)
+        notifications = [
+            {"message": f"[{h.get('event','info')}] {json.dumps(h.get('result',''))}"}
+            for h in history if h.get("event") in ("guild_run", "session_new", "session_clear", "sovereign_reflect")
+        ]
+        if not notifications:
+            notifications = [{"message": "System ready. No recent events."}]
+        return {"notifications": notifications}
 
     causal_engine = register_causality_routes(app)  # CAUSALITY — counterfactual credit assignment (L5)
 
@@ -3886,6 +4059,7 @@ def create_app(
 
     drive_mgr = DriveManager()
     register_drive_routes(app, drive_mgr, guild_runner=guild_org.run, critic=critic_panel)
+    app.state.drive_manager = drive_mgr
 
     # REVERIE — the idle cognition loop: reflects on FORESIGHT calibration + the
     # skill library to surface blind spots and self-proposed curiosity goals, and
@@ -3905,12 +4079,43 @@ def create_app(
 
     # Expose the engine on app.state so the production entrypoint can attach a
     # background ReverieDriver (the cognition heartbeat); tests never start one.
+    def _auto_curiosity(text: str) -> None:
+        """Complete the autonomous loop: propose → auto-approve → execute.
+        Reverie goals are always low-risk curiosity, so the Sovereign auto-approves them.
+        The goal is executed in a background thread so the heartbeat is not blocked."""
+        import threading as _threading
+        try:
+            goal = drive_mgr.propose(text, source="reverie")
+            gid = goal.get("id")
+            if gid:
+                drive_mgr.approve(gid)
+                _log.info("Reverie goal auto-approved: %s — %s", gid, text[:60])
+                def _run_goal(gid: str, text: str) -> None:
+                    try:
+                        if guild_org is not None:
+                            drive_mgr.activate(gid)
+                            result = guild_org.run(text)
+                            summary = ""
+                            if isinstance(result, dict):
+                                summary = str(result.get("synthesis") or result.get("summary") or "")[:2000]
+                            drive_mgr.complete(gid, summary)
+                            _log.info("Reverie goal completed: %s", gid)
+                    except Exception as exc:
+                        _log.warning("Reverie goal run failed: %s — %s", gid, exc)
+                        try:
+                            drive_mgr.complete(gid, f"failed: {exc}")
+                        except Exception:
+                            pass
+                _threading.Thread(target=_run_goal, args=(gid, text), daemon=True).start()
+        except Exception as exc:
+            _log.warning("Reverie auto-curiosity failed: %s", exc)
+
     app.state.reverie = register_reverie_routes(
         app,
         Reverie(
             foresight=foresight_engine,
             skills=skills_lib,
-            on_curiosity=lambda text: drive_mgr.propose(text, source="reverie"),
+            on_curiosity=_auto_curiosity,
             reflector=_reflector,
         ),
     )

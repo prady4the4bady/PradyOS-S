@@ -184,3 +184,20 @@ def register_system_routes(app: Any) -> None:
             )
         except Exception:  # noqa: BLE001 — never leak a stack trace to the shell
             return JSONResponse({"path": str(root), "root": str(root), "entries": []})
+
+    @app.get("/api/v1/files/content")
+    async def api_files_content(path: str = Query(...)) -> JSONResponse:
+        root = _safe_root()
+        try:
+            target = Path(path).expanduser().resolve()
+            if root not in target.parents and target != root:
+                return JSONResponse({"error": "path traversal denied"}, status_code=403)
+            if not target.is_file():
+                return JSONResponse({"error": "not a file"}, status_code=404)
+            size_mb = target.stat().st_size / (1024 * 1024)
+            if size_mb > 10:
+                return JSONResponse({"error": "file too large (>10MB)"}, status_code=413)
+            text = target.read_text(encoding="utf-8", errors="replace")
+            return JSONResponse({"path": str(target), "content": text[:100000], "size_kb": round(target.stat().st_size / 1024, 1)})
+        except Exception:
+            return JSONResponse({"error": "could not read file"}, status_code=500)

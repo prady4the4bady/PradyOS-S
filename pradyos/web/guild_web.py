@@ -8,6 +8,10 @@ local LLM (the injected worker), so it runs off the event loop.
 
 from __future__ import annotations
 
+import json
+import os
+import time
+from pathlib import Path
 from typing import Any
 
 from fastapi import Query, Request
@@ -17,6 +21,21 @@ from fastapi.responses import JSONResponse
 from pradyos.guild import GuildError, GuildOrg
 from pradyos.web._responses import err_response as _err
 from pradyos.web._responses import read_json as _json
+
+
+_SESSION_LOG = Path(
+    os.environ.get(
+        "PRADYOS_STATE_PATH",
+        Path(__file__).resolve().parent.parent / "var" / "state",
+    )
+) / "session_log.jsonl"
+
+
+def _write_guild_session(entry: dict) -> None:
+    _SESSION_LOG.parent.mkdir(parents=True, exist_ok=True)
+    entry["ts"] = entry.get("ts", time.time())
+    with _SESSION_LOG.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
 
 
 def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any | None = None) -> Any:
@@ -52,8 +71,8 @@ def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any |
         if roster is not None and not isinstance(roster, list):
             return JSONResponse({"error": "roster must be a list of role names"}, status_code=422)
         try:
-            # run() may call a (blocking) local LLM worker — keep it off the loop.
             result = await run_in_threadpool(org.run, body["objective"], roster)
+            _write_guild_session({"event": "guild_run", "objective": body["objective"], "result": result.get("summary", "")})
             return JSONResponse(result)
         except GuildError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
