@@ -417,6 +417,10 @@ def create_app(
         title="PRADY OS -- Sovereign Dashboard", version="5.0", docs_url="/docs", lifespan=_lifespan
     )
 
+    @app.get("/health", include_in_schema=False)
+    async def health() -> JSONResponse:
+        return JSONResponse({"status": "ok", "service": "PradySovereign"})
+
     if bus is not None:
         bus.subscribe("*", _publish_to_sse)
 
@@ -837,7 +841,7 @@ def create_app(
             status_code=200,
         )
 
-    @app.get("/metrics", include_in_schema=False)
+    @app.get("/metrics", include_in_schema=False, response_model=None)
     async def prometheus_metrics(request: Request) -> PlainTextResponse | JSONResponse:
         vault = getattr(request.app.state, "license_vault", None)
         if vault and not vault.entitled("metrics_prometheus"):
@@ -857,7 +861,7 @@ def create_app(
             media_type="text/plain; version=0.0.4; charset=utf-8",
         )
 
-    @app.get("/api/v1/metrics")
+    @app.get("/api/v1/metrics", response_model=None)
     async def api_v1_metrics(request: Request) -> JSONResponse:
         vault = getattr(request.app.state, "license_vault", None)
         if vault and not vault.entitled("metrics_prometheus"):

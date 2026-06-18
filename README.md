@@ -68,6 +68,22 @@ PradySovereign is free and open-source. Pro/Sovereign/Enterprise tiers unlock
 advanced governance, audit, and fleet features. See the [pricing page](/billing)
 and [docs/MONETIZATION.md](docs/MONETIZATION.md) for details.
 
+## Deploy
+
+### One-click Render (free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/prady4the4bady/PradyOS-S)
+
+Or connect your repo to [Render.com](https://render.com) → New Web Service —
+`render.yaml` is auto-detected. Fill in secret env vars in the dashboard;
+the app starts immediately on the free tier.
+
+### Self-host
+
+- **Fly.io**: `fly launch` (uses `fly.toml`)
+- **Docker**: `docker-compose -f deploy/docker-compose.yml up -d`
+- **Manual**: `uvicorn pradyos.sovereign_web:create_app --factory --host 0.0.0.0 --port 8000`
+
 ## Commands
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for a full reference covering install,

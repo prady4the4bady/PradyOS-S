@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: prady-sovereign
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: uvicorn pradyos.sovereign_web:create_app --factory --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PRADYOS_OPEN_MODE
+        value: "false"
+      - key: PRADYOS_FORESIGHT_LLM
+        value: "false"
+      - key: PRADYOS_REVERIE_LLM
+        value: "false"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PRADYOS_STRIPE_PRICE_PRO
+        sync: false
+      - key: PRADYOS_STRIPE_PRICE_SOVEREIGN
+        sync: false
+      - key: PRADYOS_STRIPE_PRICE_ENTERPRISE
+        sync: false
+      - key: STRIPE_SUCCESS_URL
+        sync: false
+      - key: STRIPE_CANCEL_URL
+        sync: false
+      - key: POLAR_ACCESS_TOKEN
+        sync: false
+      - key: PRADYOS_POLAR_PRODUCT_PRO
+        sync: false
+      - key: PRADYOS_POLAR_PRODUCT_SOVEREIGN
+        sync: false
+      - key: PRADYOS_POLAR_PRODUCT_ENTERPRISE
+        sync: false
+      - key: PRADYOS_PAYMENT_PROVIDER
+        value: "stripe"

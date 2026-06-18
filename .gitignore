@@ -50,3 +50,6 @@ var/commitmsg.txt
 # Machine-dependent benchmark artifacts
 benchmarks/
 
+# Environment files — never commit secrets
+.env
+

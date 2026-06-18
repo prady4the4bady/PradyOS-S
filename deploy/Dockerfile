@@ -23,14 +23,15 @@ RUN pip install --no-cache-dir "pip>=24.0" wheel
 COPY pyproject.toml ./
 COPY pradyos/__init__.py pradyos/
 
-# Create isolated venv then install deps
+# Create isolated venv then install deps (production only — no dev extras)
 RUN python -m venv /venv && \
-    /venv/bin/pip install --no-cache-dir -e ".[dev]" || \
+    /venv/bin/pip install --no-cache-dir "uvicorn>=0.24" "stripe>=7.0" && \
     /venv/bin/pip install --no-cache-dir -e "."
 
 # Copy full source and perform editable install
 COPY . .
-RUN /venv/bin/pip install --no-cache-dir -e .
+RUN /venv/bin/pip install --no-cache-dir -e ".[gpu]" || true && \
+    /venv/bin/pip install --no-cache-dir -e "."
 
 # ---------------------------------------------------------------------------
 # Stage 2: runtime

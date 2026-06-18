@@ -132,7 +132,27 @@ curl -X DELETE http://localhost:8000/api/v1/license/reset
 python scripts/stripe_setup.py
 ```
 
-## I) CLI Reference
+## J) Deployment
+
+```bash
+# Render (free tier)
+# Connect repo at https://render.com — render.yaml is auto-detected
+
+# Fly.io
+fly launch    # uses fly.toml
+fly deploy
+
+# Docker
+docker-compose -f deploy/docker-compose.yml up -d
+
+# Manual cold-start
+uvicorn pradyos.sovereign_web:create_app --factory --host 0.0.0.0 --port 8000
+
+# Verify health
+curl http://localhost:8000/health
+```
+
+## K) CLI Reference
 
 ```bash
 pradyos-sovereign --help              # All commands
