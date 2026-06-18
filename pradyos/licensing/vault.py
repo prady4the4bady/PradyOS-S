@@ -39,17 +39,26 @@ _TIER_ORDER: dict[str, int] = {TIER_FREE: 0, TIER_PRO: 1, TIER_SOVEREIGN: 2, TIE
 
 # The gate: which tier a premium feature requires. Anything not listed is ungated.
 FEATURE_MIN_TIER: dict[str, str] = {
+    "dev_mode": TIER_FREE,
+    "local_mode": TIER_FREE,
+    "codemap": TIER_FREE,
+    "benchmarks": TIER_FREE,
     "manual_mode": TIER_FREE,
     "local_agents": TIER_FREE,
     "research": TIER_PRO,
     "guild": TIER_PRO,
     "guild_memory": TIER_PRO,
+    "audit_log_export": TIER_PRO,
     "cloud_ai": TIER_SOVEREIGN,
     "sovereign_mode": TIER_SOVEREIGN,
     "autonomy_driver": TIER_SOVEREIGN,
     "apply_gate": TIER_SOVEREIGN,
+    "blueprint_manager": TIER_SOVEREIGN,
+    "metrics_prometheus": TIER_SOVEREIGN,
     "enterprise_seats": TIER_ENTERPRISE,
     "priority_support": TIER_ENTERPRISE,
+    "fleet_orchestration": TIER_ENTERPRISE,
+    "aegis_integrity": TIER_ENTERPRISE,
 }
 
 # Public price book (yearly, USD). The Sovereign elects a tier; the higher the

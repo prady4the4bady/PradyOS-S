@@ -20,7 +20,7 @@ from fastapi import Query, Request
 from fastapi.responses import JSONResponse
 
 from pradyos.licensing import LicenseError, LicenseVault
-from pradyos.licensing import stripe_billing
+from pradyos.licensing import polar_billing, stripe_billing
 from pradyos.licensing.vault import PRICING
 from pradyos.web._responses import read_json as _json
 
@@ -37,6 +37,8 @@ def _admin_ok(request: Request) -> bool:
 def register_license_routes(app: Any, vault: Any | None = None) -> Any:
     """Register the ``/api/v1/license`` routes on ``app``; return the vault used."""
     lic: LicenseVault = vault if vault is not None else LicenseVault()
+    # Expose vault on app.state so other routers can check entitlements
+    app.state.license_vault = lic
 
     @app.get("/api/v1/license/status")
     async def api_license_status() -> JSONResponse:
@@ -59,6 +61,20 @@ def register_license_routes(app: Any, vault: Any | None = None) -> Any:
             return JSONResponse(lic.install(body["token"]))
         except LicenseError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422)
+
+    @app.post("/api/v1/license/activate")
+    async def api_license_activate(request: Request) -> JSONResponse:
+        """Manually activate a tier (dev testing / enterprise license key entry)."""
+        if not _admin_ok(request):
+            return JSONResponse({"error": "admin token required"}, status_code=403)
+        body = await _json(request)
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "request body is required"}, status_code=422)
+        tier = str(body.get("tier", "")).strip().lower()
+        if tier not in PRICING:
+            return JSONResponse({"error": f"unknown tier {tier!r}"}, status_code=422)
+        result = lic.grant_tier(tier, holder=body.get("source", "manual"))
+        return JSONResponse(result)
 
     @app.delete("/api/v1/license/reset")
     async def api_license_reset() -> JSONResponse:
@@ -85,12 +101,28 @@ def register_license_routes(app: Any, vault: Any | None = None) -> Any:
                 {"tier": tier, "status": "open_mode", "checkout_url": None,
                  "message": "Open mode is on — every feature is already free."}
             )
-        # 1) real Stripe Checkout when configured
+        # 1a) Polar.sh checkout when PRADYOS_PAYMENT_PROVIDER=polar or Stripe unconfigured
+        provider = os.environ.get("PRADYOS_PAYMENT_PROVIDER", "stripe").lower()
+        if provider == "polar" and polar_billing.is_configured():
+            url = polar_billing.checkout_url(tier)
+            if url:
+                return JSONResponse({"tier": tier, "status": "redirect", "checkout_url": url, "provider": "polar"})
+            return JSONResponse(
+                {"tier": tier, "status": "error",
+                 "error": f"no Polar product ID configured for tier {tier!r}"},
+                status_code=502,
+            )
+        # 1b) real Stripe Checkout when configured
         if stripe_billing.is_configured():
             try:
                 return JSONResponse(stripe_billing.create_checkout_session(tier))
             except stripe_billing.StripeError as exc:
                 return JSONResponse({"tier": tier, "status": "error", "error": str(exc)}, status_code=502)
+        # 1c) Polar.sh as fallback when Stripe absent
+        if polar_billing.is_configured():
+            url = polar_billing.checkout_url(tier)
+            if url:
+                return JSONResponse({"tier": tier, "status": "redirect", "checkout_url": url, "provider": "polar"})
         # 2) generic hosted-checkout base URL
         base = os.environ.get("PRADYOS_BILLING_CHECKOUT_URL")
         if base:

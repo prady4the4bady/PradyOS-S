@@ -98,7 +98,41 @@ python scripts/export_codemap_mermaid.py
 python scripts/export_codemap_mermaid.py -o filename
 ```
 
-## G) CLI Reference
+## H) Billing & Licensing
+
+```bash
+# View pricing page
+curl http://localhost:8000/billing
+
+# Check current tier and entitlements
+curl http://localhost:8000/api/v1/license/status
+
+# Check a specific feature
+curl "http://localhost:8000/api/v1/license/entitled?feature=blueprint_manager"
+
+# Start checkout for a paid tier
+curl -X POST http://localhost:8000/api/v1/billing/checkout \
+  -H "Content-Type: application/json" \
+  -d '{"tier": "pro"}'
+
+# Manually activate a tier (dev testing / enterprise key entry)
+curl -X POST http://localhost:8000/api/v1/license/activate \
+  -H "Content-Type: application/json" \
+  -d '{"tier": "sovereign"}'
+
+# Install a signed license key
+curl -X POST http://localhost:8000/api/v1/license/install \
+  -H "Content-Type: application/json" \
+  -d '{"token": "<signed-license-token>"}'
+
+# Reset to free tier
+curl -X DELETE http://localhost:8000/api/v1/license/reset
+
+# Set up Stripe product catalogue
+python scripts/stripe_setup.py
+```
+
+## I) CLI Reference
 
 ```bash
 pradyos-sovereign --help              # All commands

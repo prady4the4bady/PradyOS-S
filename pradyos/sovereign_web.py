@@ -76,6 +76,7 @@ from pradyos.web.kll_sketch_web import register_kll_sketch_routes  # Phase 92
 from pradyos.web.lazy_segment_tree_web import register_lazyseg_routes  # Phase 163
 from pradyos.web.leftist_heap_web import register_leftist_routes  # Phase 158
 from pradyos.web.li_chao_tree_web import register_lichao_routes  # Phase 148
+from pradyos.web.billing_page import register_billing_page_routes  # BILLING — pricing page
 from pradyos.web.licensing_web import register_license_routes  # LICENSING — tiers + entitlements
 from pradyos.web.system_web import register_system_routes  # SYSTEM — real OS telemetry + filesystem
 from pradyos.web.foresight_web import register_foresight_routes  # FORESIGHT — predict/act/compare/learn
@@ -837,7 +838,15 @@ def create_app(
         )
 
     @app.get("/metrics", include_in_schema=False)
-    async def prometheus_metrics() -> PlainTextResponse:
+    async def prometheus_metrics(request: Request) -> PlainTextResponse | JSONResponse:
+        vault = getattr(request.app.state, "license_vault", None)
+        if vault and not vault.entitled("metrics_prometheus"):
+            return JSONResponse(
+                {"error": "tier_required", "feature": "metrics_prometheus",
+                 "required": "sovereign", "current": vault.tier(),
+                 "upgrade_url": "/billing"},
+                status_code=402,
+            )
         if metrics is None:
             return PlainTextResponse(
                 "",
@@ -849,7 +858,15 @@ def create_app(
         )
 
     @app.get("/api/v1/metrics")
-    async def api_v1_metrics() -> JSONResponse:
+    async def api_v1_metrics(request: Request) -> JSONResponse:
+        vault = getattr(request.app.state, "license_vault", None)
+        if vault and not vault.entitled("metrics_prometheus"):
+            return JSONResponse(
+                {"error": "tier_required", "feature": "metrics_prometheus",
+                 "required": "sovereign", "current": vault.tier(),
+                 "upgrade_url": "/billing"},
+                status_code=402,
+            )
         if metrics is None:
             return JSONResponse({})
         return JSONResponse(metrics.get_all())
@@ -3769,6 +3786,8 @@ def create_app(
     )  # GUILD + L1 auto-distill → skill library
 
     license_vault = register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
+
+    register_billing_page_routes(app, license_vault)  # BILLING — /billing pricing page
 
     # AEGIS — software integrity & tamper-evidence. Loads a signed manifest from
     # PRADYOS_INTEGRITY_MANIFEST (a token) verified with PRADYOS_INTEGRITY_PUBKEY;

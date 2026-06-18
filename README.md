@@ -62,10 +62,16 @@ without making a single network call.
 | Local Personal | Governed daemon with personal_assistant blueprint | [docs/LOCAL_MODE.md](docs/LOCAL_MODE.md) |
 | Enterprise | Docker compose + metrics + blueprint-driven fleet deployment | [docs/ENTERPRISE_MODE.md](docs/ENTERPRISE_MODE.md) |
 
+## Pricing & Monetization
+
+PradySovereign is free and open-source. Pro/Sovereign/Enterprise tiers unlock
+advanced governance, audit, and fleet features. See the [pricing page](/billing)
+and [docs/MONETIZATION.md](docs/MONETIZATION.md) for details.
+
 ## Commands
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for a full reference covering install,
-all modes, testing, benchmarks, and the codemap.
+all modes, testing, benchmarks, billing, and the codemap.
 
 ## Benchmarks & Testing
 
