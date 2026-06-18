@@ -8,6 +8,7 @@ Dogfooding the framework for the HN demo.
 
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -89,9 +90,20 @@ def _swarm_worker(role: Any, objective: str, context: list[dict]) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Swarm analysis of PradyOS codebase")
+    parser.add_argument(
+        "-t", "--task",
+        default="Find one small improvement in this repo and propose a patch.",
+        help="Task objective for the swarm (default: '%(default)s')",
+    )
+    args = parser.parse_args()
+    task = args.task
+
     print()
     print(f"  {BOLD}PradySovereign -- The Swarm That Eats Itself{RESET}")
     print(f"  {DIM}A guild of 6 agents analyses this repo through the codemap lens.{RESET}")
+    print()
+    print(f"  [{BOLD}{CYAN}TASK{RESET}] {task}")
     print()
 
     # ── Gather real repo data via codemap ──────────────────────────────
@@ -133,7 +145,8 @@ def main() -> None:
         f"{total_loc} LOC across the package tree. "
         "Identify architectural layers, assess test coverage patterns, "
         "surface consolidation opportunities, and recommend next steps "
-        "for the HN launch."
+        "for the HN launch. "
+        f"Primary task from user: {task}"
     )
 
     print(f"  {BOLD}Swarm analysis{RESET}")
