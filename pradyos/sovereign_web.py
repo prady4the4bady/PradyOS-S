@@ -3965,6 +3965,9 @@ def _read_checkpoint_summary(checkpoint_store: Any) -> dict[str, Any]:
 # UI doesn't bloat the web app; served verbatim at "/".
 from pradyos.web.console import CONSOLE_HTML as _DASHBOARD_HTML
 
+# Module-level app for production servers (Render, Fly.io, etc.) that expect `module:app`
+app = create_app()
+
 
 def main() -> None:
     """Entry point: pradyos-web."""
