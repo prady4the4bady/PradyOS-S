@@ -52,6 +52,16 @@ The system is engineered in measurable layers of progressively more general, sel
 - **AEGIS integrity**: Signed Ed25519 manifest of source files. Tamper-evidence triggers a drop to the free tier.
 - **Boot-level hardening**: Verified boot chain (Secure Boot signing, MOK, TPM2 sealing).
 
+## Developer Documentation
+
+| Document | Contents |
+|----------|----------|
+| [`DEV_MODE.md`](DEV_MODE.md) | Dev Mode API — SkillEngine, GuildSwarm, SovereignClient facades |
+| [`LOCAL_MODE.md`](LOCAL_MODE.md) | Local Personal Mode — daemon, blueprints, CLI |
+| [`ENTERPRISE_MODE.md`](ENTERPRISE_MODE.md) | Enterprise Mode — multi-agent fleet deployment |
+| [`BENCHMARKS.md`](BENCHMARKS.md) | Internal throughput benchmarks (8 modules, fixed seed) |
+| [`CODEMAP.md`](CODEMAP.md) | Codemap — structural self-knowledge via AST scanning |
+
 ## Build Instructions (Internal)
 
 ### Local development
@@ -89,6 +99,8 @@ pradyos/
 ├── oracle/          # planning + autonomous proposal loop
 ├── guild/           # multi-agent organization + continual memory + auto-distill
 ├── skills/          # skill library (learn/match/reinforce)
+├── codemap/         # structural self-knowledge (AST scanner, graph, mermaid export)
+├── dev_api/         # Dev Mode facades (SkillEngine, GuildSwarm, SovereignClient)
 ├── foresight/       # L1/L2 metacognition (+ LLM world-model)
 ├── drive/           # L3 goal/drive manager (Sovereign-gated)
 ├── critic/           # L4 adversarial critic ensemble (+ LLM critic)
