@@ -65,7 +65,7 @@ export default function App() {
   }, [setSplash]);
 
   return (
-    <div className="h-screen overflow-hidden" style={{background: 'linear-gradient(180deg, #050510 0%, #0a0a2e 50%, #0d0d2b 100%)'}}>
+    <div className="h-dvh overflow-hidden" style={{background: 'linear-gradient(180deg, #050510 0%, #0a0a2e 50%, #0d0d2b 100%)'}}>
       <Starfield />
       <Mountains />
       <WebSocketHandler />

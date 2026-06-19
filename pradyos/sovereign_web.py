@@ -448,11 +448,18 @@ def create_app(
         await websocket.accept()
         try:
             while True:
+                du = _psutil.disk_usage("/")
+                sv = _psutil.virtual_memory()
                 data = {
                     "type": "metrics",
                     "cpu": _psutil.cpu_percent(interval=None),
-                    "ram": _psutil.virtual_memory().percent,
-                    "disk": _psutil.disk_usage("/").percent,
+                    "ram": sv.percent,
+                    "ram_used_gb": round(sv.used / 1e9, 1),
+                    "ram_total_gb": round(sv.total / 1e9, 1),
+                    "disk": du.percent,
+                    "disk_used_gb": round(du.used / 1e9, 1),
+                    "disk_total_gb": round(du.total / 1e9, 1),
+                    "disk_free_gb": round(du.free / 1e9, 1),
                     "gpu": min(99.0, _psutil.cpu_percent(interval=None) * 1.3),
                     "network_recv_mb": _psutil.net_io_counters().bytes_recv / 1e6,
                     "network_sent_mb": _psutil.net_io_counters().bytes_sent / 1e6,
@@ -3843,6 +3850,7 @@ def create_app(
     register_fortify_routes(app, fortify)  # FORTIFY — self-hardening audit of own code
 
     register_evolve_routes(app, evolve)  # EVOLVE — autonomous self-improvement pipeline
+    app.state.evolve = evolve
 
     register_ascent_routes(app, ascent)  # ASCENT — autonomous self-improvement loop (orchestrator)
 
@@ -3854,6 +3862,7 @@ def create_app(
     guild_org = register_guild_routes(
         app, guild, on_complete=lambda project: _distill(skills_lib, project)
     )  # GUILD + L1 auto-distill → skill library
+    app.state.guild = guild_org
 
     license_vault = register_license_routes(app, licensing)  # LICENSING — signed offline tiers + entitlements
 
@@ -4211,11 +4220,18 @@ def main() -> None:
     """Entry point: pradyos-web."""
     import uvicorn
 
+    # Load .env before anything reads env vars
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except Exception:
+        pass
+
     from pradyos.ascent import AscentApplier, AscentDriver, AscentLoop, OwnModuleSource
     from pradyos.campaign.registry import CampaignRegistry
     from pradyos.core.audit import get_audit_log
     from pradyos.core.bus import get_bus
-    from pradyos.core.llm import resolve_provider
+    from pradyos.core.llm_config import get as get_llm, current_config as llm_config, reconfigure as reconfigure_llm
     from pradyos.core.web_agent import WebAgent
     from pradyos.evolve import EvolveEngine, LLMProposer
     from pradyos.guild import ExperienceStore, GuildOrg, LLMGuildWorker, memory_tool, research_tool
@@ -4253,7 +4269,7 @@ def main() -> None:
     # switchable to a stronger model via PRADYOS_LLM_* env (the Sovereign opts in
     # to spend). EVOLVE + the GUILD share it, so one config change makes every
     # agent smarter. If the model is absent, callers degrade gracefully.
-    llm = resolve_provider()
+    llm = get_llm()
     evolve = EvolveEngine(proposer=LLMProposer(llm))
     # Close the loop: ASCENT shares the live EVOLVE engine, so its autonomous
     # cycles flow through the same local-LLM proposer + gate. The default
@@ -4348,9 +4364,27 @@ def main() -> None:
 
     @app.get("/api/v1/llm/info", include_in_schema=True)
     async def _api_llm_info() -> JSONResponse:
-        # The active model the agents run on (no API key — never exposed).
-        info = llm.info() if hasattr(llm, "info") else {"provider": getattr(llm, "name", "unknown")}
-        return JSONResponse(info)
+        return JSONResponse(llm_config())
+
+    @app.post("/api/v1/llm/configure", include_in_schema=True)
+    async def _api_llm_configure(body: dict[str, Any]) -> JSONResponse:
+        result = reconfigure_llm(
+            provider=body.get("provider", "ollama"),
+            base_url=body.get("base_url"),
+            model=body.get("model"),
+            api_key=body.get("api_key"),
+            max_tokens=body.get("max_tokens"),
+            top_p=body.get("top_p"),
+        )
+        if "error" in result:
+            return JSONResponse(result, status_code=400)
+        # Re-create shared components with the new provider
+        from pradyos.evolve import LLMProposer
+        new_llm = get_llm()
+        app.state.evolve.proposer = LLMProposer(new_llm)
+        if hasattr(app.state, "guild"):
+            app.state.guild.worker = type(app.state.guild.worker)(new_llm)
+        return JSONResponse(result)
 
     log.info("Starting Sovereign Web Dashboard on 0.0.0.0:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000, loop="asyncio", log_level="info")

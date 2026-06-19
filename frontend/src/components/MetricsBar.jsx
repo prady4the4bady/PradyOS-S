@@ -1,6 +1,6 @@
 import useMetricsStore from "../stores/useMetricsStore";
 
-function DonutGauge({ value, label, color = "#7c3aed" }) {
+function DonutGauge({ value, label, color = "#7c3aed", detail }) {
   const r = 28, circ = 2 * Math.PI * r;
   const normalized = Math.min(100, Math.max(0, value));
   const offset = circ - (normalized / 100) * circ;
@@ -16,6 +16,7 @@ function DonutGauge({ value, label, color = "#7c3aed" }) {
           fontSize="13" fontWeight="bold">{Math.round(normalized)}%</text>
       </svg>
       <span className="text-[0.58rem] text-purple-300 tracking-widest font-semibold">{label}</span>
+      {detail && <span className="text-[0.5rem] text-txt-dim -mt-1">{detail}</span>}
     </div>
   );
 }
@@ -23,7 +24,11 @@ function DonutGauge({ value, label, color = "#7c3aed" }) {
 export default function MetricsBar() {
   const cpu = useMetricsStore((s) => s.cpu);
   const ram = useMetricsStore((s) => s.ram);
+  const ramUsedGb = useMetricsStore((s) => s.ramUsedGb);
+  const ramTotalGb = useMetricsStore((s) => s.ramTotalGb);
   const disk = useMetricsStore((s) => s.disk);
+  const diskUsedGb = useMetricsStore((s) => s.diskUsedGb);
+  const diskTotalGb = useMetricsStore((s) => s.diskTotalGb);
   const gpu = useMetricsStore((s) => s.gpu);
 
   return (
@@ -35,8 +40,10 @@ export default function MetricsBar() {
       <div className="grid grid-cols-2 gap-y-5 gap-x-2">
         <DonutGauge value={cpu} label="CPU" color="#7c3aed" />
         <DonutGauge value={gpu} label="GPU" color="#6366f1" />
-        <DonutGauge value={ram} label="RAM" color="#22c55e" />
-        <DonutGauge value={disk} label="DISK" color="#f97316" />
+        <DonutGauge value={ram} label="RAM" color="#22c55e"
+          detail={ramTotalGb > 0 ? `${ramUsedGb.toFixed(1)}/${ramTotalGb.toFixed(0)} GB` : ""} />
+        <DonutGauge value={disk} label="DISK" color="#f97316"
+          detail={diskTotalGb > 0 ? `${diskUsedGb.toFixed(0)}/${diskTotalGb.toFixed(0)} GB` : ""} />
       </div>
     </>
   );

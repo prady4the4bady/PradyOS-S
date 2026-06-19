@@ -24,7 +24,7 @@ export default function TopBar() {
   useEffect(() => {
     fetch("/api/v1/license/status")
       .then((r) => r.json())
-      .then((d) => setTier(d?.open_mode ? "OPEN" : (d?.tier || "FREE").toUpperCase()))
+      .then((d) => setTier(d?.open_mode ? "UNLOCKED" : (d?.tier || "FREE").toUpperCase()))
       .catch(() => {});
   }, []);
 

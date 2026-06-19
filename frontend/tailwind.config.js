@@ -16,6 +16,8 @@ export default {
         mono: ['"JetBrains Mono"', '"Cascadia Code"', "monospace"],
       },
       backdropBlur: { glass: "24px" },
+      height: { dvh: "100dvh" },
+      minHeight: { dvh: "100dvh" },
     },
   },
   plugins: [],

@@ -70,7 +70,8 @@ LANDING_HTML = r"""<!DOCTYPE html>
     <h1>PradySovereign</h1>
     <p>A governed, self-improving cognitive layer for autonomous AI agents. Ships in production with 50+ probabilistic modules, 6 autonomy layers, and signed sovereign gating.</p>
     <div class="hero-btns">
-      <a href="#install" class="btn-primary">⬇ Download & Install</a>
+      <a href="/console" class="btn-primary">🚀 Launch Console</a>
+      <a href="#install" class="btn-secondary">⬇ Download & Install</a>
       <a href="https://github.com/prady4the4bady/PradyOS-S" class="btn-secondary">★ Star on GitHub</a>
     </div>
   </section>

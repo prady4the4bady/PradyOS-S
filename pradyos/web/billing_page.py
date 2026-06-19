@@ -185,7 +185,7 @@ def _build_page(current_tier: str, open_mode: bool) -> str:
 
         button_html = ""
         if open_mode:
-            button_html = f'<div class="current-tier">UNLOCKED (Open Mode)</div>'
+            button_html = f'<div class="current-tier" style="background:rgba(139,92,246,0.15);color:#a78bfa;border-color:rgba(139,92,246,0.3)">All Features Unlocked</div>'
         elif is_current and tier == "free":
             button_html = f'<div class="current-tier">Current Plan</div>'
         elif is_current:
