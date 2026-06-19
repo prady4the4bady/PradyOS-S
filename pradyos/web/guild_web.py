@@ -81,21 +81,22 @@ def register_guild_routes(app: Any, guild: Any | None = None, on_complete: Any |
             return JSONResponse({"error": "roster must be a list of role names"}, status_code=422)
         try:
             result = await run_in_threadpool(org.run, body["objective"], roster)
+            has_worker = org._worker is not None
             has_content = any(
                 c.get("content", "").strip()
                 for c in result.get("contributions") or []
             ) or result.get("synthesis", "").strip()
-            if not has_content:
+            if not has_content and not has_worker:
                 contributions = result.get("contributions") or []
                 enriched = []
                 for c in contributions:
                     role = c.get("role", "agent")
                     demo = _DEMO_RESPONSES.get(role, f"I'm analyzing the task from my perspective as {role}.")
-                    enriched.append({"role": role, "content": demo + " [Demo mode — set OPENAI_API_KEY for real LLM responses]", "seq": c.get("seq", 0)})
+                    enriched.append({"role": role, "content": demo + " [Demo mode — set PRADYOS_LLM_API_KEY in .env for real LLM responses]", "seq": c.get("seq", 0)})
                 result["contributions"] = enriched
                 result["synthesis"] = " — ".join(
                     _DEMO_RESPONSES.get(c.get("role"), "") for c in contributions if c.get("role") in _DEMO_RESPONSES
-                ) + " [Demo mode — set OPENAI_API_KEY for real LLM responses]"
+                ) + " [Demo mode — set PRADYOS_LLM_API_KEY in .env for real LLM responses]"
                 result["status"] = "complete"
             _write_guild_session({"event": "guild_run", "objective": body["objective"], "result": result.get("synthesis", "")})
             return JSONResponse(result)
