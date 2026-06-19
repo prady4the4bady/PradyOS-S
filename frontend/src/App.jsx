@@ -11,6 +11,10 @@ import SettingsPanel from "./components/SettingsPanel";
 import FileBrowser from "./components/FileBrowser";
 import AgentModal from "./components/AgentModal";
 import WebPanel from "./components/WebPanel";
+import TerminalPanel from "./components/Terminal";
+import ProjectsPanel from "./components/ProjectsPanel";
+import KnowledgePanel from "./components/KnowledgePanel";
+import SystemPanel from "./components/SystemPanel";
 
 function Starfield() {
   const stars = useMemo(() =>
@@ -55,14 +59,24 @@ function Mountains() {
   );
 }
 
+const PAGES = {
+  chat: MainPanel,
+  projects: ProjectsPanel,
+  knowledge: KnowledgePanel,
+  system: SystemPanel,
+};
+
 export default function App() {
   const splash = useUIStore((s) => s.splash);
   const setSplash = useUIStore((s) => s.setSplash);
+  const activePage = useUIStore((s) => s.activePage);
 
   useEffect(() => {
     const t = setTimeout(() => setSplash(false), 450);
     return () => clearTimeout(t);
   }, [setSplash]);
+
+  const PageComponent = PAGES[activePage] || MainPanel;
 
   return (
     <div className="h-dvh overflow-hidden" style={{background: 'linear-gradient(180deg, #050510 0%, #0a0a2e 50%, #0d0d2b 100%)'}}>
@@ -92,7 +106,7 @@ export default function App() {
         >
           <div style={{ gridArea: "top" }}><TopBar /></div>
           <div style={{ gridArea: "side" }}><Sidebar /></div>
-          <div style={{ gridArea: "main" }}><MainPanel /></div>
+          <div style={{ gridArea: "main", overflow: "auto" }}><PageComponent /></div>
           <div style={{ gridArea: "rail" }}><RightPanel /></div>
           <div style={{ gridArea: "dock", justifySelf: "center", alignSelf: "end", marginBottom: "20px" }}><Dock /></div>
         </div>
@@ -103,6 +117,7 @@ export default function App() {
       <FileBrowser />
       <AgentModal />
       <WebPanel />
+      <TerminalPanel />
     </div>
   );
 }

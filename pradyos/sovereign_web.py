@@ -471,6 +471,63 @@ def create_app(
         except Exception:
             pass
 
+    @app.websocket("/ws/terminal")
+    async def terminal_ws(websocket: WebSocket):
+        import sys as _sys
+        await websocket.accept()
+        import asyncio.subprocess as asp
+        try:
+            if _sys.platform == "win32":
+                proc = await asyncio.create_subprocess_shell(
+                    "powershell.exe",
+                    stdin=asp.PIPE, stdout=asp.PIPE, stderr=asp.STDOUT,
+                    creationflags=0x08000000,  # CREATE_NO_WINDOW
+                )
+            else:
+                proc = await asyncio.create_subprocess_shell(
+                    "bash", stdin=asp.PIPE, stdout=asp.PIPE, stderr=asp.STDOUT
+                )
+        except Exception:
+            await websocket.send_json({"type": "error", "data": "Failed to start shell"})
+            await websocket.close()
+            return
+
+        async def read_stdout():
+            try:
+                while True:
+                    line = await proc.stdout.read(4096)
+                    if not line:
+                        break
+                    await websocket.send_json({"type": "output", "data": line.decode("utf-8", errors="replace")})
+            except Exception:
+                pass
+
+        async def read_stdin():
+            try:
+                while True:
+                    msg = await websocket.receive_json()
+                    if msg.get("type") == "input":
+                        proc.stdin.write((msg["data"]).encode("utf-8"))
+                        await proc.stdin.drain()
+                    elif msg.get("type") == "resize":
+                        pass
+                    elif msg.get("type") == "kill":
+                        proc.terminate()
+                        break
+            except Exception:
+                pass
+            finally:
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+
+        await asyncio.gather(read_stdout(), read_stdin())
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
     @app.get("/health", include_in_schema=False)
     async def health() -> JSONResponse:
         return JSONResponse({"status": "ok", "service": "PradySovereign"})
